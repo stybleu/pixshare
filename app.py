@@ -19,7 +19,7 @@ ADMIN_PASS = os.environ.get("ADMIN_PASS") or ""
 UPLOAD_FOLDER = "tmp/fichiers"
 DB_FILE = "files.json"
 BLOCKED_FILE = "blocked_ips.json"
-APP_VERSION = "0.1.0-alpha"
+APP_VERSION = os.environ.get("RENDER_GIT_COMMIT", "")[:7] or "dev"
 
 MAX_CONTENT_LENGTH = 128 * 1024 * 1024  # 128 Mo
 
