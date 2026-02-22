@@ -13,21 +13,20 @@ from werkzeug.utils import secure_filename
 # -----------------------
 # Configuration
 # -----------------------
-ADMIN_USER = os.environ.get("ADMIN_USER", "0")
-ADMIN_PASS = os.environ.get("ADMIN_PASS", "1")
+ADMIN_USER = os.environ.get("ADMIN_USER")
+ADMIN_PASS = os.environ.get("ADMIN_PASS")
 
 UPLOAD_FOLDER = "tmp/fichiers"
 DB_FILE = "files.json"
 BLOCKED_FILE = "blocked_ips.json"
 APP_VERSION = "0.1.0-alpha"
 
-MAX_CONTENT_LENGTH = 128 * 1024 * 1024  # 512 Mo
+MAX_CONTENT_LENGTH = 128 * 1024 * 1024  # 128 Mo
 
 # ✅ Liste blanche d'extensions autorisées (sans le point)
 # Ajuste selon ton besoin
 ALLOWED_EXTENSIONS = {
     "png", "jpg", "jpeg", "gif", "webp",
-    "pdf",
     "mp4", "webm", "avi"
 }
 
@@ -36,7 +35,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app = Flask(__name__)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
-app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
+app.secret_key = os.environ.get("SECRET_KEY")
 
 # -----------------------
 # Paths helpers
@@ -164,7 +163,7 @@ def file_meta(file_id: str):
     ext = os.path.splitext(server_name)[1].lower()
 
     # ⚠️ SVG retiré (risque XSS), sinon c'était: ... ".svg"
-    previewable = ext in {".png", ".jpg", ".jpeg", ".gif", ".webp", ".pdf"}
+    previewable = ext in {".png", ".jpg", ".jpeg", ".gif", ".webp", ".avi"}
 
     return {
         "id": file_id,
