@@ -363,7 +363,7 @@ def admin_login():
         flash("Identifiants incorrects ❌", "danger")
         return redirect(url_for("admin_login"))
 
-    return render_template("admin_login.html")
+    return render_template("admin_login.html", version=APP_VERSION)
 
 @app.route("/admin/logout", methods=["POST"])
 def admin_logout():
@@ -411,11 +411,11 @@ def admin_block_ip():
 # -----------------------
 @app.route("/cgu")
 def cgu():
-    return render_template("cgu.html")
+    return render_template("cgu.html", version=APP_VERSION)
 
 @app.route("/mentions-legales")
 def mentions_legales():
-    return render_template("mentions_legales.html")
+    return render_template("mentions_legales.html", version=APP_VERSION)
 
 # -----------------------
 # Lancement (local uniquement)
