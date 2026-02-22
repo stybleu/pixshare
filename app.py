@@ -404,7 +404,10 @@ def admin_block_ip():
         flash(f"IP déjà bloquée : {ip}", "info")
 
     return redirect(url_for("admin_panel"))
-
+    
+@app.route("/googlebe607fe93d5d66a4.html")
+def google_verify():
+    return send_from_directory("static", "googlebe607fe93d5d66a4.html")
 # -----------------------
 # Pages légales
 # -----------------------
