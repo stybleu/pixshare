@@ -13,8 +13,8 @@ from werkzeug.utils import secure_filename
 # -----------------------
 # Configuration
 # -----------------------
-ADMIN_USER = os.environ.get("ADMIN_USER")
-ADMIN_PASS = os.environ.get("ADMIN_PASS")
+ADMIN_USER = os.environ.get("ADMIN_USER") or ""
+ADMIN_PASS = os.environ.get("ADMIN_PASS") or ""
 
 UPLOAD_FOLDER = "tmp/fichiers"
 DB_FILE = "files.json"
@@ -24,7 +24,6 @@ APP_VERSION = "0.1.0-alpha"
 MAX_CONTENT_LENGTH = 128 * 1024 * 1024  # 128 Mo
 
 # ✅ Liste blanche d'extensions autorisées (sans le point)
-# Ajuste selon ton besoin
 ALLOWED_EXTENSIONS = {
     "png", "jpg", "jpeg", "gif", "webp",
     "mp4", "webm", "avi"
@@ -35,7 +34,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app = Flask(__name__)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
-app.secret_key = os.environ.get("SECRET_KEY")
+app.secret_key = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
 
 # -----------------------
 # Paths helpers
@@ -100,9 +99,7 @@ def human_size(n: int) -> str:
     return f"{f:.2f} {units[i]}" if i > 0 else f"{int(f)} {units[i]}"
 
 def safe_ext(filename: str) -> str:
-    """
-    Retourne l'extension AVEC le point (ex: '.png'), en minuscule.
-    """
+    """Retourne l'extension AVEC le point (ex: '.png'), en minuscule."""
     _, ext = os.path.splitext(filename)
     ext = (ext or "").lower()
     if len(ext) > 12:
@@ -110,9 +107,7 @@ def safe_ext(filename: str) -> str:
     return ext
 
 def allowed_file(filename: str) -> bool:
-    """
-    ✅ Vérifie si l'extension du fichier est autorisée (liste blanche).
-    """
+    """✅ Vérifie si l'extension du fichier est autorisée (liste blanche)."""
     ext = safe_ext(filename)  # ex: ".png"
     if not ext:
         return False
@@ -162,15 +157,15 @@ def file_meta(file_id: str):
     stat = os.stat(path)
     ext = os.path.splitext(server_name)[1].lower()
 
-    # ⚠️ SVG retiré (risque XSS), sinon c'était: ... ".svg"
-    previewable = ext in {".png", ".jpg", ".jpeg", ".gif", ".webp", ".avi"}
+    # Preview dans la page file.html (si tu veux preview vidéo, adapte ton template)
+    previewable = ext in {".png", ".jpg", ".jpeg", ".gif", ".webp"}
 
     return {
         "id": file_id,
         "original": meta.get("original_name", "unknown"),
         "server": server_name,
         "uploaded_at": meta.get("uploaded_at", ""),
-        "ip": meta.get("ip", ""),  # ✅ pour admin
+        "ip": meta.get("ip", ""),
         "size_h": human_size(stat.st_size),
         "mtime_h": datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M"),
         "download_url": url_for("download", file_id=file_id, _external=True),
@@ -204,20 +199,41 @@ def admin_required(fn):
     return wrapper
 
 # -----------------------
+# Google / SEO
+# -----------------------
+@app.route("/googlebe607fe93d5d66a4.html")
+def google_verify():
+    return send_from_directory("static", "googlebe607fe93d5d66a4.html")
+
+@app.route("/robots.txt")
+def robots():
+    base = request.url_root.rstrip("/")
+    content = f"""User-agent: *
+Allow: /
+
+Sitemap: {base}/sitemap.xml
+"""
+    return content, 200, {"Content-Type": "text/plain; charset=utf-8"}
+
+@app.route("/sitemap.xml")
+def sitemap():
+    base = request.url_root.rstrip("/")
+    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>{base}/</loc>
+  </url>
+</urlset>
+"""
+    return xml, 200, {"Content-Type": "application/xml; charset=utf-8"}
+
+# -----------------------
 # Routes INVITÉ (public)
 # -----------------------
 @app.route("/", methods=["GET", "POST"])
 def index():
-    """
-    Page publique :
-    - upload sans login
-    - l'invité ne voit QUE son dernier fichier (via cookie/session)
-    - uploader à nouveau supprime son ancien fichier
-    - blocage IP possible
-    """
     ip = get_client_ip()
 
-    # Vérifie IP bloquée AVANT toute action
     blocked = load_blocked()
     if ip and ip in blocked:
         return redirect("https://www.google.fr"), 302
@@ -234,21 +250,18 @@ def index():
             flash("Nom de fichier invalide.", "danger")
             return redirect(url_for("index"))
 
-        # ✅ Filtre extension (liste blanche)
         if not allowed_file(safe_name):
             allowed = ", ".join(sorted(ALLOWED_EXTENSIONS))
             flash(f"Extension non autorisée. Autorisées : {allowed}", "danger")
             return redirect(url_for("index"))
 
-        # Supprime l'ancien fichier de CET invité (si existe)
         old_id = session.get("guest_file_id")
         if old_id:
             delete_by_id(old_id)
             session.pop("guest_file_id", None)
 
-        # Sauvegarde nouveau fichier (ID unique)
         file_id = generate_file_id()
-        ext = safe_ext(safe_name)  # ex: ".png"
+        ext = safe_ext(safe_name)
         server_name = f"{file_id}{ext}"
         dest = os.path.join(app.config["UPLOAD_FOLDER"], server_name)
 
@@ -272,7 +285,6 @@ def index():
         flash("Fichier upload ✅ (ton ancien fichier a été remplacé)", "success")
         return redirect(url_for("index"))
 
-    # GET : Affiche uniquement le fichier de l'invité (si existe)
     guest_id = session.get("guest_file_id")
     guest_file = file_meta(guest_id) if guest_id else None
 
@@ -280,12 +292,12 @@ def index():
         "index.html",
         guest_file=guest_file,
         max_mb=int(MAX_CONTENT_LENGTH / (1024 * 1024)),
-        admin=is_admin(), version=APP_VERSION
+        admin=is_admin(),
+        version=APP_VERSION
     )
 
 @app.route("/view/<file_id>")
 def view_file(file_id):
-    """PUBLIC : ouvre dans le navigateur (fichier brut inline)"""
     db = load_db()
     meta = db.get(file_id)
     if not meta:
@@ -296,15 +308,10 @@ def view_file(file_id):
     if not os.path.isfile(path):
         abort(404)
 
-    return send_from_directory(
-        app.config["UPLOAD_FOLDER"],
-        server_name,
-        as_attachment=False
-    )
+    return send_from_directory(app.config["UPLOAD_FOLDER"], server_name, as_attachment=False)
 
 @app.route("/download/<file_id>")
 def download(file_id):
-    """PUBLIC : force le téléchargement"""
     db = load_db()
     meta = db.get(file_id)
     if not meta:
@@ -325,7 +332,6 @@ def download(file_id):
 
 @app.route("/file/<file_id>")
 def public_file(file_id):
-    """Page publique (HTML) qui affiche le fichier."""
     db = load_db()
     meta = db.get(file_id)
     if not meta:
@@ -338,12 +344,7 @@ def public_file(file_id):
         abort(404)
 
     file_url = url_for("view_file", file_id=file_id)
-
-    return render_template(
-        "file.html",
-        file_url=file_url,
-        original_name=original_name
-    )
+    return render_template("file.html", file_url=file_url, original_name=original_name)
 
 # -----------------------
 # Routes ADMIN (banque + suppression)
@@ -404,10 +405,7 @@ def admin_block_ip():
         flash(f"IP déjà bloquée : {ip}", "info")
 
     return redirect(url_for("admin_panel"))
-    
-@app.route("/googlebe607fe93d5d66a4.html")
-def google_verify():
-    return send_from_directory("static", "googlebe607fe93d5d66a4.html")
+
 # -----------------------
 # Pages légales
 # -----------------------
@@ -420,7 +418,7 @@ def mentions_legales():
     return render_template("mentions_legales.html")
 
 # -----------------------
-# Lancement
+# Lancement (local uniquement)
 # -----------------------
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "5000"))
