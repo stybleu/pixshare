@@ -255,10 +255,9 @@ def index():
             flash(f"Extension non autorisée. Autorisées : {allowed}", "danger")
             return redirect(url_for("index"))
 
-        old_id = session.get("guest_file_id")
-        if old_id:
-            delete_by_id(old_id)
-            session.pop("guest_file_id", None)
+        
+        
+        session["guest_file_id"] = None
 
         file_id = generate_file_id()
         ext = safe_ext(safe_name)
