@@ -69,7 +69,10 @@
 
                 <td style="min-width:360px;">
                   <div class="input-group input-group-sm">
-                    <input class="form-control" value="{{ f.download_url }}" readonly>
+                    <input class="form-control" value="{{ f.view_url }}" readonly onclick="this.select()">
+                    <button type="button" class="btn btn-outline-primary" onclick="copyLink(event)">
+                      Copier
+                    </button>
                     {% if f.previewable %}
                       <a class="btn btn-outline-success" href="{{ f.view_url }}" target="_blank">Ouvrir</a>
                     {% endif %}
@@ -107,5 +110,16 @@
 
   </div>
 </div>
-
+<script>
+  function copyLink(e){
+    e.preventDefault();
+    const input = document.getElementById("publicLink");
+    if(!input) return;
+    input.focus();
+    input.select();
+    input.setSelectionRange(0, 999999);
+    (navigator.clipboard?.writeText(input.value) || Promise.reject())
+      .catch(() => document.execCommand("copy"));
+  }
+</script>
 {% endblock %}
