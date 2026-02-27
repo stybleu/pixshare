@@ -1,7 +1,7 @@
 import os
 import json
 import secrets
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 
 from flask import (
@@ -29,12 +29,37 @@ ALLOWED_EXTENSIONS = {
     "mp4", "webm", "avi"
 }
 
+# Durée de vie max des fichiers (minutes)
+MAX_LIFETIME_MIN = 30
+DEFAULT_LIFETIME_MIN = 10
+
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 app = Flask(__name__)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
 app.secret_key = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
+
+# -----------------------
+# Time helpers
+# -----------------------
+def utcnow():
+    return datetime.now(timezone.utc)
+
+def parse_dt(s: str) -> datetime:
+    """
+    Parse une date ISO. Si elle est "naive" (sans timezone), on suppose UTC.
+    Accepte aussi le format avec 'Z'.
+    """
+    if not s:
+        return datetime.min.replace(tzinfo=timezone.utc)
+    try:
+        dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+    except Exception:
+        return datetime.min.replace(tzinfo=timezone.utc)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
 
 # -----------------------
 # Paths helpers
@@ -46,7 +71,8 @@ def _blocked_path() -> str:
     return os.path.join(app.root_path, BLOCKED_FILE)
 
 # -----------------------
-# DB JSON
+# DB JSON (files)
+# Format: { file_id: { original_name, server_name, uploaded_at, expires_at, ip } }
 # -----------------------
 def load_db() -> dict:
     path = _db_path()
@@ -54,7 +80,8 @@ def load_db() -> dict:
         return {}
     try:
         with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
+            data = json.load(f)
+            return data if isinstance(data, dict) else {}
     except Exception:
         return {}
 
@@ -64,6 +91,43 @@ def save_db(db: dict) -> None:
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(db, f, ensure_ascii=False, indent=2)
     os.replace(tmp, path)
+
+def cleanup_expired() -> int:
+    """
+    Supprime les fichiers expirés :
+    - fichier sur disque
+    - entrée dans files.json
+    Retourne le nombre de suppressions.
+    """
+    db = load_db()
+    now = utcnow()
+
+    removed = 0
+    to_delete = []
+
+    for file_id, meta in db.items():
+        exp = parse_dt(meta.get("expires_at", ""))
+        if exp <= now:
+            to_delete.append(file_id)
+
+    for file_id in to_delete:
+        meta = db.get(file_id, {})
+        server_name = os.path.basename(meta.get("server_name", ""))
+        path = os.path.join(app.config["UPLOAD_FOLDER"], server_name)
+
+        try:
+            if server_name and os.path.isfile(path):
+                os.remove(path)
+        except Exception:
+            pass
+
+        db.pop(file_id, None)
+        removed += 1
+
+    if removed:
+        save_db(db)
+
+    return removed
 
 # -----------------------
 # IP Blocklist JSON
@@ -125,6 +189,8 @@ def get_client_ip() -> str:
 
 def delete_by_id(file_id: str) -> bool:
     """Supprime fichier + entrée DB. Retourne True si supprimé."""
+    cleanup_expired()
+
     db = load_db()
     meta = db.get(file_id)
     if not meta:
@@ -133,14 +199,19 @@ def delete_by_id(file_id: str) -> bool:
     server_name = os.path.basename(meta.get("server_name", ""))
     path = os.path.join(app.config["UPLOAD_FOLDER"], server_name)
 
-    if os.path.isfile(path):
-        os.remove(path)
+    try:
+        if os.path.isfile(path):
+            os.remove(path)
+    except Exception:
+        pass
 
     db.pop(file_id, None)
     save_db(db)
     return True
 
 def file_meta(file_id: str):
+    cleanup_expired()
+
     if not file_id:
         return None
 
@@ -157,14 +228,21 @@ def file_meta(file_id: str):
     stat = os.stat(path)
     ext = os.path.splitext(server_name)[1].lower()
 
-    # Preview dans la page file.html (si tu veux preview vidéo, adapte ton template)
     previewable = ext in {".png", ".jpg", ".jpeg", ".gif", ".webp"}
+
+    # Temps restant (optionnel mais pratique)
+    exp = parse_dt(meta.get("expires_at", ""))
+    remaining_s = max(0, int((exp - utcnow()).total_seconds()))
+    remaining_min = remaining_s // 60
+    remaining_sec = remaining_s % 60
 
     return {
         "id": file_id,
         "original": meta.get("original_name", "unknown"),
         "server": server_name,
         "uploaded_at": meta.get("uploaded_at", ""),
+        "expires_at": meta.get("expires_at", ""),
+        "remaining_h": f"{remaining_min:02d}:{remaining_sec:02d}",
         "ip": meta.get("ip", ""),
         "size_h": human_size(stat.st_size),
         "mtime_h": datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M"),
@@ -174,6 +252,8 @@ def file_meta(file_id: str):
     }
 
 def list_all_files():
+    cleanup_expired()
+
     db = load_db()
     items = []
     for file_id in db.keys():
@@ -232,8 +312,9 @@ def sitemap():
 # -----------------------
 @app.route("/", methods=["GET", "POST"])
 def index():
-    ip = get_client_ip()
+    cleanup_expired()
 
+    ip = get_client_ip()
     blocked = load_blocked()
     if ip and ip in blocked:
         return redirect("https://www.google.fr"), 302
@@ -255,8 +336,15 @@ def index():
             flash(f"Extension non autorisée. Autorisées : {allowed}", "danger")
             return redirect(url_for("index"))
 
-        
-        
+        # ✅ durée choisie par l'utilisateur, mais sécurisée côté serveur (max 30 min)
+        try:
+            lifetime = int(request.form.get("lifetime", DEFAULT_LIFETIME_MIN))
+        except ValueError:
+            lifetime = DEFAULT_LIFETIME_MIN
+        lifetime = max(1, min(lifetime, MAX_LIFETIME_MIN))
+
+        # On ne remplace plus un fichier "ancien" automatiquement ici,
+        # on remet juste le "dernier fichier" du visiteur
         session["guest_file_id"] = None
 
         file_id = generate_file_id()
@@ -271,17 +359,21 @@ def index():
 
         f.save(dest)
 
+        uploaded_at = utcnow()
+        expires_at = uploaded_at + timedelta(minutes=lifetime)
+
         db = load_db()
         db[file_id] = {
             "original_name": original,
             "server_name": server_name,
-            "uploaded_at": datetime.now().isoformat(timespec="seconds"),
+            "uploaded_at": uploaded_at.isoformat(timespec="seconds"),
+            "expires_at": expires_at.isoformat(timespec="seconds"),
             "ip": ip
         }
         save_db(db)
 
         session["guest_file_id"] = file_id
-        flash("Fichier upload ✅ (ton ancien fichier a été remplacé)", "success")
+        flash(f"Fichier upload ✅ (expiration: {lifetime} min)", "success")
         return redirect(url_for("index"))
 
     guest_id = session.get("guest_file_id")
@@ -297,6 +389,8 @@ def index():
 
 @app.route("/view/<file_id>")
 def view_file(file_id):
+    cleanup_expired()
+
     db = load_db()
     meta = db.get(file_id)
     if not meta:
@@ -311,6 +405,8 @@ def view_file(file_id):
 
 @app.route("/download/<file_id>")
 def download(file_id):
+    cleanup_expired()
+
     db = load_db()
     meta = db.get(file_id)
     if not meta:
@@ -331,6 +427,8 @@ def download(file_id):
 
 @app.route("/file/<file_id>")
 def public_file(file_id):
+    cleanup_expired()
+
     db = load_db()
     meta = db.get(file_id)
     if not meta:
@@ -373,11 +471,14 @@ def admin_logout():
 @app.route("/admin", methods=["GET"])
 @admin_required
 def admin_panel():
+    cleanup_expired()
     return render_template("admin.html", files=list_all_files(), version=APP_VERSION)
 
 @app.route("/admin/delete", methods=["POST"])
 @admin_required
 def admin_delete():
+    cleanup_expired()
+
     file_id = (request.form.get("file_id") or "").strip()
     if not file_id:
         flash("ID manquant.", "warning")
