@@ -1,104 +1,63 @@
 {% extends "base.html" %}
-{% set title = "Conditions Générales d'Utilisation" %}
+{% set title = "CGU" %}
 {% block content %}
-<style>
-  h1{
-    font-size: 40px;
-  }
-  h2{
-    font-size: 30px;
-    color: #3a333399;
-  }
-  
-  p{
-    font-size: 20px;
-    color: #4f4f4f;
-  }
-</style>
-<div class="card shadow-sm">
-  <div class="card-body"><h2>Conditions d'utilisation du service</h2><p>
-Le service permet à tout utilisateur de téléverser un fichier sans création de compte.
-</p><p>
-Dans le cadre du fonctionnement et de la sécurité du service, certaines informations techniques,
-notamment l'adresse IP de l'utilisateur, peuvent être temporairement enregistrées lors du téléversement.
-</p><p>
-Chaque utilisateur invité ne peut héberger qu'un seul fichier à la fois.
-Lors de l'envoi d'un nouveau fichier, le précédent est automatiquement supprimé.
-</p><p>
-Un lien public de téléchargement est généré et peut être partagé librement.
-</p>
 
+<div class="container py-4">
+  <h1 class="h4 mb-3">Conditions Générales d’Utilisation (CGU)</h1>
 
-    <h2 class="h6 mt-4">1. Fonctionnement du service</h2>
-    <ul>
-      <li>L'utilisateur peut téléverser un fichier de manière anonyme.</li>
-      <li>Chaque utilisateur invité ne peut héberger qu'un seul fichier à la fois.</li>
-      <li>Lors de l'envoi d'un nouveau fichier, le précédent est automatiquement supprimé.</li>
-      <li>Un lien public de téléchargement est généré et peut être partagé librement.</li>
-    </ul>
+  <div class="card shadow-sm">
+    <div class="card-body">
 
-    <h2 class="h6 mt-4">2. Responsabilité de l'utilisateur</h2>
-    <p>
-      L'utilisateur est seul responsable du contenu qu'il téléverse sur le site.
-      Il s'engage à ne pas héberger de contenu :
-    </p>
-    <ul>
-      <li>illégal ou contraire aux lois en vigueur,</li>
-      <li>protégé par des droits d'auteur sans autorisation,</li>
-      <li>contenant des logiciels malveillants,</li>
-      <li>à caractère pédopornographique ou portant atteinte aux mineurs,</li>
-      <li>incitant à la haine ou à la violence.</li>
-    </ul>
+      <h2 class="h6 mt-2">1. Objet du service</h2>
+      <p class="mb-2">
+        PixShare permet d’envoyer et partager temporairement des fichiers via un lien.
+        Le service est conçu pour un usage simple et rapide, <b>sans création de compte</b>.
+      </p>
 
-    <h2 class="h6 mt-4">3. Suppression des fichiers</h2>
-    <p>
-      L'administrateur du site se réserve le droit de supprimer tout fichier
-      hébergé sans préavis, notamment en cas de contenu jugé illicite.
-    </p>
+      <h2 class="h6 mt-4">2. Durée de disponibilité / expiration</h2>
+      <p class="mb-2">
+        Lors de l’envoi, l’utilisateur choisit une durée de conservation.
+      </p>
+      <ul class="mb-2">
+        <li><b>Durée maximale : 30 minutes</b>.</li>
+        <li>Une fois expiré, le fichier est <b>supprimé automatiquement</b> et le lien devient invalide.</li>
+        <li>La suppression peut ne pas être instantanée (décalage technique possible).</li>
+      </ul>
 
-    <h2 class="h6 mt-4">4. Accès public</h2>
-    <p>
-      Les fichiers téléversés sont accessibles publiquement via le lien de téléchargement généré.
-      Toute personne disposant de ce lien peut accéder au fichier.
-    </p>
+      <h2 class="h6 mt-4">3. Limites techniques</h2>
+      <p class="mb-2">
+        Le service utilise un hébergement pouvant être mis en veille/redémarré.
+        Dans ce cas, les fichiers temporaires peuvent devenir indisponibles avant la fin théorique de la durée choisie.
+      </p>
+      <p class="mb-2">
+        PixShare n’est pas un service de stockage permanent : <b>ne pas l’utiliser comme sauvegarde</b>.
+      </p>
 
-    <h2 class="h6 mt-4">5. Données</h2>
-    <p>
-      Le site ne requiert aucune inscription. Seules des données techniques nécessaires
-      au fonctionnement du service peuvent être utilisées.
-    </p>
+      <h2 class="h6 mt-4">4. Contenus interdits</h2>
+      <p class="mb-2">
+        Il est interdit d’utiliser PixShare pour héberger, partager ou diffuser des contenus illégaux,
+        notamment : contenus pédopornographiques, contenus portant atteinte aux droits d’auteur,
+        contenus haineux, ou tout contenu contraire à la loi.
+      </p>
 
-    <h2 class="h6 mt-4">6. Acceptation</h2>
-    <p>
-      En utilisant le service, l'utilisateur accepte les présentes conditions générales d'utilisation.
-    </p>
-    
-    <h2 class="h6 mt-4">7. Données techniques</h2>
-<p>
-Pour des raisons de sécurité et de prévention des abus, l'adresse IP des utilisateurs
-peut être enregistrée lors du téléversement de fichiers.
-Ces données peuvent être utilisées afin de détecter et bloquer tout usage illicite du service.
-</p>
+      <h2 class="h6 mt-4">5. Sécurité et lutte contre les abus</h2>
+      <p class="mb-2">
+        Pour prévenir les abus (spam, attaques, contenus illicites), l’accès au service peut être bloqué
+        et des fichiers peuvent être supprimés.
+      </p>
 
-<p>
-  <h2>Durée de conservation des fichiers</h2><p>
-Les fichiers envoyés sur la plateforme sont hébergés de manière temporaire.
-Le service n’a pas vocation à assurer un stockage permanent des données.
-</p><p>
-Les fichiers peuvent être supprimés à tout moment, notamment :
-</p><ul>
-<li>lors de l’arrêt ou du redémarrage du serveur,</li>
-<li>en cas de maintenance technique,</li>
-<li>en cas de mise à jour du service,</li>
-<li>en cas de suppression manuelle par l’administrateur,</li>
-<li>ou pour toute raison liée à la sécurité ou au bon fonctionnement du service.</li>
-</ul><p>
-L’utilisateur est seul responsable de la conservation de ses fichiers et est invité à en conserver une copie.
-Le service ne pourra être tenu responsable en cas de perte de données.
-</p>
-  
-</p>
+      <h2 class="h6 mt-4">6. Responsabilité</h2>
+      <p class="mb-2">
+        L’utilisateur est seul responsable des fichiers envoyés et de leur partage.
+        PixShare est fourni “en l’état” et ne garantit pas une disponibilité continue.
+      </p>
 
+      <hr class="my-4">
+      <p class="text-muted small mb-0">
+        Version du site : {{ version }}
+      </p>
+
+    </div>
   </div>
 </div>
 

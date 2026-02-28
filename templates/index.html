@@ -23,8 +23,6 @@
     <div class="d-flex gap-2">
       {% if admin %}
         <a class="btn btn-sm btn-outline-dark" href="{{ url_for('admin_panel') }}">Admin</a>
-      {% else %}
-        <a class="btn btn-sm btn-outline-primary" href="{{ url_for('admin_login') }}">Connexion</a>
       {% endif %}
     </div>
   </div>
@@ -52,8 +50,8 @@
             <div class="col-12">
               <label class="form-label">Durée de vie du fichier</label>
               <select name="lifetime" class="form-select">
-                <option value="5">5 minutes</option>
-                <option value="10" selected>10 minutes</option>
+                <option value="5" selected>5 minutes</option>
+                <option value="10">10 minutes</option>
                 <option value="20">20 minutes</option>
                 <option value="30">30 minutes (max)</option>
               </select>
@@ -71,15 +69,15 @@
       </div>
     </div>
 
-    <!-- Ton fichier -->
+    <!-- Tes fichiers -->
     <div class="col-12 col-lg-7">
       <div class="card shadow-sm h-100">
         <div class="card-body">
 
           <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <h2 class="h6 mb-0">Ton fichier</h2>
-            {% if guest_file %}
-              <span class="badge text-bg-success">Actif</span>
+            <h2 class="h6 mb-0">Tes fichiers</h2>
+            {% if guest_files and guest_files|length > 0 %}
+              <span class="badge text-bg-success">{{ guest_files|length }} actif(s)</span>
             {% else %}
               <span class="badge text-bg-secondary">Aucun</span>
             {% endif %}
@@ -87,46 +85,53 @@
 
           <hr class="my-3">
 
-          {% if guest_file %}
-            <div class="mb-2">
-              <div class="fw-semibold">{{ guest_file.original }}</div>
+          {% if guest_files and guest_files|length > 0 %}
 
-              <div class="text-muted small">
-                {{ guest_file.size_h }} — {{ guest_file.mtime_h }}
-                {% if guest_file.remaining_h %}
-                  <span class="ms-2 badge text-bg-warning">
-                    Expire dans {{ guest_file.remaining_h }}
-                  </span>
-                {% endif %}
+            {% for f in guest_files %}
+              {% set public_url = f.view_url if f.previewable else f.download_url %}
+              <div class="mb-3 p-2 border rounded">
+
+                <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+                  <div>
+                    <div class="fw-semibold">{{ f.original }}</div>
+                    <div class="text-muted small">
+                      {{ f.size_h }} — {{ f.mtime_h }}
+                      {% if f.remaining_h %}
+                        <span class="ms-2 badge text-bg-warning">
+                          Expire dans {{ f.remaining_h }}
+                        </span>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 mt-2">
+                  <a class="btn btn-success btn-sm" href="{{ public_url }}" target="_blank" rel="noopener">Ouvrir</a>
+                  <a class="btn btn-primary btn-sm" href="{{ f.download_url }}">Télécharger</a>
+                </div>
+
+                <div class="text-muted small mt-3 mb-1">Lien public à partager :</div>
+
+                <div class="input-group">
+                  <input
+                    id="publicLink_{{ f.id }}"
+                    class="form-control"
+                    value="{{ public_url }}"
+                    readonly
+                    onclick="this.select()"
+                  >
+                  <button type="button" class="btn btn-outline-primary" onclick="copyById('publicLink_{{ f.id }}')">
+                    Copier
+                  </button>
+                </div>
+
+                <div class="text-muted small mt-2">
+                  Le lien devient invalide après expiration (suppression automatique).
+                </div>
+
               </div>
-            </div>
+            {% endfor %}
 
-            <div class="d-flex flex-wrap gap-2 mb-3">
-              {% if guest_file.previewable %}
-                <a class="btn btn-success btn-sm" href="{{ guest_file.view_url }}" target="_blank" rel="noopener">Ouvrir</a>
-              {% endif %}
-              <a class="btn btn-primary btn-sm" href="{{ guest_file.download_url }}">Télécharger</a>
-            </div>
-
-            <div class="text-muted small mb-1">Lien public à partager :</div>
-
-            <!-- ✅ Input + bouton responsive -->
-            <div class="input-group">
-              <input
-                id="publicLink"
-                class="form-control"
-                value="{{ guest_file.view_url }}"
-                readonly
-                onclick="this.select()"
-              >
-              <button type="button" class="btn btn-outline-primary" onclick="copyLink(event)">
-                Copier
-              </button>
-            </div>
-
-            <div class="text-muted small mt-2">
-              Le lien devient invalide après expiration (suppression automatique).
-            </div>
           {% else %}
             <p class="text-muted mb-0">
               Aucun fichier. Choisissez-en puis cliquez sur <b>Uploader</b>.
@@ -141,13 +146,13 @@
 </div>
 
 <script>
-  function copyLink(e){
-    e.preventDefault();
-    const input = document.getElementById("publicLink");
+  function copyById(id){
+    const input = document.getElementById(id);
     if(!input) return;
     input.focus();
     input.select();
     input.setSelectionRange(0, 999999);
+
     (navigator.clipboard?.writeText(input.value) || Promise.reject())
       .catch(() => document.execCommand("copy"));
   }

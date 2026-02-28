@@ -2,65 +2,66 @@
 {% set title = "Mentions légales" %}
 {% block content %}
 
-<div class="card shadow-sm">
-  <div class="card-body">
-    <h1 class="h4 mb-3">Mentions légales</h1><h2 class="h6 mt-4">Éditeur du site</h2>
-<p>
-  Nom : Gosset Guillaume<br><br>
-  Email : stybleu@orange.fr<br>
-  Statut : Particulier / Auto-entrepreneur
-</p>
+<div class="container py-4">
+  <h1 class="h4 mb-3">Mentions légales</h1>
 
-<h2 class="h6 mt-4">Hébergeur</h2>
-<p>
-  Le site est hébergé par :<br>
-  Render.com<br>
-  525 Brannan Street<br>
-  San Francisco, CA 94107<br>
-  États-Unis
-</p>
+  <div class="card shadow-sm">
+    <div class="card-body">
 
-<h2 class="h6 mt-4">Responsabilité</h2>
-<p>
-  Le site agit en tant qu'hébergeur technique des fichiers téléversés par les utilisateurs.
-  L'utilisateur est seul responsable du contenu qu'il met en ligne.
-</p>
+      <h2 class="h6 mt-2">Éditeur du site</h2>
+      <p class="mb-2">
+        PixShare est un service d’hébergement temporaire de fichiers.
+      </p>
+      <p class="mb-2">
+        <b>Éditeur :</b> Gosset Guillaume
+        <b>Email :</b> stybleu
+      </p>
 
-<h2 class="h6 mt-4">Données collectées</h2>
-<p>
-  Lors de l'utilisation du service, certaines données techniques peuvent être collectées automatiquement,
-  notamment l'adresse IP, à des fins de sécurité, de prévention des abus et de gestion du service.
-</p>
+      <h2 class="h6 mt-4">Hébergement</h2>
+      <p class="mb-2">
+        Le service est hébergé sur l’infrastructure de <b>Render</b>.
+      </p>
 
-<h2 class="h6 mt-4">Finalité du traitement</h2>
-<p>
-  Les données collectées sont utilisées uniquement dans le cadre du fonctionnement du service,
-  notamment pour assurer la sécurité de la plateforme, prévenir les abus et permettre la gestion
-  des fichiers téléversés par les utilisateurs.
-</p>
+      <h2 class="h6 mt-4">Fonctionnement du service et durée de conservation</h2>
+      <p class="mb-2">
+        Les fichiers envoyés sont <b>stockés temporairement</b> et sont destinés à être <b>supprimés automatiquement</b>
+        après expiration.
+      </p>
+      <ul class="mb-2">
+        <li>
+          L’utilisateur choisit une durée de conservation lors de l’envoi, <b>limitée à 30 minutes maximum</b>.
+        </li>
+        <li>
+          La suppression est <b>automatique</b> mais peut ne pas être instantanée (ex : quelques secondes/minutes de décalage possible).
+        </li>
+        <li>
+          En raison des contraintes techniques (notamment redémarrages/veille du serveur sur un hébergement gratuit),
+          la disponibilité temporaire des fichiers <b>n’est pas garantie</b>.
+        </li>
+      </ul>
 
-<h2 class="h6 mt-4">Durée de conservation</h2>
-<p>
-  Les données techniques associées aux fichiers, notamment l'adresse IP, sont conservées
-  pendant la durée d'hébergement du fichier.
-  En raison de la nature technique du service, les fichiers peuvent être supprimés à tout moment,
-  notamment lors de l'arrêt, du redémarrage ou de la maintenance du serveur.
-</p>
+      <h2 class="h6 mt-4">Données personnelles</h2>
+      <p class="mb-2">
+        PixShare ne demande pas de création de compte.
+      </p>
+      <p class="mb-2">
+        Pour des raisons de sécurité (prévention des abus), l’adresse IP peut être traitée temporairement
+        uniquement afin de gérer le blocage d’accès en cas de comportement abusif.
+      </p>
 
-<h2 class="h6 mt-4">Base légale</h2>
-<p>
-  Le traitement des données repose sur l'intérêt légitime de l'éditeur,
-  afin d'assurer la sécurité du service et prévenir les utilisations abusives.
-</p>
+      <h2 class="h6 mt-4">Responsabilité</h2>
+      <p class="mb-2">
+        L’utilisateur est responsable des fichiers qu’il envoie et de leur conformité aux lois et règlements.
+        L’éditeur se réserve le droit de supprimer tout fichier illicite et de bloquer l’accès en cas d’abus.
+      </p>
 
-<h2 class="h6 mt-4">Droits des utilisateurs</h2>
-<p>
-  Conformément au Règlement Général sur la Protection des Données (RGPD),
-  les utilisateurs disposent d'un droit d'accès, de rectification ou de suppression
-  des données les concernant.
-  Toute demande peut être adressée à l'adresse email suivante :
-  stybleu@orange.fr
-</p>
+      <hr class="my-4">
+      <p class="text-muted small mb-0">
+        Version du site : {{ version }}
+      </p>
 
+    </div>
   </div>
-</div>{% endblock %}
+</div>
+
+{% endblock %}
