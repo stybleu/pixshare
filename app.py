@@ -542,6 +542,13 @@ def cgu():
 def mentions_legales():
     return render_template("mentions_legales.html", version=APP_VERSION)
 
+@app.after_request
+def add_robots_headers(resp):
+    # Empêche l'indexation des pages admin (même si découvertes)
+    if request.path.startswith("/admin"):
+        resp.headers["X-Robots-Tag"] = "noindex, nofollow, noarchive"
+    return resp
+
 # -----------------------
 # Run local
 # -----------------------
