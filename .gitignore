@@ -7,3 +7,4 @@ blocked_ips.json
 __pycache__/
 *.pyc
 .env
+failed_logins.json

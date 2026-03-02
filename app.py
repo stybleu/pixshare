@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import secrets
 from datetime import datetime, timedelta, timezone
 from functools import wraps
@@ -21,7 +22,13 @@ DB_FILE = "files.json"
 BLOCKED_FILE = "blocked_ips.json"
 APP_VERSION = (os.environ.get("RENDER_GIT_COMMIT", "")[:7] or "dev")
 
-MAX_CONTENT_LENGTH = 128 * 1024 * 1024  # 128 Mo
+MAX_CONTENT_LENGTH = 100 * 1024 * 1024  # 100 Mo
+
+FAILED_LOGINS_FILE = "failed_logins.json"
+
+MAX_FAILED_LOGINS = 5          # ✅ 5 essais
+FAILED_WINDOW_SEC = 10 * 60    # fenêtre 10 min
+LOCKOUT_SEC = 15 * 60          # lock 15 min
 
 # ✅ Liste blanche d'extensions autorisées (sans le point)
 ALLOWED_EXTENSIONS = {
@@ -43,6 +50,100 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
 app.secret_key = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
 
+def _now_ts() -> int:
+    return int(time.time())
+
+def load_failed_logins() -> dict:
+    try:
+        with open(FAILED_LOGINS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return data if isinstance(data, dict) else {}
+    except FileNotFoundError:
+        return {}
+    except json.JSONDecodeError:
+        return {}
+
+def save_failed_logins(data: dict) -> None:
+    tmp = FAILED_LOGINS_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, FAILED_LOGINS_FILE)
+
+def cleanup_failed_logins(data: dict) -> dict:
+    """Nettoie les entrées expirées pour éviter que le fichier grossisse."""
+    now = _now_ts()
+    out = {}
+    for ip, rec in data.items():
+        if not isinstance(rec, dict):
+            continue
+        # garde si encore utile : soit en lockout, soit des fails récents
+        locked_until = int(rec.get("locked_until", 0) or 0)
+        first_fail = int(rec.get("first_fail", 0) or 0)
+        last_fail = int(rec.get("last_fail", 0) or 0)
+
+        in_lock = locked_until > now
+        in_window = (now - last_fail) <= FAILED_WINDOW_SEC and first_fail > 0
+        if in_lock or in_window:
+            out[ip] = {
+                "count": int(rec.get("count", 0) or 0),
+                "first_fail": first_fail,
+                "last_fail": last_fail,
+                "locked_until": locked_until
+            }
+    return out
+
+def is_admin_locked(ip: str) -> tuple[bool, int]:
+    """Retourne (locked?, secondes_restantes)."""
+    data = load_failed_logins()
+    data = cleanup_failed_logins(data)
+    now = _now_ts()
+
+    rec = data.get(ip, {})
+    locked_until = int(rec.get("locked_until", 0) or 0)
+    if locked_until > now:
+        # sauvegarde nettoyage au passage
+        save_failed_logins(data)
+        return True, locked_until - now
+
+    # sauvegarde nettoyage au passage
+    save_failed_logins(data)
+    return False, 0
+
+def register_admin_fail(ip: str) -> tuple[int, int]:
+    """
+    Incrémente les échecs. Retourne (count, lock_seconds_remaining).
+    Si lock déclenché, lock_seconds_remaining = LOCKOUT_SEC.
+    """
+    now = _now_ts()
+    data = load_failed_logins()
+    data = cleanup_failed_logins(data)
+
+    rec = data.get(ip)
+    if not isinstance(rec, dict):
+        rec = {"count": 0, "first_fail": 0, "last_fail": 0, "locked_until": 0}
+
+    # si la dernière tentative est trop vieille, on repart à zéro (nouvelle fenêtre)
+    last_fail = int(rec.get("last_fail", 0) or 0)
+    if last_fail == 0 or (now - last_fail) > FAILED_WINDOW_SEC:
+        rec["count"] = 0
+        rec["first_fail"] = now
+
+    rec["count"] = int(rec.get("count", 0) or 0) + 1
+    rec["last_fail"] = now
+
+    lock_remaining = 0
+    if rec["count"] >= MAX_FAILED_LOGINS:
+        rec["locked_until"] = now + LOCKOUT_SEC
+        lock_remaining = LOCKOUT_SEC
+
+    data[ip] = rec
+    save_failed_logins(data)
+    return rec["count"], lock_remaining
+
+def reset_admin_fail(ip: str) -> None:
+    data = load_failed_logins()
+    data.pop(ip, None)
+    save_failed_logins(data)
 # -----------------------
 # Utils time
 # -----------------------
@@ -476,18 +577,35 @@ def public_file(file_id):
 @app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
     if request.method == "POST":
-        user = (request.form.get("user") or "").strip()
-        pwd = (request.form.get("pass") or "").strip()
+        ip = get_client_ip()
 
-        if secrets.compare_digest(user, ADMIN_USER) and secrets.compare_digest(pwd, ADMIN_PASS):
+        locked, secs = is_admin_locked(ip)
+        if locked:
+            # 429 = Too Many Requests (logiquement)
+            flash(f"Trop d'essais. Réessaie dans {secs}s.", "danger")
+            return render_template("admin_login.html"), 429
+
+        user = (request.form.get("username") or "").strip()
+        pwd = (request.form.get("password") or "")
+
+        # ✅ vérification
+        if user == ADMIN_USER and pwd == ADMIN_PASS:
+            reset_admin_fail(ip)
             session["is_admin"] = True
-            flash("Admin connecté ✅", "success")
-            return redirect(url_for("admin_panel"))
+            return redirect(url_for("admin_panel"))  # adapte ton endpoint
 
-        flash("Identifiants incorrects ❌", "danger")
-        return redirect(url_for("admin_login"))
+        # ❌ mauvais identifiants
+        time.sleep(0.6)
+        count, lock_sec = register_admin_fail(ip)
+        if lock_sec > 0:
+            flash("Trop d'essais. Accès bloqué temporairement (15 min).", "danger")
+            return render_template("admin_login.html"), 429
 
-    return render_template("admin_login.html", version=APP_VERSION)
+        remaining = MAX_FAILED_LOGINS - count
+        flash(f"Identifiants invalides. Essais restants : {remaining}", "warning")
+        return render_template("admin_login.html"), 401
+
+    return render_template("admin_login.html")
 
 @app.route("/admin/logout", methods=["POST"])
 def admin_logout():
