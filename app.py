@@ -50,6 +50,13 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
 app.secret_key = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
 
+# -----------------------
+# Sécurité cookies session
+# -----------------------
+app.config["SESSION_COOKIE_HTTPONLY"] = True      # JS ne peut pas lire le cookie
+app.config["SESSION_COOKIE_SECURE"] = True        # Cookie envoyé uniquement en HTTPS
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"     # Protection CSRF basique
+
 def _now_ts() -> int:
     return int(time.time())
 
@@ -581,28 +588,28 @@ def admin_login():
 
         locked, secs = is_admin_locked(ip)
         if locked:
-            # 429 = Too Many Requests (logiquement)
-            flash(f"Trop d'essais. Réessaie dans {secs}s.", "danger")
+            
+            flash("Trop d’essais. Réessaie plus tard.", "danger")
             return render_template("admin_login.html"), 429
 
         user = (request.form.get("username") or "").strip()
         pwd = (request.form.get("password") or "")
 
-        # ✅ vérification
         if user == ADMIN_USER and pwd == ADMIN_PASS:
             reset_admin_fail(ip)
             session["is_admin"] = True
-            return redirect(url_for("admin_panel"))  # adapte ton endpoint
+            return redirect(url_for("admin_panel"))
 
-        # ❌ mauvais identifiants
+        
         time.sleep(0.6)
         count, lock_sec = register_admin_fail(ip)
+
         if lock_sec > 0:
-            flash("Trop d'essais. Accès bloqué temporairement (15 min).", "danger")
+            
+            flash("Trop d’essais. Accès bloqué temporairement.", "danger")
             return render_template("admin_login.html"), 429
 
-        remaining = MAX_FAILED_LOGINS - count
-        flash(f"Identifiants invalides. Essais restants : {remaining}", "warning")
+        flash("Identifiants invalides.", "warning")
         return render_template("admin_login.html"), 401
 
     return render_template("admin_login.html")
