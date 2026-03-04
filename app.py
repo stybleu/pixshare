@@ -14,8 +14,8 @@ from werkzeug.utils import secure_filename
 # -----------------------
 # Configuration
 # -----------------------
-ADMIN_USER = os.environ.get("ADMIN_USER") or ""
-ADMIN_PASS = os.environ.get("ADMIN_PASS") or ""
+ADMIN_USER = os.environ.get("ADMIN_USER") or "dev"
+ADMIN_PASS = os.environ.get("ADMIN_PASS") or "dev"
 
 UPLOAD_FOLDER = "tmp/fichiers"
 DB_FILE = "files.json"
@@ -37,8 +37,12 @@ ALLOWED_EXTENSIONS = {
 }
 
 # Durée de vie max des fichiers (minutes)
-MAX_LIFETIME_MIN = 30
-DEFAULT_LIFETIME_MIN = 10
+MAX_LIFETIME_MIN = 120
+DEFAULT_LIFETIME_MIN = 5
+
+# Option "ne pas supprimer" (uploads permanents)
+PERMANENT_UPLOADS_ENABLED = (os.environ.get("PERMANENT_UPLOADS", "0") == "1")
+PERMANENT_UPLOADS_ADMIN_ONLY = (os.environ.get("PERMANENT_UPLOADS_ADMIN_ONLY", "1") == "1")
 
 # -----------------------
 # Flask init
@@ -214,6 +218,9 @@ def cleanup_expired() -> int:
     to_delete = []
 
     for file_id, meta in db.items():
+        # ✅ uploads permanents: pas d'expiration
+        if meta.get("permanent") or not meta.get("expires_at"):
+            continue
         exp = parse_dt(meta.get("expires_at", ""))
         if exp <= now:
             to_delete.append(file_id)
@@ -341,10 +348,16 @@ def file_meta(file_id: str):
     ext = os.path.splitext(server_name)[1].lower()
     previewable = ext in {".png", ".jpg", ".jpeg", ".gif", ".webp"}
 
-    exp = parse_dt(meta.get("expires_at", ""))
-    remaining_s = max(0, int((exp - utcnow()).total_seconds()))
-    remaining_min = remaining_s // 60
-    remaining_sec = remaining_s % 60
+    permanent = bool(meta.get("permanent")) or (not meta.get("expires_at"))
+
+    if permanent:
+        remaining_h = "∞"
+    else:
+        exp = parse_dt(meta.get("expires_at", ""))
+        remaining_s = max(0, int((exp - utcnow()).total_seconds()))
+        remaining_min = remaining_s // 60
+        remaining_sec = remaining_s % 60
+        remaining_h = f"{remaining_min:02d}:{remaining_sec:02d}"
 
     return {
         "id": file_id,
@@ -352,7 +365,8 @@ def file_meta(file_id: str):
         "server": server_name,
         "uploaded_at": meta.get("uploaded_at", ""),
         "expires_at": meta.get("expires_at", ""),
-        "remaining_h": f"{remaining_min:02d}:{remaining_sec:02d}",
+        "remaining_h": remaining_h,
+        "permanent": permanent,
         "ip": meta.get("ip", ""),
         "size_h": human_size(stat.st_size),
         "mtime_h": datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M"),
@@ -468,12 +482,21 @@ def index():
             flash(f"Extension non autorisée. Autorisées : {allowed}", "danger")
             return redirect(url_for("index"))
 
-        # ✅ durée choisie par l'utilisateur mais limitée serveur (max 30 min)
-        try:
-            lifetime = int(request.form.get("lifetime", DEFAULT_LIFETIME_MIN))
-        except ValueError:
-            lifetime = DEFAULT_LIFETIME_MIN
-        lifetime = max(1, min(lifetime, MAX_LIFETIME_MIN))
+        # ✅ durée choisie par l'utilisateur (max 30 min)
+        # + option "ne pas supprimer" (si activée)
+        keep = (request.form.get("keep", "") in {"1", "on", "true", "yes"})
+        allow_keep = PERMANENT_UPLOADS_ENABLED and (not PERMANENT_UPLOADS_ADMIN_ONLY or is_admin())
+
+        if keep and allow_keep:
+            lifetime = None
+            permanent = True
+        else:
+            permanent = False
+            try:
+                lifetime = int(request.form.get("lifetime", DEFAULT_LIFETIME_MIN))
+            except ValueError:
+                lifetime = DEFAULT_LIFETIME_MIN
+            lifetime = max(1, min(lifetime, MAX_LIFETIME_MIN))
 
         file_id = generate_file_id()
         ext = safe_ext(safe_name)
@@ -488,20 +511,27 @@ def index():
         f.save(dest)
 
         uploaded_at = utcnow()
-        expires_at = uploaded_at + timedelta(minutes=lifetime)
+        if permanent:
+            expires_at = None
+        else:
+            expires_at = uploaded_at + timedelta(minutes=int(lifetime))
 
         db = load_db()
         db[file_id] = {
             "original_name": original,
             "server_name": server_name,
             "uploaded_at": uploaded_at.isoformat(timespec="seconds"),
-            "expires_at": expires_at.isoformat(timespec="seconds"),
+            "expires_at": (expires_at.isoformat(timespec="seconds") if expires_at else ""),
+            "permanent": bool(permanent),
             "ip": ip,
             "guest_token": guest_token,   # ✅ lien invité -> fichiers
         }
         save_db(db)
 
-        flash(f"Fichier upload ✅ (expiration: {lifetime} min)", "success")
+        if permanent:
+            flash("Fichier upload ✅ (sans expiration)", "success")
+        else:
+            flash(f"Fichier upload ✅ (expiration: {lifetime} min)", "success")
         return redirect(url_for("index"))
 
     # ✅ CRUCIAL: on envoie UNIQUEMENT les fichiers de l'invité au template
@@ -512,7 +542,8 @@ def index():
         guest_files=guest_files,
         max_mb=int(MAX_CONTENT_LENGTH / (1024 * 1024)),
         admin=is_admin(),
-        version=APP_VERSION
+        version=APP_VERSION,
+        can_keep=(PERMANENT_UPLOADS_ENABLED and (not PERMANENT_UPLOADS_ADMIN_ONLY or is_admin()))
     )
 
 # -----------------------

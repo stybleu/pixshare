@@ -10,6 +10,28 @@
   .df .btn, .df .form-control, .df .form-select{
     border-radius: 12px;
   }
+
+  .df .dropzone{
+    border: 2px dashed rgba(0,0,0,.25);
+    border-radius: 14px;
+    padding: 18px;
+    text-align: center;
+    cursor: pointer;
+    transition: 120ms ease;
+    background: rgba(0,0,0,.02);
+  }
+  .df .dropzone.dragover{
+    border-color: rgba(13,110,253,.8); /* bootstrap primary-ish */
+    background: rgba(13,110,253,.06);
+  }
+  .df .dropzone .dz-title{
+    font-weight: 600;
+  }
+  .df .dropzone .dz-sub{
+    color: #6c757d;
+    font-size: .95rem;
+  }
+
 </style>
 
 <div class="df">
@@ -45,7 +67,16 @@
           <form method="POST" enctype="multipart/form-data" class="row g-2 align-items-end">
             <div class="col-12">
               <label class="form-label">Choisir un fichier</label>
-              <input class="form-control" type="file" name="file" required>
+
+              <!-- ✅ Drag & Drop -->
+              <div id="dropzone" class="dropzone" role="button" tabindex="0" aria-label="Zone de dépôt">
+                <div class="dz-title">Glisse-dépose ton image ici</div>
+                <div class="dz-sub">ou clique pour sélectionner un fichier</div>
+                <div id="dz-file" class="mt-2 small text-muted"></div>
+              </div>
+
+              <!-- Input réel (utilisé par le formulaire) -->
+              <input id="fileInput" class="form-control mt-2" type="file" name="file" required>
             </div>
 
             <!-- ✅ Durée de vie (max 30 min) -->
@@ -55,12 +86,28 @@
                 <option value="5" selected>5 minutes</option>
                 <option value="10">10 minutes</option>
                 <option value="20">20 minutes</option>
-                <option value="30">30 minutes (max)</option>
+                <option value="30">30 minutes </option>
+                <option value="60">1 heure </option>
+                  <option value="120">2 heures </option>
               </select>
               <div class="form-text">
                 Le fichier sera supprimé automatiquement après expiration.
               </div>
             </div>
+
+            {% if can_keep %}
+            <div class="col-12">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="keep" value="1" id="keepChk">
+                <label class="form-check-label" for="keepChk">
+                  Ne pas supprimer (sans expiration)
+                </label>
+              </div>
+              <div class="form-text">
+                Option activable selon la configuration du serveur (et parfois réservée à l'admin).
+              </div>
+            </div>
+            {% endif %}
 
             <!-- ✅ Sur mobile le bouton prend toute la largeur -->
             <div class="col-12">
@@ -158,6 +205,72 @@
     (navigator.clipboard?.writeText(input.value) || Promise.reject())
       .catch(() => document.execCommand("copy"));
   }
+</script>
+
+
+<script>
+(() => {
+  const dz = document.getElementById("dropzone");
+  const input = document.getElementById("fileInput");
+  const label = document.getElementById("dz-file");
+  const keep = document.getElementById("keepChk");
+  const lifetime = document.querySelector('select[name="lifetime"]');
+
+  if (!dz || !input) return;
+
+  function showName() {
+    const f = input.files && input.files[0];
+    label.textContent = f ? ("Sélectionné : " + f.name) : "";
+  }
+
+  // Click / keyboard -> ouvrir le sélecteur
+  dz.addEventListener("click", () => input.click());
+  dz.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      input.click();
+    }
+  });
+
+  // Drag events
+  ["dragenter", "dragover"].forEach(evt => {
+    dz.addEventListener(evt, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dz.classList.add("dragover");
+    });
+  });
+  ["dragleave", "drop"].forEach(evt => {
+    dz.addEventListener(evt, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dz.classList.remove("dragover");
+    });
+  });
+
+  dz.addEventListener("drop", (e) => {
+    const files = e.dataTransfer && e.dataTransfer.files;
+    if (files && files.length) {
+      input.files = files;
+      showName();
+    }
+  });
+
+  input.addEventListener("change", showName);
+
+  // Keep -> désactive le select durée (UX)
+  function syncKeep() {
+    if (!keep || !lifetime) return;
+    const on = !!keep.checked;
+    lifetime.disabled = on;
+  }
+  if (keep && lifetime) {
+    keep.addEventListener("change", syncKeep);
+    syncKeep();
+  }
+
+  showName();
+})();
 </script>
 
 {% endblock %}
