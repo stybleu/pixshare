@@ -7,7 +7,7 @@ from functools import wraps
 
 from flask import (
     Flask, request, render_template, redirect, url_for,
-    flash, abort, session, send_from_directory
+    flash, abort, session, send_from_directory, make_response
 )
 from werkzeug.utils import secure_filename
 
