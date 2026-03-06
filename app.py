@@ -602,12 +602,15 @@ def public_file(file_id):
         abort(404)
 
     file_url = url_for("view_file", file_id=file_id)
-    return render_template(
+
+    response = make_response(render_template(
         "file.html",
         file_url=file_url,
         original_name=meta.get("original_name", ""),
         version=APP_VERSION
-    )
+    ))
+    response.headers["X-Robots-Tag"] = "noindex, noimageindex"
+    return response
 
 # -----------------------
 # Admin routes
