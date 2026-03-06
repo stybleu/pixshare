@@ -1,6 +1,10 @@
 User-agent: *
 Allow: /
 
+Disallow: /tmp/fichiers/
+
 Disallow: /admin
 Disallow: /admin_panel
 Disallow: /admin_login
+
+Sitemap: https://pixshare.fr/sitemap.xml
