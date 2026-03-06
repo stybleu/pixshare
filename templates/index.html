@@ -32,6 +32,18 @@
     font-size: .95rem;
   }
 
+  .df .preview-box{
+    display: none;
+    margin-top: 14px;
+    text-align: center;
+  }
+  .df .preview-box img{
+    max-width: 100%;
+    max-height: 220px;
+    border-radius: 12px;
+    box-shadow: 0 .125rem .25rem rgba(0,0,0,.075);
+  }
+
 </style>
 
 <div class="df">
@@ -77,6 +89,12 @@
 
               <!-- Input réel (utilisé par le formulaire) -->
               <input id="fileInput" class="form-control mt-2" type="file" name="file" required>
+
+              <!-- ✅ Aperçu miniature -->
+              <div id="previewBox" class="preview-box">
+                <div class="small text-muted mb-2">Aperçu de l'image</div>
+                <img id="previewImg" src="" alt="Aperçu de l'image">
+              </div>
             </div>
 
             <!-- ✅ Durée de vie (max 30 min) -->
@@ -88,7 +106,7 @@
                 <option value="20">20 minutes</option>
                 <option value="30">30 minutes </option>
                 <option value="60">1 heure </option>
-                  <option value="120">2 heures </option>
+                <option value="120">2 heures </option>
               </select>
               <div class="form-text">
                 Le fichier sera supprimé automatiquement après expiration.
@@ -207,7 +225,6 @@
   }
 </script>
 
-
 <script>
 (() => {
   const dz = document.getElementById("dropzone");
@@ -215,12 +232,34 @@
   const label = document.getElementById("dz-file");
   const keep = document.getElementById("keepChk");
   const lifetime = document.querySelector('select[name="lifetime"]');
+  const previewBox = document.getElementById("previewBox");
+  const previewImg = document.getElementById("previewImg");
 
   if (!dz || !input) return;
 
   function showName() {
     const f = input.files && input.files[0];
     label.textContent = f ? ("Sélectionné : " + f.name) : "";
+
+    if (!previewBox || !previewImg) return;
+
+    if (!f) {
+      previewBox.style.display = "none";
+      previewImg.src = "";
+      return;
+    }
+
+    if (f.type && f.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        previewImg.src = e.target.result;
+        previewBox.style.display = "block";
+      };
+      reader.readAsDataURL(f);
+    } else {
+      previewBox.style.display = "none";
+      previewImg.src = "";
+    }
   }
 
   // Click / keyboard -> ouvrir le sélecteur
