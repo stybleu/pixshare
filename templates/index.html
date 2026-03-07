@@ -97,12 +97,12 @@
               </div>
             </div>
 
-            <!-- ✅ Durée de vie (max 30 min) -->
+            <!-- ✅ Durée de vie (max  120min) -->
             <div class="col-12">
               <label class="form-label">Durée de vie du fichier</label>
               <select name="lifetime" class="form-select">
-                <option value="5" selected>5 minutes</option>
-                <option value="10">10 minutes</option>
+                <option value="5">5 minutes</option>
+                <option value="10" selected>10 minutes</option>
                 <option value="20">20 minutes</option>
                 <option value="30">30 minutes </option>
                 <option value="60">1 heure </option>
@@ -142,7 +142,7 @@
         <div class="card-body">
 
           <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <h2 class="h6 mb-0">Tes fichiers</h2>
+            <h2 class="h6 mb-0">Historique des fichiers</h2>
             {% if guest_files and guest_files|length > 0 %}
               <span class="badge text-bg-success">{{ guest_files|length }} actif(s)</span>
             {% else %}
