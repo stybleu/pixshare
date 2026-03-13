@@ -92,6 +92,11 @@ footer {
   100% { transform: scale(1); }
 }
 
+.language-switcher a {
+  text-decoration: none;
+  font-size: 1.2rem;
+}
+
 </style>
 
 {% block head %}{% endblock %}
@@ -121,20 +126,29 @@ Héberger une image gratuitement et anonymement avec PixShare
 {% endif %}
 {% endwith %}
 
-<a class="navbar-brand" href="{{ url_for('public.index') }}">
-<img src="{{ url_for('static', filename='images/pixshare_logo.png') }}" height="40">
+<div class="d-flex align-items-center justify-content-between mb-3">
 
-<span class="pixshare-animated">
-<span>P</span>
-<span>i</span>
-<span>x</span>
-<span>S</span>
-<span>h</span>
-<span>a</span>
-<span>r</span>
-<span>e</span>
-</span>
-</a>
+  <a class="navbar-brand" href="{{ url_for('public.index') }}">
+    <img src="{{ url_for('static', filename='images/pixshare_logo.png') }}" height="40">
+
+    <span class="pixshare-animated">
+      <span>P</span>
+      <span>i</span>
+      <span>x</span>
+      <span>S</span>
+      <span>h</span>
+      <span>a</span>
+      <span>r</span>
+      <span>e</span>
+    </span>
+  </a>
+
+  <div class="language-switcher">
+    <a href="?lang=fr" class="me-2">🇫🇷</a>
+    <a href="?lang=en">🇬🇧</a>
+  </div>
+
+</div>
 
 {% block content %}{% endblock %}
 
