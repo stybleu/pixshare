@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% set title = "Connexion Admin" %}
+{% block content %}
+
+<div class="container py-5" style="max-width:480px;">
+  <div class="card shadow-sm">
+    <div class="card-body">
+
+      <h2 class="h5 mb-3">Connexion Administrateur</h2>
+
+      <!-- 🔔 Messages flash -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for cat,msg in messages %}
+            <div class="alert alert-{{cat}}">{{msg}}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <form method="post">
+
+        <!-- CSRF -->
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+        <div class="mb-3">
+          <label class="form-label">Utilisateur</label>
+          <input type="text" name="username" class="form-control" required>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Mot de passe</label>
+          <input type="password" name="password" class="form-control" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">
+          Connexion
+        </button>
+
+      </form>
+
+    </div>
+  </div>
+</div>
+
+{% endblock %}

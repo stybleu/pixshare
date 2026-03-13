@@ -1,0 +1,174 @@
+<!doctype html>
+
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon.png') }}">
+<link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon.png') }}">
+<link rel="icon" type="image/png" sizes="48x48" href="{{ url_for('static', filename='favicon.png') }}">
+<link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='favicon.png') }}">
+<link rel="icon" type="image/png" sizes="512x512" href="{{ url_for('static', filename='favicon.png') }}">
+
+<link rel="canonical" href="https://pixshare.fr/">
+
+<title>{{ title or "PixShare – Héberger une image gratuitement et anonymement" }}</title>
+
+<meta name="description"
+content="PixShare permet d'héberger une image ou un fichier gratuitement et anonymement. Générer un lien de partage sécurisé avec suppression automatique.">
+
+<meta name="robots" content="index, follow">
+
+<!-- OpenGraph -->
+<meta property="og:title" content="PixShare – Hébergement d'images gratuit">
+<meta property="og:description" content="Uploader une image anonymement et générer un lien de partage sécurisé.">
+<meta property="og:image" content="https://pixshare.fr/static/images/pixshare_logo.png">
+<meta property="og:url" content="https://pixshare.fr/">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="fr_FR">
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="PixShare – Hébergement d'images gratuit">
+<meta name="twitter:description" content="Partager une image ou un fichier anonymement avec suppression automatique.">
+<meta name="twitter:image" content="https://pixshare.fr/static/images/pixshare_logo.png">
+
+<!-- Bootstrap -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<style>
+
+body {
+  background: #f8f9fa;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
+}
+
+footer {
+  background: #ffffff;
+  border-top: 1px solid #dee2e6;
+  padding: 12px;
+}
+
+/* animation logo PixShare */
+
+.pixshare-animated span {
+  display: inline-block;
+  font-weight: 700;
+  font-size: 1.4rem;
+
+  background: linear-gradient(
+      45deg,
+      #ff5bbd,
+      #7c5cff,
+      #4facfe
+  );
+
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+
+  animation: letter-pop 2s infinite;
+}
+
+.pixshare-animated span:nth-child(1) { animation-delay: 0s; }
+.pixshare-animated span:nth-child(2) { animation-delay: 0.1s; }
+.pixshare-animated span:nth-child(3) { animation-delay: 0.2s; }
+.pixshare-animated span:nth-child(4) { animation-delay: 0.3s; }
+.pixshare-animated span:nth-child(5) { animation-delay: 0.4s; }
+.pixshare-animated span:nth-child(6) { animation-delay: 0.5s; }
+.pixshare-animated span:nth-child(7) { animation-delay: 0.6s; }
+.pixshare-animated span:nth-child(8) { animation-delay: 0.7s; }
+
+@keyframes letter-pop {
+  0%   { transform: scale(1); }
+  20%  { transform: scale(1.25); }
+  40%  { transform: scale(1); }
+  100% { transform: scale(1); }
+}
+
+</style>
+
+{% block head %}{% endblock %}
+
+</head>
+
+<body>
+
+<main class="container py-4">
+
+<h1 class="visually-hidden">
+Héberger une image gratuitement et anonymement avec PixShare
+</h1>
+
+<!-- Flash messages -->
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for cat,msg in messages %}
+
+<div class="alert alert-{{ cat }} alert-dismissible fade show" role="alert">
+{{ msg }}
+<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+
+{% endfor %}
+{% endif %}
+{% endwith %}
+
+<a class="navbar-brand" href="{{ url_for('public.index') }}">
+<img src="{{ url_for('static', filename='images/pixshare_logo.png') }}" height="40">
+
+<span class="pixshare-animated">
+<span>P</span>
+<span>i</span>
+<span>x</span>
+<span>S</span>
+<span>h</span>
+<span>a</span>
+<span>r</span>
+<span>e</span>
+</span>
+</a>
+
+{% block content %}{% endblock %}
+
+</main>
+
+<footer class="text-center text-muted small">
+
+<div class="mb-1">
+
+<a href="{{ url_for('public.cgu') }}">
+Conditions générales d'utilisation
+</a>
+
+|
+
+<a href="{{ url_for('public.mentions_legales') }}">
+Mentions légales
+</a>
+
+|
+
+<a href="{{ url_for('public.index') }}">
+Accueil
+</a>
+
+</div>
+
+<div>
+PixShare V.{{ version }} © 2026
+</div>
+
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>

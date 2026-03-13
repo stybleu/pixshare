@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% set title = "Contact" %}
+{% block content %}
+
+<div class="container py-4" style="max-width: 760px;">
+  <h1 class="h4 mb-3">Contact / Signalement</h1>
+
+  <div class="card shadow-sm">
+    <div class="card-body">
+
+      <p class="text-muted">
+        Utilise ce formulaire pour contacter PixShare ou signaler un contenu problématique.
+      </p>
+
+      <form method="post" class="row g-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="file_url" value="{{ prefill_file_url }}">
+
+        <div class="col-12">
+          <label class="form-label">Type de message</label>
+          <select name="type" class="form-select">
+            <option value="contact" {% if prefill_type == "contact" %}selected{% endif %}>Contact</option>
+            <option value="report" {% if prefill_type == "report" %}selected{% endif %}>Signalement</option>
+          </select>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Nom (facultatif)</label>
+          <input type="text" name="name" class="form-control">
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Email (facultatif)</label>
+          <input type="email" name="email" class="form-control">
+        </div>
+
+        {% if prefill_file_url %}
+        <div class="col-12">
+          <label class="form-label">URL concernée</label>
+          <input type="text" class="form-control" value="{{ prefill_file_url }}" readonly>
+        </div>
+        {% endif %}
+
+        <div class="col-12">
+          <label class="form-label">Sujet</label>
+          <input
+            type="text"
+            name="subject"
+            class="form-control"
+            value="{{ prefill_subject }}"
+            required>
+        </div>
+
+        <div class="col-12">
+          <label class="form-label">Message</label>
+          <textarea
+            name="message"
+            class="form-control"
+            rows="6"
+            placeholder="Décris ton message ou le problème rencontré..."
+            required></textarea>
+        </div>
+
+        <div class="col-12">
+          <button type="submit" class="btn btn-primary">
+            Envoyer
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>
+
+{% endblock %}

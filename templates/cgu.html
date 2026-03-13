@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+{% set title = "Conditions d'utilisation" %}
+
+{% block head %}
+
+<style>
+
+h2:target{
+background: rgba(255,193,7,0.2);
+border-left:5px solid #ffc107;
+padding:6px 10px;
+border-radius:4px;
+scroll-margin-top:80px;
+transition:background 0.4s;
+}
+
+.cgu-summary ul{
+padding-left:18px;
+}
+
+.cgu-summary li{
+margin:6px 0;
+}
+
+.cgu-summary a{
+text-decoration:none;
+}
+
+.cgu-summary a:hover{
+text-decoration:underline;
+}
+
+.back-summary{
+margin-top:10px;
+font-size:0.85rem;
+}
+
+</style>
+
+{% endblock %}
+
+{% block content %}
+
+<div class="container py-4">
+
+<h1 class="h4 mb-3">Conditions Générales d’Utilisation (CGU)</h1>
+
+<div id="sommaire" class="card shadow-sm mb-4 cgu-summary">
+<div class="card-body">
+
+<h2 class="h6">Sommaire</h2>
+
+<ul class="small">
+<li><a href="#presentation">1. Présentation du service</a></li>
+<li><a href="#fonctionnement">2. Fonctionnement du service</a></li>
+<li><a href="#limites">3. Limites techniques</a></li>
+<li><a href="#contenus">4. Contenus interdits</a></li>
+<li><a href="#moderation">5. Modération et lutte contre les abus</a></li>
+<li><a href="#responsabilite_utilisateur">6. Responsabilité de l’utilisateur</a></li>
+<li><a href="#responsabilite_service">7. Responsabilité du service</a></li>
+<li><a href="#evolution">8. Évolution des conditions</a></li>
+</ul>
+
+</div>
+</div>
+
+<div class="card shadow-sm">
+<div class="card-body">
+
+<h2 id="presentation" class="h6 mt-2">1. Présentation du service</h2>
+
+<p>
+PixShare est un service permettant d’envoyer et de partager des fichiers via un lien temporaire.
+Le service est conçu pour un usage simple et rapide sans création de compte utilisateur.
+</p>
+
+<p>
+L’utilisation du service implique l’acceptation pleine et entière des présentes conditions.
+</p>
+
+<div class="back-summary">
+<a href="#sommaire">⬆ Retour au sommaire</a>
+</div>
+
+<h2 id="fonctionnement" class="h6 mt-4">2. Fonctionnement du service</h2>
+
+<p>
+Lors de l’envoi d’un fichier, un lien unique est généré permettant son accès ou son téléchargement.
+</p>
+
+<ul>
+<li>Les fichiers peuvent être conservés pendant une durée limitée.</li>
+<li>La durée maximale dépend de la configuration du service.</li>
+<li>Une fois expiré, le fichier est supprimé automatiquement.</li>
+<li>L’utilisateur peut également supprimer lui-même les fichiers qu’il a envoyés via l’interface du service lorsque cette fonctionnalité est disponible.</li>
+</ul>
+
+<p>
+PixShare est un service de partage temporaire et ne doit pas être utilisé comme solution de sauvegarde.
+</p>
+
+<div class="back-summary">
+<a href="#sommaire">⬆ Retour au sommaire</a>
+</div>
+
+<h2 id="limites" class="h6 mt-4">3. Limites techniques</h2>
+
+<ul>
+<li>La taille maximale des fichiers est limitée.</li>
+<li>Le service peut être temporairement indisponible.</li>
+<li>Les fichiers peuvent être supprimés lors d’une maintenance ou d’un redémarrage serveur.</li>
+</ul>
+
+<p>
+PixShare ne garantit pas la disponibilité permanente des fichiers.
+</p>
+
+<div class="back-summary">
+<a href="#sommaire">⬆ Retour au sommaire</a>
+</div>
+
+<h2 id="contenus" class="h6 mt-4">4. Contenus interdits</h2>
+
+<p>
+Il est interdit d’utiliser PixShare pour héberger ou transmettre :
+</p>
+
+<ul>
+<li>contenus pédopornographiques ou impliquant des mineurs</li>
+<li>contenus illégaux</li>
+<li>contenus violant les droits d’auteur</li>
+<li>virus, malwares ou logiciels malveillants</li>
+<li>contenus haineux ou incitant à la violence</li>
+</ul>
+
+<p>
+Tout contenu jugé illégal ou abusif pourra être supprimé immédiatement.
+</p>
+
+<div class="back-summary">
+<a href="#sommaire">⬆ Retour au sommaire</a>
+</div>
+
+<h2 id="moderation" class="h6 mt-4">5. Modération et lutte contre les abus</h2>
+
+<p>
+Afin de protéger le service, PixShare peut mettre en place :
+</p>
+
+<ul>
+<li>le blocage d’adresses IP</li>
+<li>la suppression de fichiers</li>
+<li>des limitations techniques</li>
+</ul>
+
+<p>
+Certaines informations techniques minimales peuvent être enregistrées
+(par exemple adresse IP) uniquement pour la sécurité et la prévention des abus.
+</p>
+
+<p>
+Un identifiant technique temporaire peut également être stocké dans le navigateur
+afin de permettre l’affichage de l’historique des fichiers envoyés depuis ce navigateur.
+Cet identifiant n’est pas utilisé pour le suivi publicitaire.
+</p>
+
+<div class="back-summary">
+<a href="#sommaire">⬆ Retour au sommaire</a>
+</div>
+
+<h2 id="responsabilite_utilisateur" class="h6 mt-4">6. Responsabilité de l’utilisateur</h2>
+
+<p>
+L’utilisateur est seul responsable des fichiers qu’il envoie et des liens qu’il partage.
+</p>
+
+<p>
+L’utilisateur s’engage à respecter la législation en vigueur.
+</p>
+
+<div class="back-summary">
+<a href="#sommaire">⬆ Retour au sommaire</a>
+</div>
+
+<h2 id="responsabilite_service" class="h6 mt-4">7. Responsabilité du service</h2>
+
+<p>
+PixShare est fourni « tel quel » sans garantie de disponibilité continue.
+</p>
+
+<ul>
+<li>perte de fichiers</li>
+<li>indisponibilité temporaire</li>
+<li>utilisation abusive des liens</li>
+</ul>
+
+<p>
+PixShare agit comme un simple hébergeur technique et ne procède pas à une vérification systématique des fichiers envoyés par les utilisateurs.
+</p>
+
+<div class="back-summary">
+<a href="#sommaire">⬆ Retour au sommaire</a>
+</div>
+
+<h2 id="evolution" class="h6 mt-4">8. Évolution des conditions</h2>
+
+<p>
+Les présentes conditions peuvent être modifiées à tout moment afin d’adapter
+le service à son évolution technique ou légale.
+</p>
+
+<div class="back-summary">
+<a href="#sommaire">⬆ Retour au sommaire</a>
+</div>
+
+<hr class="my-4">
+
+<p class="text-muted small mb-0">
+Version du site : {{ version }}
+</p>
+
+</div>
+</div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% set title = "IP bloquées - Admin" %}
+
+{% block content %}
+<div class="container py-4">
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">IP bloquées</h1>
+
+    <a class="btn btn-outline-primary btn-sm" href="{{ url_for('admin.admin_panel') }}">
+      Retour admin
+    </a>
+  </div>
+
+  <div class="d-flex gap-2 mb-3">
+
+    <form method="post" action="{{ url_for('admin.admin_clear_blocked_ips') }}">
+      <button
+        type="submit"
+        class="btn btn-danger btn-sm"
+        onclick="return confirm('Vider toute la liste des IP bloquées ?');">
+        Vider le fichier JSON
+      </button>
+    </form>
+
+    <form method="post" action="{{ url_for('admin.admin_logout') }}" class="m-0">
+      <button type="submit" class="btn btn-outline-secondary btn-sm">
+        Déconnexion
+      </button>
+    </form>
+
+  </div>
+
+  {% if blocked_ips %}
+
+  <div class="card shadow-sm">
+    <div class="card-body">
+
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+
+          <thead>
+            <tr>
+              <th>Adresse IP</th>
+              <th style="width:140px;">Action</th>
+            </tr>
+          </thead>
+
+          <tbody>
+
+          {% for ip in blocked_ips %}
+
+          <tr>
+            <td>{{ ip }}</td>
+
+            <td>
+
+              <form method="post" action="{{ url_for('admin.admin_unblock_ip') }}" class="m-0">
+
+                <input type="hidden" name="ip" value="{{ ip }}">
+
+                <button
+                  type="submit"
+                  class="btn btn-sm btn-success"
+                  onclick="return confirm('Débloquer cette IP ?');">
+
+                  Débloquer
+
+                </button>
+
+              </form>
+
+            </td>
+
+          </tr>
+
+          {% endfor %}
+
+          </tbody>
+
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+  {% else %}
+
+  <div class="alert alert-info mb-0">
+    Aucune IP bloquée.
+  </div>
+
+  {% endif %}
+
+</div>
+{% endblock %}

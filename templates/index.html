@@ -1,0 +1,732 @@
+{% extends "base.html" %}
+{% set title = "PixShare – Hébergement d'image gratuit et partage de fichiers" %}
+{% block content %}
+
+<style>
+  .df *{
+    font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+  }
+
+  .df .btn, .df .form-control, .df .form-select{
+    border-radius: 12px;
+  }
+
+  .df .dropzone{
+    border: 2px dashed rgba(0,0,0,.25);
+    border-radius: 14px;
+    padding: 18px;
+    text-align: center;
+    cursor: pointer;
+    transition: 120ms ease;
+    background: rgba(0,0,0,.02);
+  }
+
+  .df .dropzone.dragover{
+    border-color: rgba(13,110,253,.8);
+    background: rgba(13,110,253,.06);
+  }
+
+  .df .dropzone .dz-title{
+    font-weight: 600;
+  }
+
+  .df .dropzone .dz-sub{
+    color: #6c757d;
+    font-size: .95rem;
+  }
+
+  .df .preview-box{
+    display: none;
+    margin-top: 14px;
+    text-align: center;
+  }
+
+  .df .preview-box img{
+    max-width: 100%;
+    max-height: 220px;
+    border-radius: 12px;
+    box-shadow: 0 .125rem .25rem rgba(0,0,0,.075);
+  }
+
+  .df .resize-box{
+    display: none;
+    margin-top: 14px;
+    padding: 12px;
+    border: 1px solid rgba(0,0,0,.08);
+    border-radius: 12px;
+    background: rgba(0,0,0,.02);
+  }
+</style>
+
+<div class="df">
+
+<h1 class="visually-hidden">
+Héberger une image gratuitement et anonymement avec PixShare
+</h1>
+
+<div class="d-flex flex-wrap gap-2 align-items-center justify-content-between mb-3">
+  <div>
+    <p class="text-muted mb-0">
+      Hébergement d'image gratuit et partage de fichiers temporaire.
+    </p>
+  </div>
+
+  <div class="d-flex gap-2">
+    {% if admin %}
+    <a class="btn btn-sm btn-outline-dark" href="{{ url_for('admin.admin_panel') }}">Admin</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-3 align-items-start">
+
+  <!-- Upload -->
+  <div class="col-12 col-lg-5">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+
+        <h2 class="h6">Uploader un fichier (suppression automatique)</h2>
+
+        <p class="text-muted small mb-3">
+          Taille max : {{ max_mb }} Mo.
+          En envoyant un fichier, vous acceptez les
+          <a href="{{ url_for('public.cgu') }}">CGU</a>.
+        </p>
+
+        <form id="uploadForm" method="POST" enctype="multipart/form-data" autocomplete="off" class="row g-2 align-items-end">
+
+          <input type="hidden" name="csrf_token" value="{{ csrf_token|default('', true) }}">
+
+          <div class="col-12">
+
+            <label class="form-label">Choisir un fichier</label>
+
+            <div id="dropzone" class="dropzone">
+              <div class="dz-title">Glisse-dépose votre image ici</div>
+              <div class="dz-sub">ou cliquez pour sélectionner un fichier</div>
+              <div id="dz-file" class="mt-2 small text-muted"></div>
+            </div>
+
+            <input id="fileInput" class="form-control mt-2" type="file" name="file" required>
+
+            <div id="previewBox" class="preview-box">
+              <div class="small text-muted mb-2">Aperçu de l'image</div>
+              <img id="previewImg" src="" alt="Aperçu">
+            </div>
+
+            <div id="resizeBox" class="resize-box">
+              <div class="small fw-semibold mb-2">Redimensionner avant l'envoi</div>
+
+              <label id="imageDimsLabel" class="form-label small text-muted d-block mb-2">
+                Dimensions : —
+              </label>
+
+              <div class="row g-2">
+                <div class="col-6">
+                  <label class="form-label mb-1">Largeur (px)</label>
+                  <input id="resizeWidth" type="number" min="1" step="1" class="form-control" placeholder="ex : 800">
+                </div>
+
+                <div class="col-6">
+                  <label class="form-label mb-1">Hauteur (px)</label>
+                  <input id="resizeHeight" type="number" min="1" step="1" class="form-control" placeholder="ex : 600">
+                </div>
+              </div>
+
+              <div class="form-text mt-2">
+                Modifie une seule dimension : l'autre sera calculée automatiquement pour conserver les proportions.
+              </div>
+
+              <div id="resizeInfo" class="small text-muted mt-2"></div>
+            </div>
+
+          </div>
+
+          <div class="col-12">
+
+            <label class="form-label">Durée de vie du fichier, par default (10min)</label>
+
+            <select name="lifetime" class="form-select">
+              <option value="5">5 minutes</option>
+              <option value="10" selected>10 minutes</option>
+              <option value="20">20 minutes</option>
+              <option value="30">30 minutes</option>
+              <option value="60">1 heure</option>
+              <option value="120">2 heures</option>
+            </select>
+
+            <div class="form-text">
+              Le fichier sera supprimé automatiquement après expiration.
+            </div>
+
+          </div>
+
+          {% if can_keep %}
+
+          <div class="col-12">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="keep" value="1" id="keepChk">
+              <label class="form-check-label" for="keepChk">
+                Ne pas supprimer (sans expiration)
+              </label>
+            </div>
+
+            <div class="form-text">
+              Option activable selon la configuration du serveur.
+            </div>
+          </div>
+
+          {% endif %}
+
+          <div class="col-12">
+            <button id="submitBtn" class="btn btn-primary w-100" type="submit">
+              Uploader
+            </button>
+          </div>
+
+        </form>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Historique utilisateur -->
+  <div class="col-12 col-lg-7">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <h2 class="h6 mb-0">Historique des fichiers</h2>
+
+          {% if guest_files and guest_files|length > 0 %}
+          <span class="badge text-bg-success">{{ guest_files|length }} actif(s)</span>
+          {% else %}
+          <span class="badge text-bg-secondary">Aucun</span>
+          {% endif %}
+        </div>
+
+        <hr class="my-3">
+
+        {% if guest_files and guest_files|length > 0 %}
+
+        {% for f in guest_files %}
+        {% set open_url = f.raw_url if f.previewable else f.download_url %}
+
+        <div class="mb-3 p-2 border rounded">
+
+          <div class="d-flex align-items-center gap-2">
+
+            {% if f.previewable %}
+            <img
+              src="{{ f.raw_url }}"
+              alt="{{ f.original }}"
+              style="
+              width:50px;
+              height:50px;
+              object-fit:cover;
+              border-radius:6px;
+              border:1px solid #ddd;
+            ">
+            {% endif %}
+
+            <div>
+              <div class="fw-semibold">
+                {{ f.original }}
+              </div>
+            </div>
+
+          </div>
+
+          <div class="text-muted small mt-2">
+            {{ f.size_h }} — {{ f.mtime_h }} — {{ f.views }} vue(s)
+
+            {% if f.remaining_h %}
+            <span class="ms-2 badge text-bg-warning">
+              Expire dans {{ f.remaining_h }}
+            </span>
+            {% endif %}
+          </div>
+
+          <div class="d-flex flex-wrap gap-2 mt-2">
+            <a class="btn btn-success btn-sm"
+               href="{{ open_url }}"
+               target="_blank"
+               rel="noopener">
+              Ouvrir
+            </a>
+
+            <a class="btn btn-primary btn-sm"
+               href="{{ f.download_url }}">
+              Télécharger
+            </a>
+
+            <form method="post"
+                  action="{{ url_for('public.delete_own_file', file_id=f.id) }}"
+                  class="m-0">
+
+              <input type="hidden"
+                     name="csrf_token"
+                     value="{{ csrf_token }}">
+
+              <button
+                type="submit"
+                class="btn btn-outline-danger btn-sm"
+                onclick="return confirm('Supprimer ce fichier ?');">
+                Supprimer
+              </button>
+
+            </form>
+          </div>
+
+          <div class="text-muted small mt-3 mb-1">
+            Lien public à partager :
+          </div>
+
+          <div class="input-group">
+            <input
+              id="publicLink_{{ f.id }}"
+              class="form-control"
+              value="{{ f.public_url }}"
+              readonly
+              onclick="this.select()">
+
+            <button
+              type="button"
+              class="btn btn-outline-primary"
+              onclick="copyById('publicLink_{{ f.id }}')">
+              Copier
+            </button>
+          </div>
+
+        </div>
+        {% endfor %}
+
+        {% else %}
+
+        <p class="text-muted mb-0">
+          Aucun fichier. Choisissez-en puis cliquez sur
+          <b>Uploader</b>.
+        </p>
+
+        {% endif %}
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<section class="mt-5">
+  <h2>Héberger une image gratuitement</h2>
+
+  <p>
+    PixShare est un service permettant d'héberger une image ou une vidéo
+    gratuitement et sans inscription. Les fichiers peuvent être partagés
+    via un lien sécurisé et sont supprimés automatiquement après expiration.
+  </p>
+
+  <p>
+    Le service permet notamment :
+  </p>
+
+  <ul>
+    <li>héberger une capture d'écran</li>
+    <li>partager une image rapidement</li>
+    <li>envoyer un fichier temporaire</li>
+    <li>partager une vidéo courte</li>
+  </ul>
+</section>
+
+<section class="mt-4">
+  <h2>Partager une image ou un fichier rapidement</h2>
+
+  <p>
+    PixShare permet d'uploader une image, une capture d'écran ou une vidéo courte
+    et de générer un lien de partage sécurisé. Les fichiers sont automatiquement
+    supprimés après expiration afin de garantir la confidentialité.
+  </p>
+
+  <p>
+    Le service est conçu pour partager facilement :
+  </p>
+
+  <ul>
+    <li>une capture d'écran</li>
+    <li>une image</li>
+    <li>un fichier temporaire</li>
+    <li>une vidéo courte</li>
+  </ul>
+</section>
+
+</div>
+
+<script>
+function copyById(id){
+  const input = document.getElementById(id);
+  if(!input) return;
+
+  input.focus();
+  input.select();
+  input.setSelectionRange(0, 999999);
+
+  (navigator.clipboard?.writeText(input.value) || Promise.reject())
+    .catch(() => document.execCommand("copy"));
+}
+</script>
+
+<script>
+(() => {
+  const dz = document.getElementById("dropzone");
+  const input = document.getElementById("fileInput");
+  const label = document.getElementById("dz-file");
+  const keep = document.getElementById("keepChk");
+  const lifetime = document.querySelector('select[name="lifetime"]');
+  const previewBox = document.getElementById("previewBox");
+  const previewImg = document.getElementById("previewImg");
+  const resizeBox = document.getElementById("resizeBox");
+  const resizeWidth = document.getElementById("resizeWidth");
+  const resizeHeight = document.getElementById("resizeHeight");
+  const resizeInfo = document.getElementById("resizeInfo");
+  const dimsLabel = document.getElementById("imageDimsLabel");
+  const form = document.getElementById("uploadForm");
+  const submitBtn = document.getElementById("submitBtn");
+
+  let originalWidth = null;
+  let originalHeight = null;
+  let isUpdatingResizeFields = false;
+  let lastEditedField = null;
+
+  if (!dz || !input || !form) return;
+
+  function resetResizeUi() {
+    originalWidth = null;
+    originalHeight = null;
+    isUpdatingResizeFields = false;
+    lastEditedField = null;
+
+    if (resizeWidth) resizeWidth.value = "";
+    if (resizeHeight) resizeHeight.value = "";
+    if (resizeInfo) resizeInfo.textContent = "";
+    if (dimsLabel) dimsLabel.textContent = "Dimensions : —";
+    if (resizeWidth) resizeWidth.placeholder = "ex : 800";
+    if (resizeHeight) resizeHeight.placeholder = "ex : 600";
+  }
+
+  function updateResizeInfo() {
+    if (!resizeInfo) return;
+
+    const widthValue = parseInt((resizeWidth?.value || "").trim(), 10);
+    const heightValue = parseInt((resizeHeight?.value || "").trim(), 10);
+
+    const widthValid = !Number.isNaN(widthValue) && widthValue > 0;
+    const heightValid = !Number.isNaN(heightValue) && heightValue > 0;
+
+    if (!originalWidth || !originalHeight) {
+      resizeInfo.textContent = "";
+      return;
+    }
+
+    if (!widthValid && !heightValid) {
+      resizeInfo.textContent = "Laisse vide pour envoyer l'image originale.";
+      return;
+    }
+
+    if (widthValid && heightValid) {
+      resizeInfo.textContent = `Image envoyée en ${widthValue} × ${heightValue} px en conservant le ratio.`;
+      return;
+    }
+
+    resizeInfo.textContent = "Renseigne une largeur ou une hauteur.";
+  }
+
+  function syncHeightFromWidth() {
+    if (!originalWidth || !originalHeight || !resizeWidth || !resizeHeight) return;
+
+    const widthValue = parseInt((resizeWidth.value || "").trim(), 10);
+
+    isUpdatingResizeFields = true;
+
+    if (Number.isNaN(widthValue) || widthValue <= 0) {
+      resizeHeight.value = "";
+    } else {
+      const ratio = widthValue / originalWidth;
+      resizeHeight.value = String(Math.round(originalHeight * ratio));
+    }
+
+    isUpdatingResizeFields = false;
+    updateResizeInfo();
+  }
+
+  function syncWidthFromHeight() {
+    if (!originalWidth || !originalHeight || !resizeWidth || !resizeHeight) return;
+
+    const heightValue = parseInt((resizeHeight.value || "").trim(), 10);
+
+    isUpdatingResizeFields = true;
+
+    if (Number.isNaN(heightValue) || heightValue <= 0) {
+      resizeWidth.value = "";
+    } else {
+      const ratio = heightValue / originalHeight;
+      resizeWidth.value = String(Math.round(originalWidth * ratio));
+    }
+
+    isUpdatingResizeFields = false;
+    updateResizeInfo();
+  }
+
+  if (resizeWidth) {
+    resizeWidth.addEventListener("input", () => {
+      if (isUpdatingResizeFields) return;
+      lastEditedField = "width";
+      syncHeightFromWidth();
+    });
+  }
+
+  if (resizeHeight) {
+    resizeHeight.addEventListener("input", () => {
+      if (isUpdatingResizeFields) return;
+      lastEditedField = "height";
+      syncWidthFromHeight();
+    });
+  }
+
+  function showName() {
+    const f = input.files && input.files[0];
+    label.textContent = f ? ("Sélectionné : " + f.name) : "";
+
+    if (!previewBox || !previewImg || !resizeBox) return;
+
+    if (!f) {
+      previewBox.style.display = "none";
+      previewImg.src = "";
+      resizeBox.style.display = "none";
+      resetResizeUi();
+      return;
+    }
+
+    if (f.type && f.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        previewImg.src = e.target.result;
+        previewBox.style.display = "block";
+        resizeBox.style.display = "block";
+
+        const img = new Image();
+        img.onload = function() {
+          originalWidth = img.width;
+          originalHeight = img.height;
+          lastEditedField = null;
+
+          if (resizeWidth) {
+            resizeWidth.value = "";
+            resizeWidth.placeholder = String(originalWidth);
+          }
+
+          if (resizeHeight) {
+            resizeHeight.value = "";
+            resizeHeight.placeholder = String(originalHeight);
+          }
+
+          if (dimsLabel) {
+            dimsLabel.textContent =
+              "Dimensions : " + originalWidth + " × " + originalHeight + " px";
+          }
+
+          updateResizeInfo();
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(f);
+    } else {
+      previewBox.style.display = "none";
+      previewImg.src = "";
+      resizeBox.style.display = "none";
+      resetResizeUi();
+    }
+  }
+
+  dz.addEventListener("click", () => input.click());
+
+  dz.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      input.click();
+    }
+  });
+
+  ["dragenter", "dragover"].forEach(evt => {
+    dz.addEventListener(evt, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dz.classList.add("dragover");
+    });
+  });
+
+  ["dragleave", "drop"].forEach(evt => {
+    dz.addEventListener(evt, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dz.classList.remove("dragover");
+    });
+  });
+
+  dz.addEventListener("drop", (e) => {
+    const files = e.dataTransfer && e.dataTransfer.files;
+    if (files && files.length) {
+      input.files = files;
+      showName();
+    }
+  });
+
+  input.addEventListener("change", showName);
+
+  function syncKeep() {
+    if (!keep || !lifetime) return;
+    lifetime.disabled = !!keep.checked;
+  }
+
+  if (keep && lifetime) {
+    keep.addEventListener("change", syncKeep);
+    syncKeep();
+  }
+
+  function dataURLToBlob(dataURL) {
+    const parts = dataURL.split(",");
+    const mime = parts[0].match(/:(.*?);/)[1];
+    const binary = atob(parts[1]);
+    const len = binary.length;
+    const bytes = new Uint8Array(len);
+
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+
+    return new Blob([bytes], { type: mime });
+  }
+
+  async function resizeImageFile(file, width, height) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = function(event) {
+        const img = new Image();
+
+        img.onload = function() {
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+
+          const originalType = file.type && file.type.startsWith("image/")
+            ? file.type
+            : "image/png";
+
+          const targetType = (
+            originalType === "image/png" ||
+            originalType === "image/jpeg" ||
+            originalType === "image/webp"
+          ) ? originalType : "image/png";
+
+          const quality = targetType === "image/jpeg" || targetType === "image/webp" ? 0.92 : undefined;
+
+          const dataURL = canvas.toDataURL(targetType, quality);
+          const blob = dataURLToBlob(dataURL);
+
+          const resizedFile = new File([blob], file.name, {
+            type: blob.type,
+            lastModified: Date.now()
+          });
+
+          resolve(resizedFile);
+        };
+
+        img.onerror = () => reject(new Error("Impossible de charger l'image pour redimensionnement."));
+        img.src = event.target.result;
+      };
+
+      reader.onerror = () => reject(new Error("Impossible de lire le fichier."));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  form.addEventListener("submit", async (e) => {
+    const f = input.files && input.files[0];
+    if (!f) return;
+
+    const isImage = f.type && f.type.startsWith("image/");
+    if (!isImage) return;
+
+    let width = parseInt((resizeWidth?.value || "").trim(), 10);
+    let height = parseInt((resizeHeight?.value || "").trim(), 10);
+
+    const widthFilled = !Number.isNaN(width) && width > 0;
+    const heightFilled = !Number.isNaN(height) && height > 0;
+
+    if (!widthFilled && !heightFilled) {
+      return;
+    }
+
+    if (!originalWidth || !originalHeight) {
+      e.preventDefault();
+      alert("Impossible de lire les dimensions originales de l'image.");
+      return;
+    }
+
+    if (widthFilled && !heightFilled) {
+      height = Math.round(originalHeight * (width / originalWidth));
+      if (resizeHeight) resizeHeight.value = String(height);
+    } else if (heightFilled && !widthFilled) {
+      width = Math.round(originalWidth * (height / originalHeight));
+      if (resizeWidth) resizeWidth.value = String(width);
+    } else if (widthFilled && heightFilled) {
+      if (lastEditedField === "height") {
+        width = Math.round(originalWidth * (height / originalHeight));
+        if (resizeWidth) resizeWidth.value = String(width);
+      } else {
+        height = Math.round(originalHeight * (width / originalWidth));
+        if (resizeHeight) resizeHeight.value = String(height);
+      }
+    }
+
+    if (!width || !height || width <= 0 || height <= 0) {
+      e.preventDefault();
+      alert("Dimensions invalides pour le redimensionnement.");
+      return;
+    }
+
+    e.preventDefault();
+
+    try {
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Redimensionnement en cours...";
+      }
+
+      const resizedFile = await resizeImageFile(f, width, height);
+
+      const dt = new DataTransfer();
+      dt.items.add(resizedFile);
+      input.files = dt.files;
+
+      if (resizeInfo) {
+        resizeInfo.textContent = `Image redimensionnée en ${width} × ${height} px avant envoi.`;
+      }
+
+      form.submit();
+    } catch (err) {
+      alert(err.message || "Erreur pendant le redimensionnement.");
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Uploader";
+      }
+    }
+  });
+
+  showName();
+})();
+</script>
+
+{% endblock %}

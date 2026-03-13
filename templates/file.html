@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="fr">
+<head>
+
+<meta charset="utf-8">
+
+<title>{{ original_name }} – PixShare</title>
+
+<meta name="robots" content="noindex, noimageindex, nofollow">
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<meta property="og:title" content="Fichier partagé via PixShare">
+<meta property="og:image" content="{{ file_url }}">
+<meta property="og:type" content="image">
+
+<style>
+
+body{
+  margin:0;
+  background:#111;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+  font-family:system-ui,Arial;
+}
+
+.viewer{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:20px;
+}
+
+img,iframe{
+  max-width:90vw;
+  max-height:80vh;
+  border-radius:6px;
+}
+
+.report{
+  text-align:center;
+}
+
+.report a{
+  color:#ff4d4d;
+  text-decoration:none;
+  font-size:14px;
+}
+
+.report a:hover{
+  text-decoration:underline;
+}
+
+.report p{
+  color:#aaa;
+  font-size:12px;
+  margin-top:6px;
+}
+
+.file-name{
+  color:#ccc;
+  font-size:14px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="viewer">
+
+  <div class="file-name">
+    {{ original_name }}
+  </div>
+
+  <img src="{{ file_url }}" alt="{{ original_name }}">
+
+  <div class="report">
+
+    <a href="{{ url_for('public.contact', type='report', subject='Signalement contenu PixShare', file_url=request.url) }}">
+      ⚠ Signaler ce fichier
+    </a>
+
+    <p>
+      Utiliser uniquement pour signaler un contenu illégal.
+    </p>
+
+  </div>
+
+</div>
+
+</body>
+</html>

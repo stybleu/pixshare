@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% set title = "Admin - Messages" %}
+
+{% block head %}
+<meta name="robots" content="noindex, nofollow, noarchive">
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex flex-wrap gap-2 align-items-center justify-content-between mb-3">
+  <div>
+    <h1 class="h4 mb-0">Messages / Signalements</h1>
+    <div class="text-muted small">
+      Messages envoyés via le formulaire de contact et signalements utilisateurs.
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-primary btn-sm" href="{{ url_for('admin.admin_panel') }}">Retour admin</a>
+
+    <form method="post" action="{{ url_for('admin.admin_clear_messages') }}" class="m-0"
+          onsubmit="return confirm('Supprimer tous les messages de contact ?');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button class="btn btn-outline-danger btn-sm" type="submit">Vider contacts.json</button>
+    </form>
+
+    <form method="post" action="{{ url_for('admin.admin_logout') }}" class="m-0">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button class="btn btn-outline-secondary btn-sm" type="submit">Déconnexion</button>
+    </form>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+
+    {% if messages %}
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Type</th>
+              <th>Sujet / message</th>
+              <th>Contact</th>
+              <th>IP</th>
+              <th>Statut</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {% for m in messages %}
+              <tr>
+                <td class="text-muted small" style="min-width:140px;">
+                  {{ m.created_at or "—" }}
+                </td>
+
+                <td style="min-width:110px;">
+                  {% if m.type == "report" %}
+                    <span class="badge text-bg-danger">Signalement</span>
+                  {% else %}
+                    <span class="badge text-bg-primary">Contact</span>
+                  {% endif %}
+                </td>
+
+                <td style="min-width:320px;">
+                  <div class="fw-semibold">
+                    {{ m.subject or "Sans sujet" }}
+                  </div>
+
+                  {% if m.file_url %}
+                    <div class="small mt-1">
+                      <span class="text-muted">URL concernée :</span>
+                      <a href="{{ m.file_url }}" target="_blank" rel="noopener">{{ m.file_url }}</a>
+                    </div>
+                  {% endif %}
+
+                  {% if m.message %}
+                    <div class="small mt-2" style="white-space: pre-wrap;">
+                      {{ m.message }}
+                    </div>
+                  {% endif %}
+                </td>
+
+                <td style="min-width:180px;">
+                  {% if m.name %}
+                    <div>{{ m.name }}</div>
+                  {% endif %}
+
+                  {% if m.email %}
+                    <div class="small text-muted">{{ m.email }}</div>
+                  {% endif %}
+
+                  {% if not m.name and not m.email %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
+                </td>
+
+                <td>
+                  {% if m.ip %}
+                    <code>{{ m.ip }}</code>
+                  {% else %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
+                </td>
+
+                <td>
+                  {% if m.status %}
+                    <span class="badge text-bg-secondary">{{ m.status }}</span>
+                  {% else %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
+                </td>
+
+                <td style="min-width:130px;">
+                  <form method="post"
+                        action="{{ url_for('admin.admin_delete_message') }}"
+                        class="m-0"
+                        onsubmit="return confirm('Supprimer ce message ?');">
+
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="created_at" value="{{ m.created_at or '' }}">
+                    <input type="hidden" name="email" value="{{ m.email or '' }}">
+                    <input type="hidden" name="message" value="{{ m.message or '' }}">
+
+                    <button class="btn btn-sm btn-danger" type="submit">
+                      Supprimer
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="text-muted">Aucun message.</div>
+    {% endif %}
+
+  </div>
+</div>
+
+{% endblock %}
