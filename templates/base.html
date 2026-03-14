@@ -1,17 +1,19 @@
 <!doctype html>
 
-<html lang="fr">
+<html lang="{{ current_lang or 'fr' }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="alternate" hreflang="fr" href="{{ request.base_url }}?lang=fr">
+<link rel="alternate" hreflang="en" href="{{ request.base_url }}?lang=en">
+<link rel="alternate" hreflang="x-default" href="{{ request.base_url }}">
 
 <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon.png') }}">
 <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon.png') }}">
 <link rel="icon" type="image/png" sizes="48x48" href="{{ url_for('static', filename='favicon.png') }}">
 <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='favicon.png') }}">
 <link rel="icon" type="image/png" sizes="512x512" href="{{ url_for('static', filename='favicon.png') }}">
-
-<link rel="canonical" href="https://pixshare.fr/">
+<link rel="canonical" href="{{ request.base_url }}">
 
 <title>{{ title or "PixShare – Héberger une image gratuitement et anonymement" }}</title>
 
@@ -24,9 +26,11 @@ content="PixShare permet d'héberger une image ou un fichier gratuitement et ano
 <meta property="og:title" content="PixShare – Hébergement d'images gratuit">
 <meta property="og:description" content="Uploader une image anonymement et générer un lien de partage sécurisé.">
 <meta property="og:image" content="https://pixshare.fr/static/images/pixshare_logo.png">
-<meta property="og:url" content="https://pixshare.fr/">
+<meta property="og:url" content="{{ request.url }}">
 <meta property="og:type" content="website">
-<meta property="og:locale" content="fr_FR">
+<meta property="og:locale" content="{{ 'fr_FR' if current_lang=='fr' else 'en_US' }}">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:locale:alternate" content="fr_FR">
 
 <!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image">
@@ -144,8 +148,8 @@ Héberger une image gratuitement et anonymement avec PixShare
   </a>
 
   <div class="language-switcher">
-    <a href="?lang=fr" class="me-2">🇫🇷</a>
-    <a href="?lang=en">🇬🇧</a>
+    <a href="{{ switch_lang_url('fr') }}" class="me-2" title="{{ _('lang_fr') }}">🇫🇷</a>
+    <a href="{{ switch_lang_url('en') }}" title="{{ _('lang_en') }}">🇬🇧</a>
   </div>
 
 </div>
@@ -159,19 +163,19 @@ Héberger une image gratuitement et anonymement avec PixShare
 <div class="mb-1">
 
 <a href="{{ url_for('public.cgu') }}">
-Conditions générales d'utilisation
+{{ _("cgu") }}
 </a>
 
 |
 
 <a href="{{ url_for('public.mentions_legales') }}">
-Mentions légales
+{{ _("legal") }}
 </a>
 
 |
 
 <a href="{{ url_for('public.index') }}">
-Accueil
+{{ _("home") }}
 </a>
 
 </div>

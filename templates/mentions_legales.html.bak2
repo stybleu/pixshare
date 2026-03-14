@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% set title = _("legal") %}
+{% block content %}
+
+<div class="container py-4">
+  <h1 class="h4 mb-3">{{ _("legal") }}</h1>
+
+  <div class="card shadow-sm">
+    <div class="card-body">
+
+      <h2 class="h6 mt-2">Éditeur du site</h2>
+      <p class="mb-2">
+        PixShare est un service d’hébergement temporaire de fichiers.
+      </p>
+      <p class="mb-2">
+        <b>Éditeur :</b> Gosset Guillaume<br>
+        <b>Email :</b>
+        <a href="{{ url_for('public.contact') }}">stybleu@orange.fr</a><br>
+        <span class="text-muted small">
+          Pour toute demande, utilise le <a href="{{ url_for('public.contact') }}">formulaire de contact</a>.
+        </span>
+      </p>
+
+      <h2 class="h6 mt-4">{{ _("hosting") }}</h2>
+      <p class="mb-2">
+        Le service est hébergé sur l’infrastructure de <b>Render</b>.
+      </p>
+      <p class="mb-2">
+        <b>Render Services, Inc.</b><br>
+        525 Brannan Street, Suite 300<br>
+        San Francisco, CA 94107<br>
+        États-Unis<br>
+        <a href="https://render.com" target="_blank" rel="noopener">https://render.com</a>
+      </p>
+
+      <h2 class="h6 mt-4">Fonctionnement du service et durée de conservation</h2>
+
+      <p class="mb-2">
+        Les fichiers envoyés sur PixShare sont stockés de manière <b>temporaire</b>.
+        Le service est destiné au partage rapide de fichiers et non au stockage permanent.
+      </p>
+
+      <ul class="mb-2">
+        <li>
+          L’utilisateur peut choisir une durée de conservation lors de l’envoi.
+        </li>
+        <li>
+          La durée maximale est limitée par le service afin de garantir le caractère temporaire de l’hébergement.
+        </li>
+        <li>
+          Les fichiers sont supprimés automatiquement après expiration.
+        </li>
+        <li>
+          La suppression peut ne pas être instantanée (un léger délai technique peut exister).
+        </li>
+        <li>
+          En raison de contraintes techniques (maintenance, redémarrage du serveur ou limitations de l’hébergement),
+          la disponibilité temporaire des fichiers ne peut être garantie.
+        </li>
+      </ul>
+
+      <p class="mb-2">
+        Certaines images peuvent être redimensionnées côté navigateur avant leur envoi
+        afin d’optimiser leur taille et leur affichage.
+      </p>
+
+      <h2 class="h6 mt-4">Données personnelles</h2>
+
+      <p class="mb-2">
+        PixShare ne demande pas la création de compte utilisateur.
+      </p>
+
+      <p class="mb-2">
+        Pour des raisons de sécurité et de prévention des abus, certaines données techniques
+        telles que l’adresse IP peuvent être temporairement traitées.
+      </p>
+
+      <p class="mb-2">
+        Ces données sont utilisées uniquement afin de :
+      </p>
+
+      <ul class="mb-2">
+        <li>prévenir les abus du service</li>
+        <li>bloquer l’accès en cas de comportement malveillant</li>
+        <li>assurer la sécurité et la stabilité du service</li>
+      </ul>
+
+      <p class="mb-2">
+        Un identifiant technique temporaire peut également être stocké dans le navigateur
+        afin de permettre l’affichage de l’historique des fichiers envoyés depuis ce navigateur.
+        Cet identifiant n’est pas utilisé pour le suivi publicitaire.
+      </p>
+
+      <p class="mb-2">
+        Aucune création de profil utilisateur ni exploitation commerciale de ces données n’est réalisée.
+      </p>
+
+      <h2 class="h6 mt-4">Responsabilité</h2>
+
+      <p class="mb-2">
+        L’utilisateur est responsable des fichiers qu’il envoie et de leur conformité aux lois et règlements en vigueur.
+      </p>
+
+      <p class="mb-2">
+        PixShare agit en qualité d’<b>hébergeur technique</b> au sens de l’article 6-I-2
+        de la loi n°2004-575 du 21 juin 2004 pour la confiance dans l’économie numérique (LCEN).
+      </p>
+
+      <p class="mb-2">
+        L’éditeur ne peut être tenu responsable des contenus déposés par les utilisateurs.
+        Toutefois, tout contenu manifestement illicite pourra être supprimé sans préavis
+        et l’accès au service pourra être bloqué en cas d’abus.
+      </p>
+
+      <h2 class="h6 mt-4">{{ _("illegal_content_report") }}</h2>
+
+      <p class="mb-2">
+        Toute personne estimant qu’un contenu présent sur PixShare est manifestement illicite
+        peut le signaler à l’éditeur du service.
+      </p>
+
+      <p class="mb-2">
+        Le signalement peut être effectué via le
+        <a href="{{ url_for('public.contact', type='report', subject=_('report_pixshare_content')) }}">{{ _('contact_form') }}</a>.
+      </p>
+
+      <p class="mb-2">
+        Le message doit contenir :
+      </p>
+
+      <ul class="mb-2">
+        <li>l’adresse URL du contenu concerné</li>
+        <li>la description du contenu litigieux</li>
+        <li>les raisons pour lesquelles le contenu est considéré comme illicite</li>
+        <li>les coordonnées de la personne effectuant le signalement</li>
+      </ul>
+
+      <p class="mb-2">
+        Après réception d’un signalement complet, PixShare pourra procéder
+        à la suppression du contenu concerné dans les meilleurs délais.
+      </p>
+
+      <hr class="my-4">
+
+      <p class="text-muted small mb-0">
+        Version du site : {{ version }}
+      </p>
+
+    </div>
+  </div>
+</div>
+
+{% endblock %}

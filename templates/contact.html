@@ -1,15 +1,15 @@
 {% extends "base.html" %}
-{% set title = "Contact" %}
+{% set title = _("contact") %}
 {% block content %}
 
 <div class="container py-4" style="max-width: 760px;">
-  <h1 class="h4 mb-3">Contact / Signalement</h1>
+  <h1 class="h4 mb-3">{{ _("contact_report") }}</h1>
 
   <div class="card shadow-sm">
     <div class="card-body">
 
       <p class="text-muted">
-        Utilise ce formulaire pour contacter PixShare ou signaler un contenu problématique.
+        {{ _("contat_info_use") }}
       </p>
 
       <form method="post" class="row g-3">
@@ -17,20 +17,20 @@
         <input type="hidden" name="file_url" value="{{ prefill_file_url }}">
 
         <div class="col-12">
-          <label class="form-label">Type de message</label>
+          <label class="form-label">{{ _("contact_type_message") }}</label>
           <select name="type" class="form-select">
-            <option value="contact" {% if prefill_type == "contact" %}selected{% endif %}>Contact</option>
-            <option value="report" {% if prefill_type == "report" %}selected{% endif %}>Signalement</option>
+            <option value="contact" {% if prefill_type == "contact" %}selected{% endif %}>{{ _("contact") }}</option>
+            <option value="report" {% if prefill_type == "report" %}selected{% endif %}>{{ _("contact_report") }}</option>
           </select>
         </div>
 
         <div class="col-md-6">
-          <label class="form-label">Nom (facultatif)</label>
+          <label class="form-label">{{ _("name_optional") }}</label>
           <input type="text" name="name" class="form-control">
         </div>
 
         <div class="col-md-6">
-          <label class="form-label">Email (facultatif)</label>
+          <label class="form-label">{{ _("email_optional") }}</label>
           <input type="email" name="email" class="form-control">
         </div>
 
@@ -52,18 +52,18 @@
         </div>
 
         <div class="col-12">
-          <label class="form-label">Message</label>
+          <label class="form-label">{{ _("message") }}</label>
           <textarea
             name="message"
             class="form-control"
             rows="6"
-            placeholder="Décris ton message ou le problème rencontré..."
+            placeholder="{{ _("message_description") }}"
             required></textarea>
         </div>
 
         <div class="col-12">
           <button type="submit" class="btn btn-primary">
-            Envoyer
+            {{ _("send") }}
           </button>
         </div>
       </form>

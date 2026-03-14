@@ -7,6 +7,7 @@ from .services.request_service import get_client_ip
 from .routes.public_routes import public_bp
 from .routes.admin_routes import admin_bp
 from .routes.seo_routes import seo_bp
+from .services.translation_service import apply_requested_language, build_lang_url, get_current_language, translate
 
 
 def create_app() -> Flask:
@@ -17,8 +18,18 @@ def create_app() -> Flask:
     init_storage(app)
 
     @app.context_processor
-    def _inject_csrf_token():
-        return inject_csrf_token()
+    def _inject_globals():
+        data = inject_csrf_token()
+        data.update({
+            "_": translate,
+            "current_lang": get_current_language(),
+            "switch_lang_url": build_lang_url,
+        })
+        return data
+
+    @app.before_request
+    def apply_language():
+        apply_requested_language()
 
     @app.before_request
     def log_request():

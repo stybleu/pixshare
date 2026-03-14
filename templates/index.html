@@ -61,36 +61,35 @@
 <div class="df">
 
 <h1 class="visually-hidden">
-Héberger une image gratuitement et anonymement avec PixShare
+{{ _("hero_hidden_title") }}
 </h1>
 
 <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between mb-3">
   <div>
     <p class="text-muted mb-0">
-      Hébergement d'image gratuit et partage de fichiers temporaire.
+      {{ _("hero_subtitle") }}
     </p>
   </div>
 
   <div class="d-flex gap-2">
     {% if admin %}
-    <a class="btn btn-sm btn-outline-dark" href="{{ url_for('admin.admin_panel') }}">Admin</a>
+    <a class="btn btn-sm btn-outline-dark" href="{{ url_for('admin.admin_panel') }}">{{ _("admin") }}</a>
     {% endif %}
   </div>
 </div>
 
 <div class="row g-3 align-items-start">
 
-  <!-- Upload -->
   <div class="col-12 col-lg-5">
     <div class="card shadow-sm h-100">
       <div class="card-body">
 
-        <h2 class="h6">Uploader un fichier (suppression automatique)</h2>
+        <h2 class="h6">{{ _("upload_card_title") }}</h2>
 
         <p class="text-muted small mb-3">
-          Taille max : {{ max_mb }} Mo.
-          En envoyant un fichier, vous acceptez les
-          <a href="{{ url_for('public.cgu') }}">CGU</a>.
+          {{ _("max_size_label") }} {{ max_mb }} {{ _("mb") }}.
+          {{ _("by_uploading_you_accept") }}
+          <a href="{{ url_for('public.cgu') }}">{{ _("cgu_short") }}</a>.
         </p>
 
         <form id="uploadForm" method="POST" enctype="multipart/form-data" autocomplete="off" class="row g-2 align-items-end">
@@ -99,42 +98,42 @@ Héberger une image gratuitement et anonymement avec PixShare
 
           <div class="col-12">
 
-            <label class="form-label">Choisir un fichier</label>
+            <label class="form-label">{{ _("choose_file") }}</label>
 
             <div id="dropzone" class="dropzone">
-              <div class="dz-title">Glisse-dépose votre image ici</div>
-              <div class="dz-sub">ou cliquez pour sélectionner un fichier</div>
+              <div class="dz-title">{{ _("dropzone_title") }}</div>
+              <div class="dz-sub">{{ _("dropzone_subtitle") }}</div>
               <div id="dz-file" class="mt-2 small text-muted"></div>
             </div>
 
             <input id="fileInput" class="form-control mt-2" type="file" name="file" required>
 
             <div id="previewBox" class="preview-box">
-              <div class="small text-muted mb-2">Aperçu de l'image</div>
-              <img id="previewImg" src="" alt="Aperçu">
+              <div class="small text-muted mb-2">{{ _("image_preview") }}</div>
+              <img id="previewImg" src="" alt="{{ _('image_preview') }}">
             </div>
 
             <div id="resizeBox" class="resize-box">
-              <div class="small fw-semibold mb-2">Redimensionner avant l'envoi</div>
+              <div class="small fw-semibold mb-2">{{ _("resize_before_upload") }}</div>
 
               <label id="imageDimsLabel" class="form-label small text-muted d-block mb-2">
-                Dimensions : —
+                {{ _("dimensions_label") }} —
               </label>
 
               <div class="row g-2">
                 <div class="col-6">
-                  <label class="form-label mb-1">Largeur (px)</label>
-                  <input id="resizeWidth" type="number" min="1" step="1" class="form-control" placeholder="ex : 800">
+                  <label class="form-label mb-1">{{ _("width_px") }}</label>
+                  <input id="resizeWidth" type="number" min="1" step="1" class="form-control" placeholder="{{ _('placeholder_width') }}">
                 </div>
 
                 <div class="col-6">
-                  <label class="form-label mb-1">Hauteur (px)</label>
-                  <input id="resizeHeight" type="number" min="1" step="1" class="form-control" placeholder="ex : 600">
+                  <label class="form-label mb-1">{{ _("height_px") }}</label>
+                  <input id="resizeHeight" type="number" min="1" step="1" class="form-control" placeholder="{{ _('placeholder_height') }}">
                 </div>
               </div>
 
               <div class="form-text mt-2">
-                Modifie une seule dimension : l'autre sera calculée automatiquement pour conserver les proportions.
+                {{ _("resize_help") }}
               </div>
 
               <div id="resizeInfo" class="small text-muted mt-2"></div>
@@ -144,19 +143,19 @@ Héberger une image gratuitement et anonymement avec PixShare
 
           <div class="col-12">
 
-            <label class="form-label">Durée de vie du fichier, par default (10min)</label>
+            <label class="form-label">{{ _("file_lifetime_default_10") }}</label>
 
             <select name="lifetime" class="form-select">
-              <option value="5">5 minutes</option>
-              <option value="10" selected>10 minutes</option>
-              <option value="20">20 minutes</option>
-              <option value="30">30 minutes</option>
-              <option value="60">1 heure</option>
-              <option value="120">2 heures</option>
+              <option value="5">{{ _("minutes_5") }}</option>
+              <option value="10" selected>{{ _("minutes_10") }}</option>
+              <option value="20">{{ _("minutes_20") }}</option>
+              <option value="30">{{ _("minutes_30") }}</option>
+              <option value="60">{{ _("hour_1") }}</option>
+              <option value="120">{{ _("hours_2") }}</option>
             </select>
 
             <div class="form-text">
-              Le fichier sera supprimé automatiquement après expiration.
+              {{ _("expiration_help") }}
             </div>
 
           </div>
@@ -167,12 +166,12 @@ Héberger une image gratuitement et anonymement avec PixShare
             <div class="form-check">
               <input class="form-check-input" type="checkbox" name="keep" value="1" id="keepChk">
               <label class="form-check-label" for="keepChk">
-                Ne pas supprimer (sans expiration)
+                {{ _("keep_no_expiration") }}
               </label>
             </div>
 
             <div class="form-text">
-              Option activable selon la configuration du serveur.
+              {{ _("keep_option_help") }}
             </div>
           </div>
 
@@ -180,7 +179,7 @@ Héberger une image gratuitement et anonymement avec PixShare
 
           <div class="col-12">
             <button id="submitBtn" class="btn btn-primary w-100" type="submit">
-              Uploader
+              {{ _("upload") }}
             </button>
           </div>
 
@@ -190,18 +189,17 @@ Héberger une image gratuitement et anonymement avec PixShare
     </div>
   </div>
 
-  <!-- Historique utilisateur -->
   <div class="col-12 col-lg-7">
     <div class="card shadow-sm h-100">
       <div class="card-body">
 
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-          <h2 class="h6 mb-0">Historique des fichiers</h2>
+          <h2 class="h6 mb-0">{{ _("history_title") }}</h2>
 
           {% if guest_files and guest_files|length > 0 %}
-          <span class="badge text-bg-success">{{ guest_files|length }} actif(s)</span>
+          <span class="badge text-bg-success">{{ guest_files|length }} {{ _("active_count_suffix") }}</span>
           {% else %}
-          <span class="badge text-bg-secondary">Aucun</span>
+          <span class="badge text-bg-secondary">{{ _("none") }}</span>
           {% endif %}
         </div>
 
@@ -238,11 +236,11 @@ Héberger une image gratuitement et anonymement avec PixShare
           </div>
 
           <div class="text-muted small mt-2">
-            {{ f.size_h }} — {{ f.mtime_h }} — {{ f.views }} vue(s)
+            {{ f.size_h }} — {{ f.mtime_h }} — {{ f.views }} {{ _("views_suffix") }}
 
             {% if f.remaining_h %}
             <span class="ms-2 badge text-bg-warning">
-              Expire dans {{ f.remaining_h }}
+              {{ _("expires_in") }} {{ f.remaining_h }}
             </span>
             {% endif %}
           </div>
@@ -252,12 +250,12 @@ Héberger une image gratuitement et anonymement avec PixShare
                href="{{ open_url }}"
                target="_blank"
                rel="noopener">
-              Ouvrir
+              {{ _("open") }}
             </a>
 
             <a class="btn btn-primary btn-sm"
                href="{{ f.download_url }}">
-              Télécharger
+              {{ _("download") }}
             </a>
 
             <form method="post"
@@ -271,15 +269,15 @@ Héberger une image gratuitement et anonymement avec PixShare
               <button
                 type="submit"
                 class="btn btn-outline-danger btn-sm"
-                onclick="return confirm('Supprimer ce fichier ?');">
-                Supprimer
+                onclick="return confirm('{{ _('confirm_delete_file') }}');">
+                {{ _("delete") }}
               </button>
 
             </form>
           </div>
 
           <div class="text-muted small mt-3 mb-1">
-            Lien public à partager :
+            {{ _("public_share_link") }}
           </div>
 
           <div class="input-group">
@@ -294,7 +292,7 @@ Héberger une image gratuitement et anonymement avec PixShare
               type="button"
               class="btn btn-outline-primary"
               onclick="copyById('publicLink_{{ f.id }}')">
-              Copier
+              {{ _("copy") }}
             </button>
           </div>
 
@@ -304,8 +302,8 @@ Héberger une image gratuitement et anonymement avec PixShare
         {% else %}
 
         <p class="text-muted mb-0">
-          Aucun fichier. Choisissez-en puis cliquez sur
-          <b>Uploader</b>.
+          {{ _("no_file_yet") }}
+          <b>{{ _("upload") }}</b>.
         </p>
 
         {% endif %}
@@ -317,44 +315,40 @@ Héberger une image gratuitement et anonymement avec PixShare
 </div>
 
 <section class="mt-5">
-  <h2>Héberger une image gratuitement</h2>
+  <h2>{{ _("section_host_image_title") }}</h2>
 
   <p>
-    PixShare est un service permettant d'héberger une image ou une vidéo
-    gratuitement et sans inscription. Les fichiers peuvent être partagés
-    via un lien sécurisé et sont supprimés automatiquement après expiration.
+    {{ _("section_host_image_p1") }}
   </p>
 
   <p>
-    Le service permet notamment :
+    {{ _("section_host_image_p2") }}
   </p>
 
   <ul>
-    <li>héberger une capture d'écran</li>
-    <li>partager une image rapidement</li>
-    <li>envoyer un fichier temporaire</li>
-    <li>partager une vidéo courte</li>
+    <li>{{ _("feature_screenshot") }}</li>
+    <li>{{ _("feature_share_image") }}</li>
+    <li>{{ _("feature_temporary_file") }}</li>
+    <li>{{ _("feature_short_video") }}</li>
   </ul>
 </section>
 
 <section class="mt-4">
-  <h2>Partager une image ou un fichier rapidement</h2>
+  <h2>{{ _("section_share_fast_title") }}</h2>
 
   <p>
-    PixShare permet d'uploader une image, une capture d'écran ou une vidéo courte
-    et de générer un lien de partage sécurisé. Les fichiers sont automatiquement
-    supprimés après expiration afin de garantir la confidentialité.
+    {{ _("section_share_fast_p1") }}
   </p>
 
   <p>
-    Le service est conçu pour partager facilement :
+    {{ _("section_share_fast_p2") }}
   </p>
 
   <ul>
-    <li>une capture d'écran</li>
-    <li>une image</li>
-    <li>un fichier temporaire</li>
-    <li>une vidéo courte</li>
+    <li>{{ _("feature_screenshot") }}</li>
+    <li>{{ _("feature_image") }}</li>
+    <li>{{ _("feature_temporary_file") }}</li>
+    <li>{{ _("feature_short_video") }}</li>
   </ul>
 </section>
 
@@ -398,6 +392,23 @@ function copyById(id){
 
   if (!dz || !input || !form) return;
 
+  const I18N = {
+    selectedPrefix: {{ _("js_selected_prefix")|tojson }},
+    dimensionsLabel: {{ _("dimensions_label")|tojson }},
+    placeholderWidth: {{ _("placeholder_width")|tojson }},
+    placeholderHeight: {{ _("placeholder_height")|tojson }},
+    leaveEmptyOriginal: {{ _("js_leave_empty_original")|tojson }},
+    sentKeepingRatio: {{ _("js_sent_keeping_ratio")|tojson }},
+    fillWidthOrHeight: {{ _("js_fill_width_or_height")|tojson }},
+    imageResizedBeforeUpload: {{ _("js_image_resized_before_upload")|tojson }},
+    cannotReadOriginalDimensions: {{ _("js_cannot_read_original_dimensions")|tojson }},
+    invalidDimensions: {{ _("js_invalid_dimensions")|tojson }},
+    resizingInProgress: {{ _("js_resizing_in_progress")|tojson }},
+    upload: {{ _("upload")|tojson }},
+    readFileError: {{ _("js_read_file_error")|tojson }},
+    loadImageResizeError: {{ _("js_load_image_resize_error")|tojson }}
+  };
+
   function resetResizeUi() {
     originalWidth = null;
     originalHeight = null;
@@ -407,9 +418,9 @@ function copyById(id){
     if (resizeWidth) resizeWidth.value = "";
     if (resizeHeight) resizeHeight.value = "";
     if (resizeInfo) resizeInfo.textContent = "";
-    if (dimsLabel) dimsLabel.textContent = "Dimensions : —";
-    if (resizeWidth) resizeWidth.placeholder = "ex : 800";
-    if (resizeHeight) resizeHeight.placeholder = "ex : 600";
+    if (dimsLabel) dimsLabel.textContent = I18N.dimensionsLabel + " : —";
+    if (resizeWidth) resizeWidth.placeholder = I18N.placeholderWidth;
+    if (resizeHeight) resizeHeight.placeholder = I18N.placeholderHeight;
   }
 
   function updateResizeInfo() {
@@ -427,16 +438,16 @@ function copyById(id){
     }
 
     if (!widthValid && !heightValid) {
-      resizeInfo.textContent = "Laisse vide pour envoyer l'image originale.";
+      resizeInfo.textContent = I18N.leaveEmptyOriginal;
       return;
     }
 
     if (widthValid && heightValid) {
-      resizeInfo.textContent = `Image envoyée en ${widthValue} × ${heightValue} px en conservant le ratio.`;
+      resizeInfo.textContent = `${I18N.sentKeepingRatio} ${widthValue} × ${heightValue} px.`;
       return;
     }
 
-    resizeInfo.textContent = "Renseigne une largeur ou une hauteur.";
+    resizeInfo.textContent = I18N.fillWidthOrHeight;
   }
 
   function syncHeightFromWidth() {
@@ -493,7 +504,7 @@ function copyById(id){
 
   function showName() {
     const f = input.files && input.files[0];
-    label.textContent = f ? ("Sélectionné : " + f.name) : "";
+    label.textContent = f ? (I18N.selectedPrefix + f.name) : "";
 
     if (!previewBox || !previewImg || !resizeBox) return;
 
@@ -530,7 +541,7 @@ function copyById(id){
 
           if (dimsLabel) {
             dimsLabel.textContent =
-              "Dimensions : " + originalWidth + " × " + originalHeight + " px";
+              I18N.dimensionsLabel + " : " + originalWidth + " × " + originalHeight + " px";
           }
 
           updateResizeInfo();
@@ -643,11 +654,11 @@ function copyById(id){
           resolve(resizedFile);
         };
 
-        img.onerror = () => reject(new Error("Impossible de charger l'image pour redimensionnement."));
+        img.onerror = () => reject(new Error(I18N.loadImageResizeError));
         img.src = event.target.result;
       };
 
-      reader.onerror = () => reject(new Error("Impossible de lire le fichier."));
+      reader.onerror = () => reject(new Error(I18N.readFileError));
       reader.readAsDataURL(file);
     });
   }
@@ -671,7 +682,7 @@ function copyById(id){
 
     if (!originalWidth || !originalHeight) {
       e.preventDefault();
-      alert("Impossible de lire les dimensions originales de l'image.");
+      alert(I18N.cannotReadOriginalDimensions);
       return;
     }
 
@@ -693,7 +704,7 @@ function copyById(id){
 
     if (!width || !height || width <= 0 || height <= 0) {
       e.preventDefault();
-      alert("Dimensions invalides pour le redimensionnement.");
+      alert(I18N.invalidDimensions);
       return;
     }
 
@@ -702,7 +713,7 @@ function copyById(id){
     try {
       if (submitBtn) {
         submitBtn.disabled = true;
-        submitBtn.textContent = "Redimensionnement en cours...";
+        submitBtn.textContent = I18N.resizingInProgress;
       }
 
       const resizedFile = await resizeImageFile(f, width, height);
@@ -712,15 +723,15 @@ function copyById(id){
       input.files = dt.files;
 
       if (resizeInfo) {
-        resizeInfo.textContent = `Image redimensionnée en ${width} × ${height} px avant envoi.`;
+        resizeInfo.textContent = `${I18N.imageResizedBeforeUpload} ${width} × ${height} px.`;
       }
 
       form.submit();
     } catch (err) {
-      alert(err.message || "Erreur pendant le redimensionnement.");
+      alert(err.message || I18N.readFileError);
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.textContent = "Uploader";
+        submitBtn.textContent = I18N.upload;
       }
     }
   });
