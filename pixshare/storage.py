@@ -64,6 +64,10 @@ def contacts_path(app: Flask) -> str:
     return project_path(app, app.config["CONTACTS_FILE"])
 
 
+def votes_path(app: Flask) -> str:
+    return project_path(app, app.config["VOTES_FILE"])
+
+
 def init_storage(app: Flask) -> None:
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
     for path, default in [
@@ -72,6 +76,7 @@ def init_storage(app: Flask) -> None:
         (failed_logins_path(app), {}),
         (views_path(app), {}),
         (contacts_path(app), []),
+        (votes_path(app), {}),
     ]:
         ensure_parent_dir(path)
         if not os.path.exists(path):

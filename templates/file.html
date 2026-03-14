@@ -15,15 +15,17 @@
 <meta property="og:type" content="image">
 
 <style>
-
 body{
   margin:0;
   background:#111;
   display:flex;
   justify-content:center;
   align-items:center;
-  height:100vh;
+  min-height:100vh;
   font-family:system-ui,Arial;
+  color:#eee;
+  padding:20px;
+  box-sizing:border-box;
 }
 
 .viewer{
@@ -31,12 +33,85 @@ body{
   flex-direction:column;
   align-items:center;
   gap:20px;
+  width:100%;
+  max-width:980px;
 }
 
 img,iframe{
   max-width:90vw;
-  max-height:80vh;
+  max-height:70vh;
   border-radius:6px;
+}
+
+.file-name{
+  color:#ccc;
+  font-size:14px;
+  text-align:center;
+  word-break:break-word;
+}
+
+.stats{
+  display:flex;
+  gap:16px;
+  flex-wrap:wrap;
+  justify-content:center;
+  color:#ddd;
+  font-size:14px;
+}
+
+.stats-card{
+  background:#1b1b1b;
+  border:1px solid #2d2d2d;
+  border-radius:10px;
+  padding:10px 14px;
+  min-width:90px;
+  text-align:center;
+}
+
+.actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:center;
+}
+
+.actions a,
+.vote-form button{
+  background:#222;
+  color:#fff;
+  border:1px solid #444;
+  padding:10px 14px;
+  border-radius:8px;
+  text-decoration:none;
+  cursor:pointer;
+  font-size:14px;
+}
+
+.actions a:hover,
+.vote-form button:hover{
+  background:#333;
+}
+
+.vote-area{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:10px;
+}
+
+.vote-form{
+  display:flex;
+  gap:10px;
+}
+
+.vote-form button.active{
+  border-color:#6aa9ff;
+  box-shadow:0 0 0 1px #6aa9ff inset;
+}
+
+.vote-note{
+  font-size:12px;
+  color:#aaa;
 }
 
 .report{
@@ -46,24 +121,17 @@ img,iframe{
 .report a{
   color:#ff4d4d;
   text-decoration:none;
-  font-size:14px;
 }
 
 .report a:hover{
   text-decoration:underline;
 }
 
-.report p{
-  color:#aaa;
-  font-size:12px;
-  margin-top:6px;
-}
-
-.file-name{
-  color:#ccc;
+.not-image{
+  color:#bbb;
   font-size:14px;
+  text-align:center;
 }
-
 </style>
 
 </head>
@@ -72,23 +140,72 @@ img,iframe{
 
 <div class="viewer">
 
-  <div class="file-name">
-    {{ original_name }}
-  </div>
+<div class="file-name">
+{{ original_name }}
+</div>
 
-  <img src="{{ file_url }}" alt="{{ original_name }}">
+{% if is_image %}
+<img src="{{ file_url }}" alt="{{ original_name }}">
+{% else %}
+<iframe src="{{ file_url }}"></iframe>
+<div class="not-image">
+Aperçu générique du fichier
+</div>
+{% endif %}
 
-  <div class="report">
+<div class="stats">
 
-    <a href="{{ url_for('public.contact', type='report', subject=_("report_pixshare_content"), file_url=request.url) }}">
-      ⚠ Signaler ce fichier
-    </a>
+<div class="stats-card">
+<div>👍</div>
+<strong>{{ vote_summary.up }}</strong>
+</div>
 
-    <p>
-      Utiliser uniquement pour signaler un contenu illégal.
-    </p>
+<div class="stats-card">
+<div>👎</div>
+<strong>{{ vote_summary.down }}</strong>
+</div>
 
-  </div>
+</div>
+
+<div class="actions">
+<a href="{{ download_url }}">Télécharger</a>
+</div>
+
+{% if is_image %}
+
+<div class="vote-area">
+
+<form class="vote-form" method="post" action="{{ url_for('public.vote_file', file_id=file_id) }}">
+
+<input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+<button type="submit" name="vote" value="up"
+class="{% if vote_summary.current_vote == 'up' %}active{% endif %}">
+👍 J'aime
+</button>
+
+<button type="submit" name="vote" value="down"
+class="{% if vote_summary.current_vote == 'down' %}active{% endif %}">
+👎 Je n'aime pas
+</button>
+
+</form>
+
+</div>
+
+{% endif %}
+
+<div class="report">
+
+<a href="{{ url_for('public.contact', type='report', subject=_("report_pixshare_content"), file_url=request.url) }}">
+⚠ Signaler ce fichier
+</a>
+
+<p>
+Utiliser uniquement pour signaler un contenu illégal
+</p>
+
+</div>
 
 </div>
 

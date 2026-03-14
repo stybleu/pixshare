@@ -1,12 +1,21 @@
 User-agent: *
 Allow: /
 
+# zones privées
 Disallow: /admin
 Disallow: /admin_panel
 Disallow: /admin_login
+
+# fichiers temporaires
 Disallow: /file/
 Disallow: /download/
 Disallow: /tmp/
+Disallow: /uploads/
+
+# API interne
 Disallow: /api/
+
+# données serveur
+Disallow: /data/
 
 Sitemap: https://pixshare.fr/sitemap.xml

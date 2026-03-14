@@ -7,6 +7,7 @@ from pixshare.storage import (
     failed_logins_path,
     read_json_file,
     views_path,
+    votes_path,
 )
 
 
@@ -48,3 +49,11 @@ def load_failed_logins() -> dict:
 
 def save_failed_logins(data: dict) -> None:
     atomic_write_json(failed_logins_path(current_app), data)
+
+
+def load_votes() -> dict:
+    return read_json_file(votes_path(current_app), {})
+
+
+def save_votes(data: dict) -> None:
+    atomic_write_json(votes_path(current_app), data)

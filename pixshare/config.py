@@ -12,6 +12,7 @@ class Config:
     FAILED_LOGINS_FILE = os.path.join(DATA_DIR, "failed_logins.json")
     VIEWS_FILE = os.path.join(DATA_DIR, "views.json")
     CONTACTS_FILE = os.path.join(DATA_DIR, "contacts.json")
+    VOTES_FILE = os.path.join(DATA_DIR, "votes.json")
 
     UPLOAD_FOLDER = "tmp/fichiers"
     APP_VERSION = (os.environ.get("RENDER_GIT_COMMIT", "")[:7] or "dev")

@@ -236,7 +236,11 @@
           </div>
 
           <div class="text-muted small mt-2">
-            {{ f.size_h }} — {{ f.mtime_h }} — {{ f.views }} {{ _("views_suffix") }}
+            {{ f.size_h }} — {{ f.mtime_h }} —
+            {{ f.views }} {{ _("views_suffix") }} ·
+            👍 {{ f.votes_up or 0 }} ·
+            👎 {{ f.votes_down or 0 }} ·
+            
 
             {% if f.remaining_h %}
             <span class="ms-2 badge text-bg-warning">

@@ -3,7 +3,7 @@ import secrets
 from datetime import datetime, timedelta
 from flask import current_app, request, session, url_for
 from .auth_service import is_admin
-from .json_services import load_db, save_db, load_views, save_views
+from .json_services import load_db, save_db, load_views, save_views, load_votes, save_votes
 from .request_service import get_client_ip
 from .time_service import parse_dt, utcnow
 
@@ -76,6 +76,7 @@ def cleanup_expired() -> int:
             to_delete.append(file_id)
 
     removed = 0
+    votes = load_votes()
     for file_id in to_delete:
         meta = db.get(file_id, {})
         server_name = os.path.basename(meta.get("server_name", ""))
@@ -86,10 +87,12 @@ def cleanup_expired() -> int:
         except Exception:
             pass
         db.pop(file_id, None)
+        votes.pop(file_id, None)
         removed += 1
 
     if removed:
         save_db(db)
+        save_votes(votes)
     return removed
 
 
@@ -248,4 +251,9 @@ def delete_by_id(file_id: str) -> bool:
         pass
     db.pop(file_id, None)
     save_db(db)
+
+    votes = load_votes()
+    if file_id in votes:
+        votes.pop(file_id, None)
+        save_votes(votes)
     return True

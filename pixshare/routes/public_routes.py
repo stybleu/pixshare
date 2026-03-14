@@ -18,6 +18,7 @@ from pixshare.services.file_service import (
 )
 from pixshare.services.json_services import load_blocked, load_db, save_db
 from pixshare.services.request_service import get_client_ip
+from pixshare.services.vote_service import get_vote_summary, is_image_filename, register_vote
 
 public_bp = Blueprint("public", __name__)
 
@@ -67,9 +68,21 @@ def index():
             flash(f"Fichier upload ✅ (expiration: {lifetime} min)", "success")
         return redirect(url_for("public.index"))
 
+    guest_files = list_guest_files()
+    for item in guest_files:
+        file_id = item.get("id") or item.get("file_id")
+        if not file_id:
+            continue
+
+        summary = get_vote_summary(file_id, ip)
+        item["views"] = int(item.get("views", 0) or 0)
+        item["votes_up"] = summary["up"]
+        item["votes_down"] = summary["down"]
+        item["score"] = summary["score"]
+
     return render_template(
         "index.html",
-        guest_files=list_guest_files(),
+        guest_files=guest_files,
         max_mb=int(current_app.config["MAX_CONTENT_LENGTH"] / (1024 * 1024)),
         admin=is_admin(),
         version=current_app.config["APP_VERSION"],
@@ -112,7 +125,52 @@ def view_file(file_id):
     _, meta, server_name = get_file_record(file_id)
     if not meta:
         abort(404)
-    return send_from_directory(current_app.config["UPLOAD_FOLDER"], server_name, as_attachment=False)
+    return send_from_directory(
+        current_app.config["UPLOAD_FOLDER"],
+        server_name,
+        as_attachment=False
+    )
+
+
+@public_bp.route("/image/<file_id>", endpoint="image_page")
+def image_page(file_id):
+    cleanup_expired()
+
+    _db, meta, _server_name = get_file_record(file_id)
+    if not meta:
+        abort(404)
+
+    original_name = meta.get("original_name", "")
+    if not is_image_filename(original_name):
+        abort(404)
+
+    client_ip = get_client_ip()
+    vote_summary = get_vote_summary(file_id, client_ip)
+    file_url = url_for("public.view_file", file_id=file_id)
+    download_url = url_for("public.download", file_id=file_id)
+    report_url = url_for(
+        "public.contact",
+        type="report",
+        subject="Signaler un contenu PixShare",
+        file_url=request.url,
+    )
+
+    response = make_response(render_template(
+        "image_page.html",
+        file_id=file_id,
+        file_url=file_url,
+        download_url=download_url,
+        report_url=report_url,
+        original_name=original_name,
+        meta=meta,
+        vote_summary=vote_summary,
+        version=current_app.config["APP_VERSION"],
+    ))
+
+    if not bool(meta.get("permanent")):
+        response.headers["X-Robots-Tag"] = "noindex, noimageindex"
+
+    return response
 
 
 @public_bp.route("/download/<file_id>", endpoint="download")
@@ -121,6 +179,7 @@ def download(file_id):
     _, meta, server_name = get_file_record(file_id)
     if not meta:
         abort(404)
+
     return send_from_directory(
         current_app.config["UPLOAD_FOLDER"],
         server_name,
@@ -142,11 +201,20 @@ def public_file(file_id):
         db[file_id] = meta
         save_db(db)
 
+    client_ip = get_client_ip()
+    vote_summary = get_vote_summary(file_id, client_ip)
+
     response = make_response(render_template(
         "file.html",
+        file_id=file_id,
         file_url=url_for("public.view_file", file_id=file_id),
+        download_url=url_for("public.download", file_id=file_id),
         original_name=meta.get("original_name", ""),
         version=current_app.config["APP_VERSION"],
+        meta=meta,
+        views=int(meta.get("views", 0) or 0),
+        vote_summary=vote_summary,
+        is_image=is_image_filename(meta.get("original_name", "")),
     ))
     response.headers["X-Robots-Tag"] = "noindex, noimageindex"
 
@@ -159,7 +227,37 @@ def public_file(file_id):
             secure=True,
             samesite="Lax",
         )
+
     return response
+
+
+@public_bp.route("/file/<file_id>/vote", methods=["POST"], endpoint="vote_file")
+def vote_file(file_id):
+    cleanup_expired()
+    validate_csrf()
+
+    _db, meta, _server_name = get_file_record(file_id)
+    if not meta:
+        abort(404)
+
+    original_name = meta.get("original_name", "")
+    if not is_image_filename(original_name):
+        flash("Le vote est réservé aux images.", "warning")
+        return redirect(url_for("public.public_file", file_id=file_id))
+
+    vote_value = (request.form.get("vote") or "").strip().lower()
+    if vote_value not in {"up", "down"}:
+        flash("Vote invalide.", "warning")
+        return redirect(url_for("public.public_file", file_id=file_id))
+
+    client_ip = get_client_ip()
+    if not client_ip:
+        flash("Impossible d'enregistrer le vote pour le moment.", "warning")
+        return redirect(url_for("public.public_file", file_id=file_id))
+
+    register_vote(file_id, client_ip, vote_value)
+
+    return redirect(url_for("public.public_file", file_id=file_id))
 
 
 @public_bp.route("/delete/<file_id>", methods=["POST"], endpoint="delete_own_file")
@@ -181,7 +279,10 @@ def delete_own_file(file_id):
         abort(403)
 
     ok = delete_by_id(file_id)
-    flash("Fichier supprimé ✅" if ok else "Suppression impossible.", "success" if ok else "warning")
+    flash(
+        "Fichier supprimé ✅" if ok else "Suppression impossible.",
+        "success" if ok else "warning"
+    )
     return redirect(url_for("public.index"))
 
 
