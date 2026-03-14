@@ -88,7 +88,7 @@ TRANSLATIONS = {
         "illegal_content_report": "Signalement de contenu illicite",
         "contact_form": "formulaire de contact",
         "legal_hosting_service": "PixShare est un service d’hébergement temporaire de fichiers permettant d’uploader et de partager des fichiers via un lien sécurisé.",
-        "legal_contact_help": "Pour toute demande, utilise le",
+        "legal_contact_help": "Pour toute demande, utilise le ",
         "legal_intro_service": "PixShare est un service d’hébergement temporaire de fichiers.",
         "legal_temp_storage": "Les fichiers envoyés sur PixShare sont stockés de manière temporaire.",
         "legal_no_account": "PixShare ne demande pas la création de compte utilisateur.",
@@ -125,7 +125,6 @@ TRANSLATIONS = {
         "publisher_label": "Éditeur",
         "site_version": "Version du site",
         "editing": "Éditeur",
-         "legal_info_contact": "Pour toute demande, utilisez le ",
          "contat_info_use": "Utilisez ce formulaire pour contacter PixShare ou signaler un contenu problématique.",
          "contact_type_message": "Type de messages",
          
@@ -251,7 +250,6 @@ TRANSLATIONS = {
         "publisher_label": "Publisher",
         "site_version": "Site version",
         "editing": "Editor",
-        "legal_info_contact": "For any request, please use the",
         "contat_info_use" : "Use this form to contact PixShare or report problematic content.",
         "contact_type_message": "Message type",
         
