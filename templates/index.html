@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% set title = "PixShare – Hébergement d'image gratuit et partage de fichiers" %}
+
 {% block content %}
 
 <style>
@@ -106,7 +107,7 @@
               <div id="dz-file" class="mt-2 small text-muted"></div>
             </div>
 
-            <input id="fileInput" class="form-control mt-2" type="file" name="file" required>
+            <input id="fileInput" class="form-control mt-2" type="file" name="file"  required>
 
             <div id="previewBox" class="preview-box">
               <div class="small text-muted mb-2">{{ _("image_preview") }}</div>
@@ -130,18 +131,19 @@
                   <label class="form-label mb-1">{{ _("height_px") }}</label>
                   <input id="resizeHeight" type="number" min="1" step="1" class="form-control" placeholder="{{ _('placeholder_height') }}">
                 </div>
-              </div>
-
-              <div class="form-text mt-2">
-                {{ _("resize_help") }}
-              </div>
-
-              <div id="resizeInfo" class="small text-muted mt-2"></div>
-            </div>
-
+                          <div class="col-12">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="enhance_quality" value="1" id="enhanceQuality">
+            <label class="form-check-label" for="enhanceQuality">
+              {{ _("amelioration_image") }}
+            </label>
           </div>
-
-          <div class="col-12">
+        
+          <div class="form-text">
+            Option disponible pour JPG, JPEG et PNG.
+          </div>
+        </div>
+                  <div class="col-12">
 
             <label class="form-label">{{ _("file_lifetime_default_10") }}</label>
 
@@ -159,6 +161,18 @@
             </div>
 
           </div>
+              </div>
+
+              <div class="form-text mt-2">
+                {{ _("resize_help") }}
+              </div>
+
+              <div id="resizeInfo" class="small text-muted mt-2"></div>
+            </div>
+            
+          </div>
+
+
 
           {% if can_keep %}
 

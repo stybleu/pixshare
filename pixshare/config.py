@@ -25,15 +25,16 @@ class Config:
     LOCKOUT_SEC = 15 * 60
 
     ALLOWED_EXTENSIONS = {
-        "png", "jpg", "jpeg", "gif", "webp",
-        "mp4", "webm", "avi"
-    }
+    "png", "jpg", "jpeg", "gif", "webp",
+    "tif", "tiff",
+    "mp4", "webm", "avi"
+}
 
     MAX_LIFETIME_MIN = 120
     DEFAULT_LIFETIME_MIN = 5
 
-    PERMANENT_UPLOADS_ENABLED = (os.environ.get("PERMANENT_UPLOADS", "0") == "1")
-    PERMANENT_UPLOADS_ADMIN_ONLY = (os.environ.get("PERMANENT_UPLOADS_ADMIN_ONLY", "1") == "1")
+    PERMANENT_UPLOADS_ENABLED = (os.environ.get("PERMANENT_UPLOADS", "0") == "0")
+    PERMANENT_UPLOADS_ADMIN_ONLY = (os.environ.get("PERMANENT_UPLOADS_ADMIN_ONLY", "1") == "0")
 
     SECRET_KEY = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
     SESSION_COOKIE_HTTPONLY = True

@@ -6,6 +6,7 @@ from .auth_service import is_admin
 from .json_services import load_db, save_db, load_views, save_views, load_votes, save_votes
 from .request_service import get_client_ip
 from .time_service import parse_dt, utcnow
+from .image_quality_service import can_enhance_extension, enhance_image_bytes
 
 
 def human_size(n: int) -> str:
@@ -116,7 +117,10 @@ def file_meta(file_id: str):
 
     stat = os.stat(path)
     ext = os.path.splitext(server_name)[1].lower()
-    previewable = ext in {".png", ".jpg", ".jpeg", ".gif", ".webp"}
+    previewable = ext in {
+    ".png", ".jpg", ".jpeg", ".gif", ".webp",
+    ".mp4", ".webm",
+}
     permanent = bool(meta.get("permanent")) or (not meta.get("expires_at"))
 
     if permanent:
@@ -191,7 +195,19 @@ def save_uploaded_file(file_storage, original_name: str, client_ip: str, guest_t
         server_name = f"{file_id}{ext}"
         dest = os.path.join(current_app.config["UPLOAD_FOLDER"], server_name)
 
-    file_storage.save(dest)
+    enhance_requested = request.form.get("enhance_quality") in {"1", "on", "true", "yes"}
+
+    if enhance_requested and can_enhance_extension(ext):
+        file_bytes = file_storage.read()
+        try:
+            file_bytes = enhance_image_bytes(file_bytes, ext)
+        except Exception:
+            pass
+
+        with open(dest, "wb") as f:
+            f.write(file_bytes)
+    else:
+        file_storage.save(dest)
 
     allow_keep = can_keep_uploads()
     if keep_requested and allow_keep:
