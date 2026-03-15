@@ -38,6 +38,7 @@ uploads/*
 # =========================
 
 data/*.json
+pixshare/data/*.json
 
 # =========================
 # Logs
