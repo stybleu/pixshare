@@ -10,7 +10,7 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<meta property="og:title" content="{{ _("shared_file_og_title") }}">
+<meta property="og:title" content="{{ _('shared_file_og_title') }}">
 <meta property="og:image" content="{{ file_url }}">
 <meta property="og:type" content="image">
 
@@ -152,20 +152,6 @@ img,iframe{
 Aperçu générique du fichier
 </div>
 {% endif %}
-
-<div class="stats">
-
-<div class="stats-card">
-<div>👍</div>
-<strong>{{ vote_summary.up }}</strong>
-</div>
-
-<div class="stats-card">
-<div>👎</div>
-<strong>{{ vote_summary.down }}</strong>
-</div>
-
-</div>
 
 <div class="actions">
 <a href="{{ download_url }}">Télécharger</a>
