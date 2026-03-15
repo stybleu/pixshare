@@ -19,6 +19,7 @@ from pixshare.services.file_service import (
 from pixshare.services.json_services import load_blocked, load_db, save_db
 from pixshare.services.request_service import get_client_ip
 from pixshare.services.vote_service import get_vote_summary, is_image_filename, register_vote
+from pixshare.services.settings_service import get_max_upload_size_bytes, get_max_upload_size_mb
 
 public_bp = Blueprint("public", __name__)
 
@@ -53,6 +54,13 @@ def index():
             flash(f"Extension non autorisée. Autorisées : {allowed}", "danger")
             return redirect(url_for("public.index"))
 
+        max_size_bytes = get_max_upload_size_bytes()
+        content_length = request.content_length or 0
+        if content_length > max_size_bytes:
+            max_mb = get_max_upload_size_mb()
+            flash(f"Fichier trop volumineux. Taille maximale : {max_mb} Mo.", "danger")
+            return redirect(url_for("public.index"))
+
         keep = (request.form.get("keep", "") in {"1", "on", "true", "yes"})
         _, lifetime, permanent = save_uploaded_file(
             f,
@@ -83,7 +91,7 @@ def index():
     return render_template(
         "index.html",
         guest_files=guest_files,
-        max_mb=int(current_app.config["MAX_CONTENT_LENGTH"] / (1024 * 1024)),
+        max_mb=get_max_upload_size_mb(),
         admin=is_admin(),
         version=current_app.config["APP_VERSION"],
         can_keep=can_keep_uploads(),

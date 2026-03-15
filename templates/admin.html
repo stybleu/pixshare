@@ -40,9 +40,7 @@
   display: block;
 }
 
-</style>
-
-{% endblock %}
+</style>{% endblock %}
 
 {% block content %}
 
@@ -50,184 +48,183 @@
   <div>
     <h1 class="h4 mb-0">Panel Admin</h1>
     <div class="text-muted small">Banque de fichiers (liens publics) + suppression + blocage IP.</div>
-  </div>
-
-  <div class="d-flex gap-2">
+  </div>  <div class="d-flex gap-2">
     <a class="btn btn-outline-primary btn-sm" href="{{ url_for('public.index') }}">Voir page publique</a>
     <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_messages') }}">Messages</a>
     <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_blocked_ips') }}">
       IP bloquées
     </a>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('admin.admin_settings') }}">
+      Paramètres
+    </a><form method="post" action="{{ url_for('admin.admin_logout') }}" class="m-0">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <button class="btn btn-outline-secondary btn-sm" type="submit">Déconnexion</button>
+</form>
 
-    <form method="post" action="{{ url_for('admin.admin_logout') }}" class="m-0">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <button class="btn btn-outline-secondary btn-sm" type="submit">Déconnexion</button>
-    </form>
   </div>
-</div>
-
-<!-- Blocage IP -->
-<div class="card shadow-sm mb-3">
+</div><!-- Blocage IP --><div class="card shadow-sm mb-3">
   <div class="card-body">
-    <h2 class="h6 mb-2">Bloquer une IP manuellement</h2>
+    <h2 class="h6 mb-2">Bloquer une IP manuellement</h2><form method="post" action="{{ url_for('admin.admin_block_ip') }}" class="row g-2 align-items-end">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
-    <form method="post" action="{{ url_for('admin.admin_block_ip') }}" class="row g-2 align-items-end">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <div class="col-12 col-md-6">
+    <label class="form-label">IP</label>
+    <input class="form-control" name="ip" placeholder="ex: 82.64.xxx.xxx" required>
+  </div>
 
-      <div class="col-12 col-md-6">
-        <label class="form-label">IP</label>
-        <input class="form-control" name="ip" placeholder="ex: 82.64.xxx.xxx" required>
-      </div>
-
-      <div class="col-12 col-md-3">
-        <button class="btn btn-warning w-100" type="submit">
-          Bloquer
-        </button>
-      </div>
-    </form>
+  <div class="col-12 col-md-3">
+    <button class="btn btn-warning w-100" type="submit">
+      Bloquer
+    </button>
+  </div>
+</form>
 
   </div>
-</div>
+</div><div class="card shadow-sm">
+  <div class="card-body"><h2 class="h6 mb-3">Fichiers (banque de données)</h2>
 
-<div class="card shadow-sm">
-  <div class="card-body">
+{% if files %}
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead>
+        <tr>
+          <th>Aperçu</th>
+          <th>Nom original</th>
+          <th>Taille</th>
+          <th>Date</th>
+          <th>Expiration</th>
+          <th>Vues</th>
+          <th>IP</th>
+          <th>Lien public</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
 
-    <h2 class="h6 mb-3">Fichiers (banque de données)</h2>
+      <tbody>
+      {% for f in files %}
+      <tr>
 
-    {% if files %}
-      <div class="table-responsive">
-        <table class="table align-middle">
-          <thead>
-            <tr>
-              <th>Aperçu</th>
-              <th>Nom original</th>
-              <th>Taille</th>
-              <th>Date</th>
-              <th>Vues</th>
-              <th>IP</th>
-              <th>Lien public</th>
-              <th class="text-end">Actions</th>
-            </tr>
-          </thead>
+        <td style="width:90px;">
+          {% if f.previewable %}
+          <div class="admin-thumb-container">
+            <a href="{{ f.raw_url }}" target="_blank" rel="noopener">
+              <img
+                src="{{ f.raw_url }}"
+                alt="Aperçu de {{ f.original }}"
+                class="admin-thumb"
+                loading="lazy">
+            </a>
 
-          <tbody>
-          {% for f in files %}
-          <tr>
+            <img
+              src="{{ f.raw_url }}"
+              alt="Zoom de {{ f.original }}"
+              class="admin-thumb-zoom"
+              loading="lazy">
+          </div>
+          {% else %}
+          <span class="text-muted small">—</span>
+          {% endif %}
+        </td>
 
-            <td style="width:90px;">
-              {% if f.previewable %}
-              <div class="admin-thumb-container">
-                <a href="{{ f.raw_url }}" target="_blank" rel="noopener">
-                  <img
-                    src="{{ f.raw_url }}"
-                    alt="Aperçu de {{ f.original }}"
-                    class="admin-thumb"
-                    loading="lazy">
-                </a>
+        <td class="fw-semibold">{{ f.original }}</td>
+        <td>{{ f.size_h }}</td>
+        <td class="text-muted">{{ f.mtime_h }}</td>
 
-                <img
-                  src="{{ f.raw_url }}"
-                  alt="Zoom de {{ f.original }}"
-                  class="admin-thumb-zoom"
-                  loading="lazy">
-              </div>
-              {% else %}
-              <span class="text-muted small">—</span>
-              {% endif %}
-            </td>
+        <td>
+          {% if f.remaining_time %}
+            <span class="badge text-bg-info">{{ f.remaining_time }}</span>
+          {% else %}
+            <span class="text-muted">Permanent</span>
+          {% endif %}
+        </td>
 
-            <td class="fw-semibold">{{ f.original }}</td>
-            <td>{{ f.size_h }}</td>
-            <td class="text-muted">{{ f.mtime_h }}</td>
-            <td>
-              <span class="badge text-bg-secondary">{{ f.views or 0 }}</span>
-            </td>
+        <td>
+          <span class="badge text-bg-secondary">{{ f.views or 0 }}</span>
+        </td>
 
-            <td>
-              {% if f.ip %}
-                <code>{{ f.ip }}</code>
-              {% else %}
-                <span class="text-muted">—</span>
-              {% endif %}
-            </td>
+        <td>
+          {% if f.ip %}
+            <code>{{ f.ip }}</code>
+          {% else %}
+            <span class="text-muted">—</span>
+          {% endif %}
+        </td>
 
-            <td style="min-width:360px;">
-              <div class="input-group input-group-sm">
-                <div class="input-group">
-                  <input
-                    class="form-control public-link"
-                    value="{{ f.public_url }}"
-                    readonly
-                    onclick="this.select()">
+        <td style="min-width:360px;">
+          <div class="input-group input-group-sm">
+            <div class="input-group">
+              <input
+                class="form-control public-link"
+                value="{{ f.public_url }}"
+                readonly
+                onclick="this.select()">
 
-                  <button
-                    type="button"
-                    class="btn btn-outline-primary"
-                    onclick="copyLink(this)">
-                    Copier
-                  </button>
-                </div>
+              <button
+                type="button"
+                class="btn btn-outline-primary"
+                onclick="copyLink(this)">
+                Copier
+              </button>
+            </div>
 
-                {% if f.previewable %}
-                  <a class="btn btn-outline-success" href="{{ f.raw_url }}" target="_blank" rel="noopener">
-                    Ouvrir
-                  </a>
-                {% endif %}
+            {% if f.previewable %}
+              <a class="btn btn-outline-success" href="{{ f.raw_url }}" target="_blank" rel="noopener">
+                Ouvrir
+              </a>
+            {% endif %}
 
-                <a class="btn btn-outline-primary" href="{{ f.download_url }}">
-                  Télécharger
-                </a>
-              </div>
-            </td>
+            <a class="btn btn-outline-primary" href="{{ f.download_url }}">
+              Télécharger
+            </a>
+          </div>
+        </td>
 
-            <td class="text-end">
-              <div class="d-flex justify-content-end gap-2 flex-wrap">
+        <td class="text-end">
+          <div class="d-flex justify-content-end gap-2 flex-wrap">
 
-                {% if f.ip %}
-                <form method="post"
-                      action="{{ url_for('admin.admin_block_ip') }}"
-                      class="m-0"
-                      onsubmit="return confirm('Bloquer cette IP ?');">
+            {% if f.ip %}
+            <form method="post"
+                  action="{{ url_for('admin.admin_block_ip') }}"
+                  class="m-0"
+                  onsubmit="return confirm('Bloquer cette IP ?');">
 
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                  <input type="hidden" name="ip" value="{{ f.ip }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="ip" value="{{ f.ip }}">
 
-                  <button class="btn btn-warning btn-sm" type="submit">
-                    Bloquer IP
-                  </button>
-                </form>
-                {% endif %}
+              <button class="btn btn-warning btn-sm" type="submit">
+                Bloquer IP
+              </button>
+            </form>
+            {% endif %}
 
-                <form method="post"
-                      action="{{ url_for('admin.admin_delete') }}"
-                      class="m-0"
-                      onsubmit="return confirm('Supprimer définitivement ce fichier ?');">
+            <form method="post"
+                  action="{{ url_for('admin.admin_delete') }}"
+                  class="m-0"
+                  onsubmit="return confirm('Supprimer définitivement ce fichier ?');">
 
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                  <input type="hidden" name="file_id" value="{{ f.id }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="file_id" value="{{ f.id }}">
 
-                  <button class="btn btn-danger btn-sm" type="submit">
-                    Supprimer
-                  </button>
-                </form>
+              <button class="btn btn-danger btn-sm" type="submit">
+                Supprimer
+              </button>
+            </form>
 
-              </div>
-            </td>
+          </div>
+        </td>
 
-          </tr>
-          {% endfor %}
-          </tbody>
+      </tr>
+      {% endfor %}
+      </tbody>
 
-        </table>
-      </div>
-    {% else %}
-      <div class="text-muted">Aucun fichier dans la banque.</div>
-    {% endif %}
+    </table>
+  </div>
+{% else %}
+  <div class="text-muted">Aucun fichier dans la banque.</div>
+{% endif %}
 
   </div>
-</div>
-
-<script>
+</div><script>
 function copyLink(btn){
   const group = btn.closest(".input-group");
   if(!group) return;
@@ -242,6 +239,4 @@ function copyLink(btn){
   navigator.clipboard?.writeText(input.value)
     .catch(()=>document.execCommand("copy"));
 }
-</script>
-
-{% endblock %}
+</script>{% endblock %}

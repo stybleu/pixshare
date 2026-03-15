@@ -7,6 +7,7 @@ from .json_services import load_db, save_db, load_views, save_views, load_votes,
 from .request_service import get_client_ip
 from .time_service import parse_dt, utcnow
 from .image_quality_service import can_enhance_extension, enhance_image_bytes
+from .settings_service import permanent_files_enabled
 
 
 def human_size(n: int) -> str:
@@ -179,6 +180,8 @@ def list_guest_files():
 
 
 def can_keep_uploads() -> bool:
+    if not permanent_files_enabled():
+        return False
     return current_app.config["PERMANENT_UPLOADS_ENABLED"] and (
         not current_app.config["PERMANENT_UPLOADS_ADMIN_ONLY"] or is_admin()
     )

@@ -4,6 +4,8 @@ from pixshare.security.csrf import validate_csrf
 from pixshare.services.auth_service import admin_required, process_admin_login
 from pixshare.services.file_service import cleanup_expired, delete_by_id, list_all_files
 from pixshare.services.json_services import load_blocked, load_contacts, save_blocked, save_contacts
+from pixshare.services.settings_service import load_settings, save_settings
+from pixshare.services.time_service import get_remaining_time_label
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -31,6 +33,7 @@ def admin_messages():
         messages=items,
         version=current_app.config["APP_VERSION"]
     )
+
 
 @admin_bp.route("/admin/messages/delete", methods=["POST"], endpoint="admin_delete_message")
 @admin_required
@@ -77,12 +80,14 @@ def admin_blocked_ips():
         version=current_app.config["APP_VERSION"]
     )
 
+
 @admin_bp.route("/admin/blocked-ips/clear", methods=["POST"])
 @admin_required
 def admin_clear_blocked_ips():
     save_blocked([])
     flash("La liste des IP bloquées a été vidée.", "success")
     return redirect(url_for("admin.admin_blocked_ips"))
+
 
 @admin_bp.route("/admin/blocked-ips/unblock", methods=["POST"], endpoint="admin_unblock_ip")
 @admin_required
@@ -136,7 +141,47 @@ def admin_logout():
 @admin_required
 def admin_panel():
     cleanup_expired()
-    return render_template("admin.html", files=list_all_files(), version=current_app.config["APP_VERSION"])
+
+    files = list_all_files()
+
+    for f in files:
+        f["remaining_time"] = get_remaining_time_label(f.get("expires_at"))
+
+    return render_template(
+        "admin.html",
+        files=files,
+        version=current_app.config["APP_VERSION"]
+    )
+
+
+@admin_bp.route("/admin/settings", methods=["GET", "POST"], endpoint="admin_settings")
+@admin_required
+def admin_settings():
+    settings = load_settings()
+
+    if request.method == "POST":
+        validate_csrf()
+
+        try:
+            max_upload_size_mb = int(request.form.get("max_upload_size_mb", settings.get("max_upload_size_mb", 100)))
+        except (TypeError, ValueError):
+            flash("Taille maximale invalide.", "warning")
+            return redirect(url_for("admin.admin_settings"))
+
+        allow_permanent_files = request.form.get("allow_permanent_files") == "1"
+
+        settings = save_settings({
+            "max_upload_size_mb": max_upload_size_mb,
+            "allow_permanent_files": allow_permanent_files,
+        })
+        flash("Paramètres enregistrés ✅", "success")
+        return redirect(url_for("admin.admin_settings"))
+
+    return render_template(
+        "admin_settings.html",
+        settings=settings,
+        version=current_app.config["APP_VERSION"],
+    )
 
 
 @admin_bp.route("/admin/delete", methods=["POST"], endpoint="admin_delete")
