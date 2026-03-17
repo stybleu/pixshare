@@ -4,7 +4,7 @@ from pixshare.security.csrf import validate_csrf
 from pixshare.services.auth_service import admin_required, process_admin_login
 from pixshare.services.file_service import cleanup_expired, delete_by_id, list_all_files
 from pixshare.services.json_services import load_blocked, load_contacts, save_blocked, save_contacts
-from pixshare.services.settings_service import load_settings, save_settings
+from pixshare.services.settings_service import get_valid_lifetime, load_settings, save_settings
 from pixshare.services.time_service import get_remaining_time_label
 
 admin_bp = Blueprint("admin", __name__)
@@ -170,9 +170,20 @@ def admin_settings():
 
         allow_permanent_files = request.form.get("allow_permanent_files") == "1"
 
+        try:
+            default_lifetime_minutes = int(request.form.get("default_lifetime_minutes", settings.get("default_lifetime_minutes", 10)))
+        except (TypeError, ValueError):
+            flash("Temps d'expiration par défaut invalide.", "warning")
+            return redirect(url_for("admin.admin_settings"))
+
+        if get_valid_lifetime(default_lifetime_minutes) != default_lifetime_minutes:
+            flash("Temps d'expiration par défaut invalide.", "warning")
+            return redirect(url_for("admin.admin_settings"))
+
         settings = save_settings({
             "max_upload_size_mb": max_upload_size_mb,
             "allow_permanent_files": allow_permanent_files,
+            "default_lifetime_minutes": default_lifetime_minutes,
         })
         flash("Paramètres enregistrés ✅", "success")
         return redirect(url_for("admin.admin_settings"))

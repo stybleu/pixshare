@@ -19,7 +19,7 @@ from pixshare.services.file_service import (
 from pixshare.services.json_services import load_blocked, load_db, save_db
 from pixshare.services.request_service import get_client_ip
 from pixshare.services.vote_service import get_vote_summary, is_image_filename, register_vote
-from pixshare.services.settings_service import get_max_upload_size_bytes, get_max_upload_size_mb
+from pixshare.services.settings_service import get_default_lifetime, get_max_upload_size_bytes, get_max_upload_size_mb
 
 public_bp = Blueprint("public", __name__)
 
@@ -95,6 +95,7 @@ def index():
         admin=is_admin(),
         version=current_app.config["APP_VERSION"],
         can_keep=can_keep_uploads(),
+        default_lifetime=get_default_lifetime(),
     )
 
 

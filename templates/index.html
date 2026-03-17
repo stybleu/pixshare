@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% set title = "PixShare – Upload et partage d’images et fichiers en haute qualité" %}
+{% set title = "PixShare – Hébergement d'image gratuit et partage de fichiers" %}
 
 {% block content %}
 
@@ -140,7 +140,7 @@
           </div>
         
           <div class="form-text">
-            Option disponible pour JPG, JPEG et PNG.
+            {{ _("option_image") }}
           </div>
         </div>
                   <div class="col-12">
@@ -148,12 +148,12 @@
             <label class="form-label">{{ _("file_lifetime_default_10") }}</label>
 
             <select name="lifetime" class="form-select">
-              <option value="5">{{ _("minutes_5") }}</option>
-              <option value="10" selected>{{ _("minutes_10") }}</option>
-              <option value="20">{{ _("minutes_20") }}</option>
-              <option value="30">{{ _("minutes_30") }}</option>
-              <option value="60">{{ _("hour_1") }}</option>
-              <option value="120">{{ _("hours_2") }}</option>
+              <option value="5" {% if default_lifetime == 5 %}selected{% endif %}>{{ _("minutes_5") }}</option>
+              <option value="10" {% if default_lifetime == 10 %}selected{% endif %}>{{ _("minutes_10") }}</option>
+              <option value="20" {% if default_lifetime == 20 %}selected{% endif %}>{{ _("minutes_20") }}</option>
+              <option value="30" {% if default_lifetime == 30 %}selected{% endif %}>{{ _("minutes_30") }}</option>
+              <option value="60" {% if default_lifetime == 60 %}selected{% endif %}>{{ _("hour_1") }}</option>
+              <option value="120" {% if default_lifetime == 120 %}selected{% endif %}>{{ _("hours_2") }}</option>
             </select>
 
             <div class="form-text">
@@ -346,11 +346,13 @@
   <ul>
     <li>{{ _("feature_screenshot") }}</li>
     <li>{{ _("feature_share_image") }}</li>
-    <li>{{ _("feature_temporary_file") }}</li>
     <li>{{ _("feature_short_video") }}</li>
   </ul>
 </section>
 
+
+
+</div>
 
 <script>
 function copyById(id){

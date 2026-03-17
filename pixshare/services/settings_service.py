@@ -9,7 +9,11 @@ SETTINGS_FILE = DATA_DIR / "settings.json"
 DEFAULT_SETTINGS = {
     "max_upload_size_mb": 100,
     "allow_permanent_files": True,
+    "default_lifetime_minutes": 10,
 }
+
+
+ALLOWED_LIFETIMES = {5, 10, 20, 30, 60, 120}
 
 
 def ensure_settings_file() -> None:
@@ -34,6 +38,7 @@ def load_settings() -> dict:
     settings.update(data)
     settings["max_upload_size_mb"] = get_valid_max_upload_size_mb(settings.get("max_upload_size_mb"))
     settings["allow_permanent_files"] = bool(settings.get("allow_permanent_files", True))
+    settings["default_lifetime_minutes"] = get_valid_lifetime(settings.get("default_lifetime_minutes"))
     return settings
 
 
@@ -43,6 +48,7 @@ def save_settings(settings: dict) -> dict:
     clean_settings = {
         "max_upload_size_mb": get_valid_max_upload_size_mb(settings.get("max_upload_size_mb")),
         "allow_permanent_files": bool(settings.get("allow_permanent_files", True)),
+        "default_lifetime_minutes": get_valid_lifetime(settings.get("default_lifetime_minutes")),
     }
 
     with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
@@ -57,6 +63,21 @@ def get_valid_max_upload_size_mb(value) -> int:
     except (TypeError, ValueError):
         value = DEFAULT_SETTINGS["max_upload_size_mb"]
     return max(1, min(value, 500))
+
+
+def get_valid_lifetime(value) -> int:
+    try:
+        value = int(value)
+    except (TypeError, ValueError):
+        return DEFAULT_SETTINGS["default_lifetime_minutes"]
+
+    if value not in ALLOWED_LIFETIMES:
+        return DEFAULT_SETTINGS["default_lifetime_minutes"]
+    return value
+
+
+def get_default_lifetime() -> int:
+    return int(load_settings().get("default_lifetime_minutes", DEFAULT_SETTINGS["default_lifetime_minutes"]))
 
 
 def get_max_upload_size_mb() -> int:

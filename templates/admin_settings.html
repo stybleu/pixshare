@@ -36,6 +36,20 @@
         <div class="form-text">Valeur autorisée : de 1 à 500 Mo.</div>
       </div>
 
+
+      <div class="col-12 col-md-6">
+        <label class="form-label fw-semibold">Temps d'expiration par défaut</label>
+        <select name="default_lifetime_minutes" class="form-select">
+          <option value="5" {% if settings.default_lifetime_minutes == 5 %}selected{% endif %}>5 minutes</option>
+          <option value="10" {% if settings.default_lifetime_minutes == 10 %}selected{% endif %}>10 minutes</option>
+          <option value="20" {% if settings.default_lifetime_minutes == 20 %}selected{% endif %}>20 minutes</option>
+          <option value="30" {% if settings.default_lifetime_minutes == 30 %}selected{% endif %}>30 minutes</option>
+          <option value="60" {% if settings.default_lifetime_minutes == 60 %}selected{% endif %}>1 heure</option>
+          <option value="120" {% if settings.default_lifetime_minutes == 120 %}selected{% endif %}>2 heures</option>
+        </select>
+        <div class="form-text">Valeur présélectionnée sur la page d'upload.</div>
+      </div>
+
       <div class="col-12 col-md-6">
         <label class="form-label fw-semibold">Fichiers permanents</label>
         <select name="allow_permanent_files" class="form-select">
