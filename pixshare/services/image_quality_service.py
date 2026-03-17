@@ -6,6 +6,14 @@ from PIL import Image, ImageEnhance, ImageFilter
 # Protection contre les images gigantesques / decompression bombs
 Image.MAX_IMAGE_PIXELS = 60_000_000
 
+# Support HEIC / HEIF via pillow-heif
+try:
+    import pillow_heif
+    pillow_heif.register_heif_opener()
+    HEIF_AVAILABLE = True
+except Exception:
+    HEIF_AVAILABLE = False
+
 
 SUPPORTED_ENHANCE_EXTENSIONS = {
     ".jpg", ".jpeg",
@@ -13,15 +21,38 @@ SUPPORTED_ENHANCE_EXTENSIONS = {
     ".webp",
     ".tif", ".tiff",
     ".avif",
+    ".heic", ".heif",
 }
 
 
 def can_enhance_extension(ext: str) -> bool:
-    return (ext or "").lower() in SUPPORTED_ENHANCE_EXTENSIONS
+    ext = (ext or "").lower()
+
+    if ext in {".heic", ".heif"} and not HEIF_AVAILABLE:
+        return False
+
+    return ext in SUPPORTED_ENHANCE_EXTENSIONS
+
+
+def get_output_extension(ext: str) -> str:
+    """
+    Retourne l'extension finale après amélioration.
+    HEIC / HEIF sont convertis en JPG pour compatibilité navigateur.
+    """
+    ext = (ext or "").lower()
+
+    if ext in {".heic", ".heif"}:
+        return ".jpg"
+
+    return ext
 
 
 def enhance_image_bytes(file_bytes: bytes, ext: str) -> bytes:
     ext = (ext or "").lower()
+
+    # Si HEIC/HEIF demandé sans support installé, on renvoie l'original
+    if ext in {".heic", ".heif"} and not HEIF_AVAILABLE:
+        return file_bytes
 
     try:
         with Image.open(io.BytesIO(file_bytes)) as img:
@@ -45,6 +76,16 @@ def enhance_image_bytes(file_bytes: bytes, ext: str) -> bytes:
             elif ext == ".avif":
                 if img.mode not in ("RGB", "RGBA"):
                     img = img.convert("RGB")
+
+            elif ext in {".heic", ".heif"}:
+                # On convertit ensuite en JPEG
+                if img.mode not in ("RGB", "RGBA"):
+                    img = img.convert("RGB")
+                elif img.mode == "RGBA":
+                    # JPEG ne gère pas l'alpha
+                    background = Image.new("RGB", img.size, (255, 255, 255))
+                    background.paste(img, mask=img.getchannel("A"))
+                    img = background
 
             else:
                 return file_bytes
@@ -102,6 +143,19 @@ def enhance_image_bytes(file_bytes: bytes, ext: str) -> bytes:
                 except Exception:
                     # Si AVIF n'est pas supporté par Pillow/libavif
                     return file_bytes
+
+            elif ext in {".heic", ".heif"}:
+                # Conversion HEIC/HEIF -> JPEG pour compatibilité web
+                if img.mode != "RGB":
+                    img = img.convert("RGB")
+
+                img.save(
+                    output,
+                    format="JPEG",
+                    quality=95,
+                    subsampling=0,
+                    optimize=True,
+                )
 
             else:
                 return file_bytes
