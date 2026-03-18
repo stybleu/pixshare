@@ -3,3 +3,4 @@ gunicorn
 Werkzeug
 Pillow
 pillow-heif
+psutil
