@@ -42,6 +42,24 @@
 .status-badge{
   min-width: 88px;
 }
+
+.monitor-value{
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.monitor-label{
+  font-size: .9rem;
+  color: #6c757d;
+}
+
+.monitor-card{
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 14px;
+  padding: 1rem;
+  background: #fff;
+  height: 100%;
+}
 </style>
 {% endblock %}
 
@@ -61,6 +79,77 @@
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <button class="btn btn-outline-secondary btn-sm" type="submit">Déconnexion</button>
     </form>
+  </div>
+</div>
+
+<div class="card shadow-sm mb-3">
+  <div class="card-body">
+    <h2 class="h6 mb-3">Surveillance mémoire</h2>
+
+    <div class="row g-3">
+      <div class="col-12 col-lg-6">
+        <div class="monitor-card">
+          <div class="monitor-label mb-2">RAM du processus PixShare</div>
+
+          {% if stats is defined and stats.process_ram is defined and stats.process_ram.ok %}
+            <div class="monitor-value">{{ stats.process_ram.rss_mb }} MB</div>
+            <div class="text-muted small mt-1">
+              RSS = mémoire réellement occupée par le processus Python
+            </div>
+
+            {% if stats.process_ram.vms_mb is not none %}
+              <div class="small mt-2">
+                <strong>VMS :</strong> {{ stats.process_ram.vms_mb }} MB
+              </div>
+            {% endif %}
+          {% else %}
+            <div class="text-muted">
+              Indisponible
+              {% if stats is defined
+                    and stats.process_ram is defined
+                    and stats.process_ram.error is defined
+                    and stats.process_ram.error %}
+                : {{ stats.process_ram.error }}
+              {% endif %}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="col-12 col-lg-6">
+        <div class="monitor-card">
+          <div class="monitor-label mb-2">RAM système</div>
+
+          {% if stats is defined and stats.system_ram is defined and stats.system_ram.ok %}
+            <div class="monitor-value">
+              {{ stats.system_ram.used_mb }} / {{ stats.system_ram.total_mb }} MB
+            </div>
+
+            <div class="progress mt-3" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ stats.system_ram.percent }}">
+              <div class="progress-bar" style="width: {{ stats.system_ram.percent }}%;">
+                {{ stats.system_ram.percent }}%
+              </div>
+            </div>
+
+            {% if stats.system_ram.available_mb is not none %}
+              <div class="small text-muted mt-2">
+                Disponible : {{ stats.system_ram.available_mb }} MB
+              </div>
+            {% endif %}
+          {% else %}
+            <div class="text-muted">
+              Indisponible
+              {% if stats is defined
+                    and stats.system_ram is defined
+                    and stats.system_ram.error is defined
+                    and stats.system_ram.error %}
+                : {{ stats.system_ram.error }}
+              {% endif %}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 

@@ -13,6 +13,7 @@ from pixshare.services.settings_service import (
     save_settings,
 )
 from pixshare.services.time_service import get_remaining_time_label
+from pixshare.services.system_service import get_system_stats
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -156,9 +157,12 @@ def admin_panel():
     for f in files:
         f["remaining_time"] = get_remaining_time_label(f.get("expires_at")) if f.get("status") == "active" else ""
 
+    stats = get_system_stats()
+
     return render_template(
         "admin.html",
         files=files,
+        stats=stats,
         version=current_app.config["APP_VERSION"]
     )
 
