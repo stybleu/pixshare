@@ -157,12 +157,10 @@ def admin_panel():
     for f in files:
         f["remaining_time"] = get_remaining_time_label(f.get("expires_at")) if f.get("status") == "active" else ""
 
-    stats = get_system_stats()
 
     return render_template(
         "admin.html",
         files=files,
-        stats=stats,
         version=current_app.config["APP_VERSION"]
     )
 
@@ -260,3 +258,14 @@ def admin_block_ip():
     else:
         flash(f"IP déjà bloquée : {ip}", "info")
     return redirect(url_for("admin.admin_panel"))
+    
+@admin_bp.route("/admin/system", methods=["GET"], endpoint="admin_system")
+@admin_required
+def admin_system():
+    stats = get_system_stats()
+
+    return render_template(
+        "admin_system.html",
+        stats=stats,
+        version=current_app.config["APP_VERSION"]
+    )

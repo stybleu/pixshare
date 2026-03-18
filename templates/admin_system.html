@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% set title = "Admin - Système" %}
+
+{% block head %}
+<meta name="robots" content="noindex, nofollow, noarchive">
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex flex-wrap gap-2 align-items-center justify-content-between mb-3">
+  <div>
+    <h1 class="h4 mb-0">Surveillance système</h1>
+    <div class="text-muted small">État mémoire de l'application et du serveur</div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_panel') }}">Fichiers</a>
+    <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_messages') }}">Messages</a>
+    <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_blocked_ips') }}">IP bloquées</a>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('admin.admin_settings') }}">Paramètres</a>
+  </div>
+</div>
+
+<div class="row g-3">
+
+  <!-- RAM PROCESSUS -->
+  <div class="col-12 col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+
+        <h2 class="h6 mb-3">RAM application (PixShare)</h2>
+
+        {% if stats is defined and stats.process_ram is defined and stats.process_ram.ok %}
+          {% set p = stats.process_ram.percent or 0 %}
+
+          <div class="mb-2">
+            <strong>{{ stats.process_ram.rss_mb }} MB</strong>
+            {% if stats.process_ram.percent is not none %}
+              <span class="text-muted">({{ stats.process_ram.percent }}%)</span>
+            {% endif %}
+          </div>
+
+          <div class="progress mb-2" style="height: 12px;">
+            <div class="progress-bar 
+              {% if p >= 80 %}bg-danger
+              {% elif p >= 60 %}bg-warning text-dark
+              {% else %}bg-success{% endif %}"
+              style="width: {{ p }}%;">
+            </div>
+          </div>
+
+          {% if stats.process_ram.vms_mb is not none %}
+            <div class="small text-muted">VMS : {{ stats.process_ram.vms_mb }} MB</div>
+          {% endif %}
+
+        {% else %}
+          <div class="text-muted">
+            Indisponible
+            {% if stats is defined and stats.process_ram.error %}
+              : {{ stats.process_ram.error }}
+            {% endif %}
+          </div>
+        {% endif %}
+
+      </div>
+    </div>
+  </div>
+
+  <!-- RAM SYSTEME -->
+  <div class="col-12 col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+
+        <h2 class="h6 mb-3">RAM système</h2>
+
+        {% if stats is defined and stats.system_ram is defined and stats.system_ram.ok %}
+          {% set s = stats.system_ram.percent or 0 %}
+
+          <div class="mb-2">
+            <strong>{{ stats.system_ram.used_mb }} / {{ stats.system_ram.total_mb }} MB</strong>
+            {% if stats.system_ram.percent is not none %}
+              <span class="text-muted">({{ stats.system_ram.percent }}%)</span>
+            {% endif %}
+          </div>
+
+          <div class="progress mb-2" style="height: 12px;">
+            <div class="progress-bar 
+              {% if s >= 80 %}bg-danger
+              {% elif s >= 60 %}bg-warning text-dark
+              {% else %}bg-success{% endif %}"
+              style="width: {{ s }}%;">
+            </div>
+          </div>
+
+          {% if stats.system_ram.available_mb is not none %}
+            <div class="small text-muted">
+              Disponible : {{ stats.system_ram.available_mb }} MB
+            </div>
+          {% endif %}
+
+        {% else %}
+          <div class="text-muted">
+            Indisponible
+            {% if stats is defined and stats.system_ram.error %}
+              : {{ stats.system_ram.error }}
+            {% endif %}
+          </div>
+        {% endif %}
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}
