@@ -13,6 +13,7 @@ class Config:
     VIEWS_FILE = os.path.join(DATA_DIR, "views.json")
     CONTACTS_FILE = os.path.join(DATA_DIR, "contacts.json")
     VOTES_FILE = os.path.join(DATA_DIR, "votes.json")
+    THUMBNAIL_FOLDER = os.path.join(DATA_DIR, "mod_thumbs")
 
     UPLOAD_FOLDER = "tmp/fichiers"
     APP_VERSION = (os.environ.get("RENDER_GIT_COMMIT", "")[:7] or "dev")
@@ -25,10 +26,10 @@ class Config:
     LOCKOUT_SEC = 15 * 60
 
     ALLOWED_EXTENSIONS = {
-    "png", "jpg", "jpeg", "gif", "webp",
-    "tif", "tiff",
-    "mp4", "webm", "avi","heic", "heif"
-}
+        "png", "jpg", "jpeg", "gif", "webp",
+        "tif", "tiff",
+        "mp4", "webm", "avi", "heic", "heif"
+    }
 
     MAX_LIFETIME_MIN = 120
     DEFAULT_LIFETIME_MIN = 5

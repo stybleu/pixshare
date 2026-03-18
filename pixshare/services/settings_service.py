@@ -10,8 +10,8 @@ DEFAULT_SETTINGS = {
     "max_upload_size_mb": 100,
     "allow_permanent_files": True,
     "default_lifetime_minutes": 10,
+    "thumbnail_retention_hours": 24,
 }
-
 
 ALLOWED_LIFETIMES = {5, 10, 20, 30, 60, 120}
 
@@ -39,6 +39,7 @@ def load_settings() -> dict:
     settings["max_upload_size_mb"] = get_valid_max_upload_size_mb(settings.get("max_upload_size_mb"))
     settings["allow_permanent_files"] = bool(settings.get("allow_permanent_files", True))
     settings["default_lifetime_minutes"] = get_valid_lifetime(settings.get("default_lifetime_minutes"))
+    settings["thumbnail_retention_hours"] = get_valid_thumbnail_retention_hours(settings.get("thumbnail_retention_hours"))
     return settings
 
 
@@ -49,6 +50,7 @@ def save_settings(settings: dict) -> dict:
         "max_upload_size_mb": get_valid_max_upload_size_mb(settings.get("max_upload_size_mb")),
         "allow_permanent_files": bool(settings.get("allow_permanent_files", True)),
         "default_lifetime_minutes": get_valid_lifetime(settings.get("default_lifetime_minutes")),
+        "thumbnail_retention_hours": get_valid_thumbnail_retention_hours(settings.get("thumbnail_retention_hours")),
     }
 
     with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
@@ -76,6 +78,14 @@ def get_valid_lifetime(value) -> int:
     return value
 
 
+def get_valid_thumbnail_retention_hours(value) -> int:
+    try:
+        value = int(value)
+    except (TypeError, ValueError):
+        value = DEFAULT_SETTINGS["thumbnail_retention_hours"]
+    return max(0, min(value, 48))
+
+
 def get_default_lifetime() -> int:
     return int(load_settings().get("default_lifetime_minutes", DEFAULT_SETTINGS["default_lifetime_minutes"]))
 
@@ -90,3 +100,7 @@ def get_max_upload_size_bytes() -> int:
 
 def permanent_files_enabled() -> bool:
     return bool(load_settings().get("allow_permanent_files", True))
+
+
+def get_thumbnail_retention_hours() -> int:
+    return int(load_settings().get("thumbnail_retention_hours", DEFAULT_SETTINGS["thumbnail_retention_hours"]))

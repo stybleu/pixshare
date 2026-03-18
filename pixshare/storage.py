@@ -68,8 +68,14 @@ def votes_path(app: Flask) -> str:
     return project_path(app, app.config["VOTES_FILE"])
 
 
+def thumbnail_dir(app: Flask) -> str:
+    return project_path(app, app.config["THUMBNAIL_FOLDER"])
+
+
 def init_storage(app: Flask) -> None:
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+    os.makedirs(thumbnail_dir(app), exist_ok=True)
+
     for path, default in [
         (db_path(app), {}),
         (blocked_path(app), []),

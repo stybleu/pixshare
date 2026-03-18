@@ -1,10 +1,17 @@
-from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
+import os
+
+from flask import Blueprint, current_app, flash, redirect, render_template, request, send_file, session, url_for, abort
 
 from pixshare.security.csrf import validate_csrf
 from pixshare.services.auth_service import admin_required, process_admin_login
-from pixshare.services.file_service import cleanup_expired, delete_by_id, list_all_files
+from pixshare.services.file_service import cleanup_expired, delete_by_id, get_thumbnail_abs_path, list_all_files
 from pixshare.services.json_services import load_blocked, load_contacts, save_blocked, save_contacts
-from pixshare.services.settings_service import get_valid_lifetime, load_settings, save_settings
+from pixshare.services.settings_service import (
+    get_valid_lifetime,
+    get_valid_thumbnail_retention_hours,
+    load_settings,
+    save_settings,
+)
 from pixshare.services.time_service import get_remaining_time_label
 
 admin_bp = Blueprint("admin", __name__)
@@ -68,7 +75,7 @@ def admin_delete_message():
         flash("Message introuvable.", "warning")
 
     return redirect(url_for("admin.admin_messages"))
-    
+
 
 @admin_bp.route("/admin/blocked-ips")
 @admin_required
@@ -84,6 +91,7 @@ def admin_blocked_ips():
 @admin_bp.route("/admin/blocked-ips/clear", methods=["POST"])
 @admin_required
 def admin_clear_blocked_ips():
+    validate_csrf()
     save_blocked([])
     flash("La liste des IP bloquées a été vidée.", "success")
     return redirect(url_for("admin.admin_blocked_ips"))
@@ -92,6 +100,7 @@ def admin_clear_blocked_ips():
 @admin_bp.route("/admin/blocked-ips/unblock", methods=["POST"], endpoint="admin_unblock_ip")
 @admin_required
 def admin_unblock_ip():
+    validate_csrf()
     ip = (request.form.get("ip") or "").strip()
 
     if not ip:
@@ -145,13 +154,23 @@ def admin_panel():
     files = list_all_files()
 
     for f in files:
-        f["remaining_time"] = get_remaining_time_label(f.get("expires_at"))
+        f["remaining_time"] = get_remaining_time_label(f.get("expires_at")) if f.get("status") == "active" else ""
 
     return render_template(
         "admin.html",
         files=files,
         version=current_app.config["APP_VERSION"]
     )
+
+
+@admin_bp.route("/admin/thumb/<file_id>", methods=["GET"], endpoint="admin_thumbnail")
+@admin_required
+def admin_thumbnail(file_id):
+    cleanup_expired()
+    abs_path = get_thumbnail_abs_path(file_id)
+    if not os.path.isfile(abs_path):
+        abort(404)
+    return send_file(abs_path, mimetype="image/jpeg", conditional=True, max_age=0)
 
 
 @admin_bp.route("/admin/settings", methods=["GET", "POST"], endpoint="admin_settings")
@@ -176,14 +195,25 @@ def admin_settings():
             flash("Temps d'expiration par défaut invalide.", "warning")
             return redirect(url_for("admin.admin_settings"))
 
+        try:
+            thumbnail_retention_hours = int(request.form.get("thumbnail_retention_hours", settings.get("thumbnail_retention_hours", 24)))
+        except (TypeError, ValueError):
+            flash("Durée de conservation des miniatures invalide.", "warning")
+            return redirect(url_for("admin.admin_settings"))
+
         if get_valid_lifetime(default_lifetime_minutes) != default_lifetime_minutes:
             flash("Temps d'expiration par défaut invalide.", "warning")
+            return redirect(url_for("admin.admin_settings"))
+
+        if get_valid_thumbnail_retention_hours(thumbnail_retention_hours) != thumbnail_retention_hours:
+            flash("Durée des miniatures invalide.", "warning")
             return redirect(url_for("admin.admin_settings"))
 
         settings = save_settings({
             "max_upload_size_mb": max_upload_size_mb,
             "allow_permanent_files": allow_permanent_files,
             "default_lifetime_minutes": default_lifetime_minutes,
+            "thumbnail_retention_hours": thumbnail_retention_hours,
         })
         flash("Paramètres enregistrés ✅", "success")
         return redirect(url_for("admin.admin_settings"))
@@ -204,7 +234,7 @@ def admin_delete():
         flash("ID manquant.", "warning")
         return redirect(url_for("admin.admin_panel"))
 
-    ok = delete_by_id(file_id)
+    ok = delete_by_id(file_id, reason="admin_delete")
     flash("Fichier supprimé ✅" if ok else "Fichier introuvable.", "success" if ok else "warning")
     return redirect(url_for("admin.admin_panel"))
 

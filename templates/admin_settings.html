@@ -36,7 +36,6 @@
         <div class="form-text">Valeur autorisée : de 1 à 500 Mo.</div>
       </div>
 
-
       <div class="col-12 col-md-6">
         <label class="form-label fw-semibold">Temps d'expiration par défaut</label>
         <select name="default_lifetime_minutes" class="form-select">
@@ -57,6 +56,19 @@
           <option value="0" {% if not settings.allow_permanent_files %}selected{% endif %}>Désactivés</option>
         </select>
         <div class="form-text">Autorise ou masque l'option “sans expiration”.</div>
+      </div>
+
+      <div class="col-12 col-md-6">
+        <label class="form-label fw-semibold">Conservation des miniatures de modération</label>
+        <select name="thumbnail_retention_hours" class="form-select">
+          <option value="0" {% if settings.thumbnail_retention_hours == 0 %}selected{% endif %}>Désactivée</option>
+          <option value="1" {% if settings.thumbnail_retention_hours == 1 %}selected{% endif %}>1 heure</option>
+          <option value="6" {% if settings.thumbnail_retention_hours == 6 %}selected{% endif %}>6 heures</option>
+          <option value="12" {% if settings.thumbnail_retention_hours == 12 %}selected{% endif %}>12 heures</option>
+          <option value="24" {% if settings.thumbnail_retention_hours == 24 %}selected{% endif %}>24 heures</option>
+          <option value="48" {% if settings.thumbnail_retention_hours == 48 %}selected{% endif %}>48 heures</option>
+        </select>
+        <div class="form-text">Maximum 48 heures. Après suppression ou expiration du fichier public, la miniature reste temporairement visible dans l'admin puis est supprimée automatiquement.</div>
       </div>
 
       <div class="col-12">
