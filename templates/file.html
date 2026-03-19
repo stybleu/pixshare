@@ -14,6 +14,10 @@
 <meta property="og:image" content="{{ file_url }}">
 <meta property="og:type" content="website">
 
+<script async
+  src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6064591871344346"
+  crossorigin="anonymous"></script>
+
 <style>
 body{
   margin:0;
@@ -109,6 +113,13 @@ img,video{
   font-size:14px;
   text-align:center;
 }
+
+.ad-box{
+  width:100%;
+  max-width:900px;
+  text-align:center;
+  margin:8px 0;
+}
 </style>
 
 </head>
@@ -127,6 +138,18 @@ img,video{
 
 <img src="{{ file_url }}" alt="{{ original_name }}">
 
+<div class="ad-box">
+  <ins class="adsbygoogle"
+       style="display:block"
+       data-ad-client="ca-pub-6064591871344346"
+       data-ad-slot="TON_SLOT_FILE_1"
+       data-ad-format="auto"
+       data-full-width-responsive="true"></ins>
+</div>
+<script>
+  (adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
 {% elif ext in ["mp4","webm"] %}
 
 <video controls preload="metadata">
@@ -138,6 +161,18 @@ img,video{
 Votre navigateur ne supporte pas la lecture vidéo.
 </video>
 
+<div class="ad-box">
+  <ins class="adsbygoogle"
+       style="display:block"
+       data-ad-client="ca-pub-6064591871344346"
+       data-ad-slot="TON_SLOT_FILE_1"
+       data-ad-format="auto"
+       data-full-width-responsive="true"></ins>
+</div>
+<script>
+  (adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
 {% elif ext == "avi" %}
 
 <video controls preload="metadata">
@@ -148,6 +183,18 @@ Votre navigateur ne supporte pas la lecture vidéo.
 <div class="not-image">
 Si la vidéo ne se lit pas, téléchargez-la.
 </div>
+
+<div class="ad-box">
+  <ins class="adsbygoogle"
+       style="display:block"
+       data-ad-client="ca-pub-6064591871344346"
+       data-ad-slot="TON_SLOT_FILE_1"
+       data-ad-format="auto"
+       data-full-width-responsive="true"></ins>
+</div>
+<script>
+  (adsbygoogle = window.adsbygoogle || []).push({});
+</script>
 
 {% else %}
 
@@ -184,6 +231,18 @@ class="{% if vote_summary.current_vote == 'down' %}active{% endif %}">
 </div>
 
 {% endif %}
+
+<div class="ad-box">
+  <ins class="adsbygoogle"
+       style="display:block"
+       data-ad-client="ca-pub-6064591871344346"
+       data-ad-slot="TON_SLOT_FILE_2"
+       data-ad-format="auto"
+       data-full-width-responsive="true"></ins>
+</div>
+<script>
+  (adsbygoogle = window.adsbygoogle || []).push({});
+</script>
 
 <div class="report">
 
