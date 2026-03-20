@@ -6,25 +6,28 @@
   <h1 class="h4 mb-3">{{ _("legal") }}</h1>
 
   <div class="card shadow-sm">
+    <div class="card-body">
+
       <h2 class="h6 mt-2">{{ _("site_publisher") }}</h2>
 
-      
       <p class="mb-2">
         {{ _("legal_intro_service") }}<br>
         <b>{{ _("editing") }}</b> : Gosset Guillaume<br>
-        
+
         <b>Contact :</b>
-          {{ _("legal_contact_help") }} <a href="{{ url_for('public.contact') }}">{{ _("contact_form") }}</a>.
+        {{ _("legal_contact_help") }} <a href="{{ url_for('public.contact') }}">{{ _("contact_form") }}</a>.
       </p>
 
       <h2 class="h6 mt-4">{{ _("hosting") }}</h2>
-      
+
       <p class="mb-2">
         <b>Render Services, Inc.</b><br>
         525 Brannan Street, Suite 300<br>
         San Francisco, CA 94107<br>
         États-Unis<br>
         <a href="https://render.com" target="_blank" rel="noopener">https://render.com</a>
+      </p>
+
       <h2 class="h6 mt-4">{{ _("service_operation_retention") }}</h2>
 
       <p class="mb-2">
@@ -38,6 +41,36 @@
         <li>{{ _("retention_not_instant") }}</li>
         <li>{{ _("retention_availability_not_guaranteed") }}</li>
       </ul>
+
+      <p class="mb-2">
+        Lorsque le service le permet, certains fichiers peuvent également être envoyés via une API.
+        Les mêmes principes de stockage temporaire, de suppression automatique et d’absence de garantie de conservation s’appliquent aux fichiers envoyés via l’API.
+      </p>
+
+      <h2 class="h6 mt-4">API publique</h2>
+
+      <p class="mb-2">
+        PixShare peut mettre à disposition une API permettant l’envoi automatisé et la gestion technique de fichiers via des requêtes HTTP.
+      </p>
+
+      <p class="mb-2">
+        L’accès à l’API peut nécessiter une clé API personnelle. Toute clé API reste strictement personnelle et ne doit pas être exposée publiquement.
+      </p>
+
+      <p class="mb-2">
+        Les actions disponibles peuvent inclure notamment :
+      </p>
+
+      <ul class="mb-2">
+        <li>l’envoi de fichiers</li>
+        <li>la génération de liens d’accès ou d’affichage</li>
+        <li>la récupération d’informations techniques liées au fichier</li>
+        <li>la suppression d’un fichier via un lien ou un mécanisme prévu à cet effet</li>
+      </ul>
+
+      <p class="mb-2">
+        PixShare peut limiter, suspendre ou bloquer l’accès à l’API en cas d’utilisation abusive, de dépassement de quota, de tentative de contournement des limitations ou de non-respect des conditions d’utilisation.
+      </p>
 
       <h2 class="h6 mt-4">{{ _("personal_data") }}</h2>
 
@@ -60,6 +93,12 @@
       </ul>
 
       <p class="mb-2">
+        Des informations techniques liées à l’utilisation du site ou de l’API
+        (par exemple journaux d’accès, erreurs, quotas, événements techniques ou données de sécurité)
+        peuvent être enregistrées temporairement lorsque cela est nécessaire au bon fonctionnement, à la protection et à la stabilité du service.
+      </p>
+
+      <p class="mb-2">
         {{ _("temporary_browser_identifier") }}
       </p>
 
@@ -74,12 +113,21 @@
       </p>
 
       <p class="mb-2">
+        L’utilisateur est également seul responsable de l’usage de sa clé API, de la conservation de ses liens sensibles et de l’ensemble des requêtes émises sous son accès.
+      </p>
+
+      <p class="mb-2">
         {{ _("legal_host_status") }}
       </p>
 
       <p class="mb-2">
         {{ _("editor_not_responsible_user_content") }}
       </p>
+
+      <p class="mb-2">
+        PixShare ne garantit ni la disponibilité permanente du site ou de l’API, ni la conservation continue des fichiers envoyés, ni l’absence d’interruption, de maintenance ou de suppression technique.
+      </p>
+
       <h2 class="h6 mt-4">{{ _("illegal_content_report") }}</h2>
 
       <p class="mb-2">

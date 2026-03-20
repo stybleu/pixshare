@@ -72,6 +72,10 @@ def thumbnail_dir(app: Flask) -> str:
     return project_path(app, app.config["THUMBNAIL_FOLDER"])
 
 
+def api_keys_path(app: Flask) -> str:
+    return project_path(app, app.config["API_KEYS_FILE"])
+
+
 def init_storage(app: Flask) -> None:
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
     os.makedirs(thumbnail_dir(app), exist_ok=True)
@@ -83,6 +87,7 @@ def init_storage(app: Flask) -> None:
         (views_path(app), {}),
         (contacts_path(app), []),
         (votes_path(app), {}),
+        (api_keys_path(app), {}),
     ]:
         ensure_parent_dir(path)
         if not os.path.exists(path):

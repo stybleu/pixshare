@@ -3,8 +3,8 @@ import secrets
 
 
 class Config:
-    ADMIN_USER = os.environ.get("ADMIN_USER") or "dev"
-    ADMIN_PASS = os.environ.get("ADMIN_PASS") or "dev"
+    ADMIN_USER = os.environ.get("ADMIN_USER") or "0"
+    ADMIN_PASS = os.environ.get("ADMIN_PASS") or "0"
 
     DATA_DIR = "data"
     DB_FILE = os.path.join(DATA_DIR, "files.json")
@@ -13,6 +13,7 @@ class Config:
     VIEWS_FILE = os.path.join(DATA_DIR, "views.json")
     CONTACTS_FILE = os.path.join(DATA_DIR, "contacts.json")
     VOTES_FILE = os.path.join(DATA_DIR, "votes.json")
+    API_KEYS_FILE = os.path.join(DATA_DIR, "api_keys.json")
     THUMBNAIL_FOLDER = os.path.join(DATA_DIR, "mod_thumbs")
 
     UPLOAD_FOLDER = "tmp/fichiers"
@@ -41,3 +42,5 @@ class Config:
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SECURE = True
     SESSION_COOKIE_SAMESITE = "Lax"
+
+    API_DEFAULT_MAX_FILE_SIZE_MB = 10

@@ -59,6 +59,9 @@ font-size:0.85rem;
 <li><a href="#responsabilite_utilisateur">6. Responsabilité de l’utilisateur</a></li>
 <li><a href="#responsabilite_service">7. Responsabilité du service</a></li>
 <li><a href="#evolution">8. Évolution des conditions</a></li>
+<li><a href="#api">9. API publique</a></li>
+<li><a href="#api_limites">10. Limites, quotas et restrictions API</a></li>
+<li><a href="#financier">11. Conditions financières</a></li>
 </ul>
 
 </div>
@@ -75,6 +78,10 @@ Le service est conçu pour un usage simple et rapide sans création de compte ut
 </p>
 
 <p>
+Le service peut être utilisé depuis l’interface web publique ainsi que, lorsque cette fonctionnalité est proposée, via une API permettant l’envoi automatisé de fichiers.
+</p>
+
+<p>
 L’utilisation du service implique l’acceptation pleine et entière des présentes conditions.
 </p>
 
@@ -85,18 +92,19 @@ L’utilisation du service implique l’acceptation pleine et entière des prés
 <h2 id="fonctionnement" class="h6 mt-4">2. Fonctionnement du service</h2>
 
 <p>
-Lors de l’envoi d’un fichier, un lien unique est généré permettant son accès ou son téléchargement.
+Lors de l’envoi d’un fichier, un lien unique est généré permettant son accès, son affichage ou son téléchargement selon la nature du fichier et les fonctionnalités disponibles.
 </p>
 
 <ul>
 <li>Les fichiers peuvent être conservés pendant une durée limitée.</li>
 <li>La durée maximale dépend de la configuration du service.</li>
 <li>Une fois expiré, le fichier est supprimé automatiquement.</li>
-<li>L’utilisateur peut également supprimer lui-même les fichiers qu’il a envoyés via l’interface du service lorsque cette fonctionnalité est disponible.</li>
+<li>L’utilisateur peut également supprimer lui-même les fichiers qu’il a envoyés via l’interface du service ou via les liens fournis lorsque cette fonctionnalité est disponible.</li>
+<li>Certains fichiers peuvent être conservés sans expiration uniquement si cette option est proposée par le service.</li>
 </ul>
 
 <p>
-PixShare est un service de partage temporaire et ne doit pas être utilisé comme solution de sauvegarde.
+PixShare est un service de partage temporaire et ne doit pas être utilisé comme solution de sauvegarde, d’archivage ou d’hébergement garanti à long terme.
 </p>
 
 <div class="back-summary">
@@ -107,12 +115,14 @@ PixShare est un service de partage temporaire et ne doit pas être utilisé comm
 
 <ul>
 <li>La taille maximale des fichiers est limitée.</li>
+<li>Le service peut limiter certains formats ou certains usages.</li>
+<li>Le nombre d’envois peut être restreint selon la configuration en vigueur.</li>
 <li>Le service peut être temporairement indisponible.</li>
-<li>Les fichiers peuvent être supprimés lors d’une maintenance ou d’un redémarrage serveur.</li>
+<li>Les fichiers peuvent être supprimés lors d’une maintenance, d’un redémarrage serveur, d’une erreur technique ou d’une opération de sécurité.</li>
 </ul>
 
 <p>
-PixShare ne garantit pas la disponibilité permanente des fichiers.
+PixShare ne garantit pas la disponibilité permanente des fichiers, ni l’accès continu au service, ni la conservation de tout contenu envoyé.
 </p>
 
 <div class="back-summary">
@@ -122,19 +132,20 @@ PixShare ne garantit pas la disponibilité permanente des fichiers.
 <h2 id="contenus" class="h6 mt-4">4. Contenus interdits</h2>
 
 <p>
-Il est interdit d’utiliser PixShare pour héberger ou transmettre :
+Il est interdit d’utiliser PixShare pour héberger, stocker, transmettre, afficher ou partager :
 </p>
 
 <ul>
-<li>contenus pédopornographiques ou impliquant des mineurs</li>
-<li>contenus illégaux</li>
-<li>contenus violant les droits d’auteur</li>
-<li>virus, malwares ou logiciels malveillants</li>
-<li>contenus haineux ou incitant à la violence</li>
+<li>des contenus pédopornographiques ou impliquant des mineurs</li>
+<li>des contenus illégaux ou contraires à la législation applicable</li>
+<li>des contenus violant les droits d’auteur, droits voisins ou droits de propriété intellectuelle</li>
+<li>des virus, malwares, scripts malveillants ou logiciels destinés à nuire</li>
+<li>des contenus haineux, violents, diffamatoires ou incitant à la violence</li>
+<li>des contenus visant à porter atteinte à la sécurité du service ou de tiers</li>
 </ul>
 
 <p>
-Tout contenu jugé illégal ou abusif pourra être supprimé immédiatement.
+Tout contenu jugé illégal, dangereux ou abusif pourra être supprimé immédiatement, sans préavis.
 </p>
 
 <div class="back-summary">
@@ -151,17 +162,25 @@ Afin de protéger le service, PixShare peut mettre en place :
 <li>le blocage d’adresses IP</li>
 <li>la suppression de fichiers</li>
 <li>des limitations techniques</li>
+<li>des restrictions temporaires ou permanentes</li>
+<li>des mécanismes de quota et de limitation d’usage</li>
 </ul>
 
 <p>
 Certaines informations techniques minimales peuvent être enregistrées
-(par exemple adresse IP) uniquement pour la sécurité et la prévention des abus.
+(par exemple adresse IP, informations liées aux requêtes, journaux techniques ou événements d’usage)
+uniquement pour la sécurité, la stabilité du service et la prévention des abus.
 </p>
 
 <p>
 Un identifiant technique temporaire peut également être stocké dans le navigateur
 afin de permettre l’affichage de l’historique des fichiers envoyés depuis ce navigateur.
 Cet identifiant n’est pas utilisé pour le suivi publicitaire.
+</p>
+
+<p>
+En cas d’usage abusif, de tentative de contournement des limitations ou d’activité suspecte,
+PixShare peut restreindre ou bloquer l’accès au service sans préavis.
 </p>
 
 <div class="back-summary">
@@ -171,11 +190,22 @@ Cet identifiant n’est pas utilisé pour le suivi publicitaire.
 <h2 id="responsabilite_utilisateur" class="h6 mt-4">6. Responsabilité de l’utilisateur</h2>
 
 <p>
-L’utilisateur est seul responsable des fichiers qu’il envoie et des liens qu’il partage.
+L’utilisateur est seul responsable des fichiers qu’il envoie, des liens qu’il partage, de l’usage qu’il fait du service et du respect de la législation applicable.
 </p>
 
 <p>
-L’utilisateur s’engage à respecter la législation en vigueur.
+L’utilisateur s’engage notamment à :
+</p>
+
+<ul>
+<li>ne pas envoyer de contenu interdit ou illicite</li>
+<li>ne pas porter atteinte aux droits d’autrui</li>
+<li>ne pas utiliser PixShare comme outil d’attaque, de diffusion malveillante ou de contournement technique</li>
+<li>ne pas détourner le service de sa finalité normale</li>
+</ul>
+
+<p>
+L’utilisateur demeure responsable de l’utilisation des liens générés, y compris lorsqu’ils permettent l’affichage, le téléchargement ou la suppression d’un fichier.
 </p>
 
 <div class="back-summary">
@@ -185,17 +215,24 @@ L’utilisateur s’engage à respecter la législation en vigueur.
 <h2 id="responsabilite_service" class="h6 mt-4">7. Responsabilité du service</h2>
 
 <p>
-PixShare est fourni « tel quel » sans garantie de disponibilité continue.
+PixShare est fourni « tel quel » sans garantie de disponibilité continue, de conservation permanente, ni d’adéquation à un usage particulier.
 </p>
 
 <ul>
 <li>perte de fichiers</li>
+<li>suppression automatique ou technique</li>
 <li>indisponibilité temporaire</li>
-<li>utilisation abusive des liens</li>
+<li>ralentissement ou interruption du service</li>
+<li>utilisation abusive ou non autorisée des liens</li>
+<li>dommages indirects liés à l’utilisation du service</li>
 </ul>
 
 <p>
-PixShare agit comme un simple hébergeur technique et ne procède pas à une vérification systématique des fichiers envoyés par les utilisateurs.
+PixShare agit comme un simple hébergeur technique et ne procède pas à une vérification systématique de tous les fichiers envoyés par les utilisateurs.
+</p>
+
+<p>
+La responsabilité de PixShare ne pourra être engagée en cas d’usage frauduleux, illicite ou non autorisé effectué par un utilisateur ou un tiers.
 </p>
 
 <div class="back-summary">
@@ -206,7 +243,104 @@ PixShare agit comme un simple hébergeur technique et ne procède pas à une vé
 
 <p>
 Les présentes conditions peuvent être modifiées à tout moment afin d’adapter
-le service à son évolution technique ou légale.
+le service à son évolution technique, fonctionnelle, sécuritaire, économique ou légale.
+</p>
+
+<p>
+La version en vigueur est celle publiée sur le site au moment de la consultation.
+</p>
+
+<div class="back-summary">
+<a href="#sommaire">⬆ Retour au sommaire</a>
+</div>
+
+<h2 id="api" class="h6 mt-4">9. API publique</h2>
+
+<p>
+PixShare peut proposer une API publique permettant l’envoi automatisé de fichiers ainsi que, selon les fonctionnalités disponibles, l’accès à certaines informations ou actions liées à ces fichiers.
+</p>
+
+<p>
+L’utilisation de l’API nécessite une clé API personnelle lorsqu’elle est exigée par le service.
+Toute requête effectuée via l’API doit respecter la documentation, les limitations techniques et les présentes CGU.
+</p>
+
+<ul>
+<li>Chaque requête doit inclure une authentification valide lorsque cela est requis.</li>
+<li>L’API peut permettre l’envoi de fichiers, la récupération de liens d’accès, l’affichage direct de fichiers, ainsi que la suppression d’un fichier lorsque cette action est autorisée.</li>
+<li>Les liens générés (affichage, téléchargement, suppression) sont strictement liés au fichier concerné.</li>
+<li>Un lien de suppression ou une URL technique sensible ne doit pas être diffusé publiquement sans nécessité.</li>
+</ul>
+
+<p>
+Toute utilisation de l’API implique l’acceptation pleine et entière des présentes conditions, au même titre que l’utilisation du site web.
+</p>
+
+<div class="back-summary">
+<a href="#sommaire">⬆ Retour au sommaire</a>
+</div>
+
+<h2 id="api_limites" class="h6 mt-4">10. Limites, quotas et restrictions API</h2>
+
+<p>
+Afin de garantir la stabilité, la sécurité et la disponibilité du service, PixShare peut appliquer à l’API des limitations automatiques ou manuelles.
+</p>
+
+<ul>
+<li>nombre maximal de requêtes par jour</li>
+<li>nombre total maximal d’uploads autorisés</li>
+<li>limitation par clé API</li>
+<li>limitation par adresse IP</li>
+<li>taille maximale de fichier</li>
+<li>blocage automatique en cas d’abus, d’erreurs répétées ou de tentative de contournement</li>
+</ul>
+
+<p>
+PixShare se réserve le droit, à tout moment et sans préavis, de :
+</p>
+
+<ul>
+<li>désactiver ou suspendre une clé API</li>
+<li>bloquer une adresse IP</li>
+<li>supprimer un fichier ou en restreindre l’accès</li>
+<li>restreindre temporairement ou définitivement l’accès à tout ou partie de l’API</li>
+<li>modifier les quotas, formats acceptés, durées de conservation ou conditions d’accès</li>
+</ul>
+
+<p>
+Toute tentative de contournement des limitations, de surcharge volontaire du service,
+d’automatisation abusive ou d’exploitation détournée de l’API est strictement interdite.
+</p>
+
+<p>
+Les erreurs API, y compris notamment celles liées à l’authentification, à l’absence de clé API,
+à l’épuisement d’un quota ou à une requête invalide, peuvent être renvoyées sous forme de réponses JSON.
+</p>
+
+<div class="back-summary">
+<a href="#sommaire">⬆ Retour au sommaire</a>
+</div>
+
+<h2 id="financier" class="h6 mt-4">11. Conditions financières</h2>
+
+<p>
+Le service PixShare est actuellement proposé gratuitement et sans but lucratif.
+</p>
+
+<p>
+Toutefois, l’éditeur se réserve le droit de faire évoluer le modèle économique du service,
+notamment en introduisant à l’avenir des fonctionnalités payantes, des offres premium,
+des limitations spécifiques selon les usages ou toute autre modalité d’accès différenciée.
+</p>
+
+<p>
+Ces évolutions pourront intervenir à tout moment, sous réserve d’une information préalable des utilisateurs
+par tout moyen jugé approprié par l’éditeur.
+</p>
+
+<p>
+En conséquence, certaines fonctionnalités actuellement gratuites pourront être maintenues,
+modifiées, limitées ou rendues payantes à l’avenir.
 </p>
 
 <div class="back-summary">

@@ -75,6 +75,7 @@
     <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_messages') }}">Messages</a>
     <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_blocked_ips') }}">IP bloquées</a>
     <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_system') }}">Système</a>
+    <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_api_keys') }}">Clés API</a>
     <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('admin.admin_settings') }}">Paramètres</a>
     <form method="post" action="{{ url_for('admin.admin_logout') }}" class="m-0">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

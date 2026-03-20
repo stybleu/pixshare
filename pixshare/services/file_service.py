@@ -408,6 +408,94 @@ def save_uploaded_file(file_storage, original_name: str, client_ip: str, guest_t
     return file_id, lifetime, permanent
 
 
+def save_api_uploaded_file(
+    file_storage,
+    original_name: str,
+    client_ip: str,
+    api_key_value: str,
+    api_key_name: str,
+    requested_lifetime: int,
+    keep_requested: bool,
+    key_data: dict | None = None,
+) -> tuple[str, int | None, bool]:
+    key_data = key_data or {}
+    ext = safe_ext(original_name)
+
+    file_id = generate_file_id()
+    server_name = f"{file_id}{ext}"
+    dest = os.path.join(current_app.config["UPLOAD_FOLDER"], server_name)
+
+    while os.path.exists(dest):
+        file_id = generate_file_id()
+        server_name = f"{file_id}{ext}"
+        dest = os.path.join(current_app.config["UPLOAD_FOLDER"], server_name)
+
+    file_storage.save(dest)
+
+    thumb_path = ""
+    if is_image_extension(ext):
+        try:
+            thumb_path = create_thumbnail(dest, file_id)
+        except Exception:
+            thumb_path = ""
+
+    allow_permanent = bool(key_data.get("allow_permanent", False))
+    permanent = bool(keep_requested and allow_permanent)
+
+    allowed_lifetimes = key_data.get("allowed_lifetimes") or [5, 10, 20, 30, 60]
+    clean_lifetimes = []
+    for value in allowed_lifetimes:
+        try:
+            ivalue = int(value)
+        except (TypeError, ValueError):
+            continue
+        if ivalue > 0 and ivalue not in clean_lifetimes:
+            clean_lifetimes.append(ivalue)
+    clean_lifetimes = sorted(clean_lifetimes or [10])
+
+    if permanent:
+        lifetime = None
+    else:
+        try:
+            lifetime = int(requested_lifetime)
+        except (TypeError, ValueError):
+            lifetime = int(key_data.get("default_lifetime_minutes", clean_lifetimes[0]))
+
+        if lifetime not in clean_lifetimes:
+            try:
+                os.remove(dest)
+            except Exception:
+                pass
+            if thumb_path:
+                delete_thumbnail_file(thumb_path)
+            raise ValueError(f"Lifetime invalide. Valeurs autorisées : {', '.join(str(x) for x in clean_lifetimes)} minutes.")
+
+    uploaded_at = utcnow()
+    expires_at = None if permanent else uploaded_at + timedelta(minutes=int(lifetime))
+
+    db = load_db()
+    db[file_id] = {
+        "original_name": original_name,
+        "server_name": server_name,
+        "uploaded_at": uploaded_at.isoformat(timespec="seconds"),
+        "expires_at": (expires_at.isoformat(timespec="seconds") if expires_at else ""),
+        "permanent": bool(permanent),
+        "ip": client_ip,
+        "guest_token": f"api:{api_key_name}",
+        "api_key": api_key_value,
+        "api_name": api_key_name,
+        "views": 0,
+        "status": "active",
+        "deleted_at": "",
+        "delete_reason": "",
+        "thumb_path": thumb_path,
+        "thumb_delete_at": "",
+    }
+    save_db(db)
+
+    return file_id, lifetime, permanent
+
+
 def get_file_record(file_id: str):
     cleanup_expired()
     db = load_db()

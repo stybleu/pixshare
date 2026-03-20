@@ -1,6 +1,11 @@
 from flask import Blueprint, abort, current_app, flash, make_response, redirect, render_template, request, send_from_directory, url_for
 from werkzeug.utils import secure_filename
 
+import json, os
+from datetime import datetime
+
+
+
 from pixshare.security.csrf import validate_csrf
 from pixshare.services.auth_service import is_admin
 from pixshare.services.contact_service import create_contact_message
@@ -303,3 +308,54 @@ def cgu():
 @public_bp.route("/mentions-legales", endpoint="mentions_legales")
 def mentions_legales():
     return render_template("mentions_legales.html", version=current_app.config["APP_VERSION"])
+    
+    
+@public_bp.route("/api")
+def api_page():
+    return render_template("api.html")
+    
+REQUEST_FILE = "pixshare/data/api_requests.json"
+
+def save_request(data):
+    if not os.path.exists(REQUEST_FILE):
+        with open(REQUEST_FILE, "w") as f:
+            json.dump([], f)
+
+    with open(REQUEST_FILE, "r") as f:
+        requests = json.load(f)
+
+    requests.append(data)
+
+    with open(REQUEST_FILE, "w") as f:
+        json.dump(requests, f, indent=2)
+
+
+@public_bp.route("/api/request-key", methods=["POST"])
+def request_api_key():
+
+    email = (request.form.get("email") or "").strip()
+    project_name = (request.form.get("project_name") or "").strip()
+    usage_type = (request.form.get("usage_type") or "").strip()
+    usage_details = (request.form.get("usage_details") or "").strip()
+    estimated_uploads = (request.form.get("estimated_uploads") or "").strip()
+
+    message = f"""
+📌 Nouvelle demande API
+
+Projet : {project_name}
+Type d'utilisation : {usage_type}
+Détails : {usage_details}
+Volume estimé : {estimated_uploads}
+"""
+
+    create_contact_message(
+        msg_type="api_request",
+        name="Demande API",
+        email=email,
+        subject="Nouvelle demande API",
+        message=message,
+        file_url=""
+    )
+
+    flash("Demande envoyée avec succès.")
+    return redirect("/api")

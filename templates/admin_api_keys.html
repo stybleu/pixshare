@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+{% set title = "Admin - Clés API" %}
+
+{% block head %}
+<meta name="robots" content="noindex, nofollow, noarchive">
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex flex-wrap gap-2 align-items-center justify-content-between mb-3">
+  <div>
+    <h1 class="h4 mb-0">Clés API</h1>
+    <div class="text-muted small">
+      Gestion des accès API, limites d’upload et suppression des clés.
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-primary btn-sm" href="{{ url_for('admin.admin_panel') }}">Retour admin</a>
+
+    <form method="post" action="{{ url_for('admin.admin_logout') }}" class="m-0">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button class="btn btn-outline-secondary btn-sm" type="submit">Déconnexion</button>
+    </form>
+  </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <h2 class="h6 mb-3">Créer une clé API</h2>
+
+    <form method="post" action="{{ url_for('admin.admin_api_key_create') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Nom</label>
+          <input type="text" name="name" class="form-control" value="api-client">
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Préfixe</label>
+          <input type="text" name="key_prefix" class="form-control" value="ps_live">
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Clé personnalisée (optionnel)</label>
+          <input type="text" name="custom_key" class="form-control" placeholder="Sinon générée automatiquement">
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">Taille max (Mo)</label>
+          <input type="number" name="max_file_size_mb" class="form-control" value="10" min="1">
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">Uploads max total</label>
+          <input type="number" name="max_uploads_total" class="form-control" value="100" min="1">
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">Uploads max / jour</label>
+          <input type="number" name="max_uploads_per_day" class="form-control" value="10" min="1">
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">Expiration par défaut (min)</label>
+          <input type="number" name="default_lifetime_minutes" class="form-control" value="10" min="1">
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Durées autorisées (minutes)</label>
+          <input type="text" name="allowed_lifetimes" class="form-control" value="5,10,20,30,60">
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">Clé active</label>
+          <select name="is_active" class="form-select">
+            <option value="1" selected>Oui</option>
+            <option value="0">Non</option>
+          </select>
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">Permanent autorisé</label>
+          <select name="allow_permanent" class="form-select">
+            <option value="0" selected>Non</option>
+            <option value="1">Oui</option>
+          </select>
+        </div>
+
+        <div class="col-12">
+          <label class="form-label">Notes</label>
+          <textarea name="notes" class="form-control" rows="3"></textarea>
+        </div>
+
+        <div class="col-12">
+          <button type="submit" class="btn btn-success">Créer la clé API</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <h2 class="h6 mb-3">Clés existantes</h2>
+
+    {% if api_keys %}
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead>
+            <tr>
+              <th>Nom</th>
+              <th>Clé</th>
+              <th>Statut</th>
+              <th>Taille max</th>
+              <th>Expiration</th>
+              <th>Usage</th>
+              <th>Notes</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {% for key in api_keys %}
+              <tr>
+                <td>{{ key.name }}</td>
+
+                <!-- ✅ COPIE STYLE INDEX -->
+                <td style="min-width:260px;">
+                  <div class="input-group input-group-sm">
+                    <input
+                      type="text"
+                      class="form-control"
+                      value="{{ key.key_value }}"
+                      id="apiKey{{ loop.index }}"
+                      readonly
+                    >
+                    <button
+                      class="btn btn-outline-secondary"
+                      type="button"
+                      onclick="copyKey('apiKey{{ loop.index }}', this)">
+                      Copier
+                    </button>
+                  </div>
+                </td>
+
+                <td>
+                  {% if key.is_active %}
+                    <span class="badge text-bg-success">Active</span>
+                  {% else %}
+                    <span class="badge text-bg-secondary">Inactive</span>
+                  {% endif %}
+                </td>
+
+                <td>{{ key.max_file_size_mb }} Mo</td>
+
+                <td>
+                  <div>Défaut : {{ key.default_lifetime_minutes }} min</div>
+                  <div class="small text-muted">
+                    Autorisées : {{ key.allowed_lifetimes_text or "—" }}
+                  </div>
+                  <div class="small">
+                    Permanent :
+                    {% if key.allow_permanent %}Oui{% else %}Non{% endif %}
+                  </div>
+                </td>
+
+                <td>
+                  <div>Total restant : {{ key.remaining_total }}</div>
+                  <div>Jour restant : {{ key.remaining_today }}</div>
+                </td>
+
+                <td>
+                  {% if key.notes %}
+                    <div class="small" style="white-space: pre-wrap;">{{ key.notes }}</div>
+                  {% else %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
+                </td>
+
+                <td>
+                  <div class="d-flex flex-wrap gap-2">
+                    <form method="post" action="{{ url_for('admin.admin_api_key_toggle') }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                      <input type="hidden" name="key_value" value="{{ key.key_value }}">
+                      <button class="btn btn-sm btn-outline-warning">
+                        {% if key.is_active %}Désactiver{% else %}Activer{% endif %}
+                      </button>
+                    </form>
+
+                    <form method="post" action="{{ url_for('admin.admin_api_key_reset_usage') }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                      <input type="hidden" name="key_value" value="{{ key.key_value }}">
+                      <button class="btn btn-sm btn-outline-primary">
+                        Reset
+                      </button>
+                    </form>
+
+                    <form method="post" action="{{ url_for('admin.admin_api_key_delete') }}"
+                          onsubmit="return confirm('Supprimer cette clé API ?');">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                      <input type="hidden" name="key_value" value="{{ key.key_value }}">
+                      <button class="btn btn-sm btn-danger">
+                        Supprimer
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+
+        </table>
+      </div>
+    {% else %}
+      <div class="text-muted">Aucune clé API.</div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ✅ SCRIPT COPIE STYLE INDEX -->
+<script>
+function copyKey(inputId, button) {
+  const input = document.getElementById(inputId);
+  input.select();
+  input.setSelectionRange(0, 99999);
+
+  document.execCommand("copy");
+
+  const oldText = button.textContent;
+  button.textContent = "Copié ✅";
+
+  setTimeout(() => {
+    button.textContent = oldText;
+  }, 1200);
+}
+</script>
+
+{% endblock %}

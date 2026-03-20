@@ -1,11 +1,13 @@
 import os
+import secrets
 
 from flask import Blueprint, current_app, flash, redirect, render_template, request, send_file, session, url_for, abort
 
 from pixshare.security.csrf import validate_csrf
 from pixshare.services.auth_service import admin_required, process_admin_login
+from pixshare.services.api_auth_service import ensure_default_api_keys, remaining_uploads_info
 from pixshare.services.file_service import cleanup_expired, delete_by_id, get_thumbnail_abs_path, list_all_files
-from pixshare.services.json_services import load_blocked, load_contacts, save_blocked, save_contacts
+from pixshare.services.json_services import load_api_keys, load_blocked, load_contacts, save_api_keys, save_blocked, save_contacts
 from pixshare.services.settings_service import (
     get_valid_lifetime,
     get_valid_thumbnail_retention_hours,
@@ -16,6 +18,73 @@ from pixshare.services.time_service import get_remaining_time_label
 from pixshare.services.system_service import get_system_stats
 
 admin_bp = Blueprint("admin", __name__)
+
+
+def _parse_positive_int(value, default, minimum=1):
+    try:
+        ivalue = int(value)
+    except (TypeError, ValueError):
+        return default
+    return max(minimum, ivalue)
+
+
+def _parse_allowed_lifetimes(raw_value: str, fallback: list[int] | None = None) -> list[int]:
+    fallback = fallback or [5, 10, 20, 30, 60]
+    values = []
+    for chunk in (raw_value or '').replace(';', ',').split(','):
+        chunk = chunk.strip()
+        if not chunk:
+            continue
+        try:
+            ivalue = int(chunk)
+        except (TypeError, ValueError):
+            continue
+        if ivalue > 0 and ivalue not in values:
+            values.append(ivalue)
+    return sorted(values or fallback)
+
+
+def _build_api_key_record_from_form(form):
+    allowed_lifetimes = _parse_allowed_lifetimes(form.get('allowed_lifetimes') or '5,10,20,30,60')
+    default_lifetime = _parse_positive_int(form.get('default_lifetime_minutes'), 10)
+    if default_lifetime not in allowed_lifetimes:
+        default_lifetime = min(allowed_lifetimes, key=lambda x: abs(x - default_lifetime))
+
+    return {
+        'name': (form.get('name') or 'api-client').strip(),
+        'is_active': form.get('is_active', '1') == '1',
+        'max_uploads_total': _parse_positive_int(form.get('max_uploads_total'), 100),
+        'uploads_used': 0,
+        'max_uploads_per_day': _parse_positive_int(form.get('max_uploads_per_day'), 10),
+        'daily_uploads_used': 0,
+        'daily_reset_date': '',
+        'max_file_size_mb': _parse_positive_int(form.get('max_file_size_mb'), 10),
+        'allow_permanent': form.get('allow_permanent') == '1',
+        'default_lifetime_minutes': default_lifetime,
+        'allowed_lifetimes': allowed_lifetimes,
+        'notes': (form.get('notes') or '').strip(),
+    }
+
+
+def _decorate_api_keys(api_keys: dict) -> list[dict]:
+    rows = []
+    for key_value, key_data in api_keys.items():
+        usage = remaining_uploads_info(key_data)
+        rows.append({
+            'key_value': key_value,
+            'key_preview': f"{key_value[:16]}…{key_value[-8:]}" if len(key_value) > 28 else key_value,
+            'name': key_data.get('name') or 'api-client',
+            'is_active': bool(key_data.get('is_active', True)),
+            'max_file_size_mb': key_data.get('max_file_size_mb', 10),
+            'allow_permanent': bool(key_data.get('allow_permanent', False)),
+            'default_lifetime_minutes': key_data.get('default_lifetime_minutes', 10),
+            'allowed_lifetimes_text': ', '.join(str(x) for x in key_data.get('allowed_lifetimes', [])),
+            'notes': key_data.get('notes', ''),
+            'daily_reset_date': key_data.get('daily_reset_date', ''),
+            **usage,
+        })
+    rows.sort(key=lambda item: (not item['is_active'], item['name'].lower(), item['key_value']))
+    return rows
 
 
 @admin_bp.route("/admin/messages/clear", methods=["POST"], endpoint="admin_clear_messages")
@@ -43,30 +112,25 @@ def admin_messages():
     )
 
 
-@admin_bp.route("/admin/messages/delete", methods=["POST"], endpoint="admin_delete_message")
+@admin_bp.route("/admin/messages/delete", methods=["POST"])
 @admin_required
 def admin_delete_message():
     validate_csrf()
 
-    created_at = (request.form.get("created_at") or "").strip()
-    email = (request.form.get("email") or "").strip()
-    message = (request.form.get("message") or "").strip()
+    message_id = (request.form.get("id") or "").strip()
+
+    if not message_id:
+        flash("ID manquant.", "warning")
+        return redirect(url_for("admin.admin_messages"))
 
     items = load_contacts()
     new_items = []
     deleted = False
 
     for item in items:
-        same_item = (
-            item.get("created_at", "").strip() == created_at and
-            item.get("email", "").strip() == email and
-            item.get("message", "").strip() == message
-        )
-
-        if same_item and not deleted:
+        if item.get("id") == message_id and not deleted:
             deleted = True
             continue
-
         new_items.append(item)
 
     if deleted:
@@ -259,6 +323,120 @@ def admin_block_ip():
         flash(f"IP déjà bloquée : {ip}", "info")
     return redirect(url_for("admin.admin_panel"))
     
+
+
+@admin_bp.route("/admin/api-keys", methods=["GET"], endpoint="admin_api_keys")
+@admin_required
+def admin_api_keys():
+    api_keys = load_api_keys()
+    return render_template(
+        "admin_api_keys.html",
+        api_keys=_decorate_api_keys(api_keys),
+        version=current_app.config["APP_VERSION"]
+    )
+
+
+@admin_bp.route("/admin/api-keys/create", methods=["POST"], endpoint="admin_api_key_create")
+@admin_required
+def admin_api_key_create():
+    validate_csrf()
+    ensure_default_api_keys()
+    api_keys = load_api_keys()
+
+    custom_key = (request.form.get("custom_key") or "").strip()
+    prefix = (request.form.get("key_prefix") or "ps_live").strip() or "ps_live"
+    key_value = custom_key or f"{prefix}_{secrets.token_hex(32)}"
+
+    if len(key_value) < 16:
+        flash("Clé API trop courte.", "warning")
+        return redirect(url_for("admin.admin_api_keys"))
+
+    if key_value in api_keys:
+        flash("Cette clé API existe déjà.", "warning")
+        return redirect(url_for("admin.admin_api_keys"))
+
+    api_keys[key_value] = _build_api_key_record_from_form(request.form)
+    save_api_keys(api_keys)
+    flash("Clé API créée ✅", "success")
+    return redirect(url_for("admin.admin_api_keys"))
+
+
+@admin_bp.route("/admin/api-keys/toggle", methods=["POST"], endpoint="admin_api_key_toggle")
+@admin_required
+def admin_api_key_toggle():
+    validate_csrf()
+    key_value = (request.form.get("key_value") or "").strip()
+    api_keys = load_api_keys()
+    key_data = api_keys.get(key_value)
+
+    if not key_data:
+        flash("Clé API introuvable.", "warning")
+        return redirect(url_for("admin.admin_api_keys"))
+
+    key_data["is_active"] = not bool(key_data.get("is_active", True))
+    api_keys[key_value] = key_data
+    save_api_keys(api_keys)
+    flash("Clé API mise à jour ✅", "success")
+    return redirect(url_for("admin.admin_api_keys"))
+
+
+@admin_bp.route("/admin/api-keys/reset-usage", methods=["POST"], endpoint="admin_api_key_reset_usage")
+@admin_required
+def admin_api_key_reset_usage():
+    validate_csrf()
+    key_value = (request.form.get("key_value") or "").strip()
+    api_keys = load_api_keys()
+    key_data = api_keys.get(key_value)
+
+    if not key_data:
+        flash("Clé API introuvable.", "warning")
+        return redirect(url_for("admin.admin_api_keys"))
+
+    key_data["uploads_used"] = 0
+    key_data["daily_uploads_used"] = 0
+    api_keys[key_value] = key_data
+    save_api_keys(api_keys)
+    flash("Compteurs remis à zéro ✅", "success")
+    return redirect(url_for("admin.admin_api_keys"))
+
+
+@admin_bp.route("/admin/api-keys/delete", methods=["POST"], endpoint="admin_api_key_delete")
+@admin_required
+def admin_api_key_delete():
+    validate_csrf()
+
+    key_value = (request.form.get("key_value") or "").strip()
+    api_keys = load_api_keys()
+
+    print("DELETE KEY:", key_value)
+    print("ALL KEYS:", api_keys)
+
+    deleted = False
+
+    # Cas 1 : dict classique (OK attendu)
+    if isinstance(api_keys, dict):
+        if key_value in api_keys:
+            del api_keys[key_value]
+            deleted = True
+
+    # Cas 2 : liste (sécurité)
+    elif isinstance(api_keys, list):
+        new_keys = []
+        for k in api_keys:
+            if k.get("key") == key_value and not deleted:
+                deleted = True
+                continue
+            new_keys.append(k)
+        api_keys = new_keys
+
+    if deleted:
+        save_api_keys(api_keys)
+        flash("Clé API supprimée ✅", "success")
+    else:
+        flash("Clé API introuvable.", "warning")
+
+    return redirect(url_for("admin.admin_api_keys"))
+
 @admin_bp.route("/admin/system", methods=["GET"], endpoint="admin_system")
 @admin_required
 def admin_system():

@@ -7,7 +7,9 @@ from .services.request_service import get_client_ip
 from .routes.public_routes import public_bp
 from .routes.admin_routes import admin_bp
 from .routes.seo_routes import seo_bp
+from .routes.api_public_routes import api_public_bp
 from .services.translation_service import apply_requested_language, build_lang_url, get_current_language, translate
+from .services.api_auth_service import ensure_default_api_keys
 
 
 def create_app() -> Flask:
@@ -16,6 +18,8 @@ def create_app() -> Flask:
     app.config["UPLOAD_FOLDER"] = project_path(app, app.config["UPLOAD_FOLDER"])
 
     init_storage(app)
+    with app.app_context():
+        ensure_default_api_keys()
 
     @app.context_processor
     def _inject_globals():
@@ -61,6 +65,7 @@ def create_app() -> Flask:
 
     app.register_blueprint(seo_bp)
     app.register_blueprint(public_bp)
+    app.register_blueprint(api_public_bp)
     app.register_blueprint(admin_bp)
 
     return app

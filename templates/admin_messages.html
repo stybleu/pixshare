@@ -59,6 +59,8 @@
                 <td style="min-width:110px;">
                   {% if m.type == "report" %}
                     <span class="badge text-bg-danger">Signalement</span>
+                  {% elif m.type == "api_request" %}
+                    <span class="badge text-bg-warning">Demande API</span>
                   {% else %}
                     <span class="badge text-bg-primary">Contact</span>
                   {% endif %}
@@ -120,9 +122,7 @@
                         onsubmit="return confirm('Supprimer ce message ?');">
 
                     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                    <input type="hidden" name="created_at" value="{{ m.created_at or '' }}">
-                    <input type="hidden" name="email" value="{{ m.email or '' }}">
-                    <input type="hidden" name="message" value="{{ m.message or '' }}">
+                    <input type="hidden" name="id" value="{{ m.id or '' }}">
 
                     <button class="btn btn-sm btn-danger" type="submit">
                       Supprimer

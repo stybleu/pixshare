@@ -14,7 +14,9 @@
 
   <div class="d-flex gap-2 mb-3">
 
+    <!-- ✅ CLEAR IP -->
     <form method="post" action="{{ url_for('admin.admin_clear_blocked_ips') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <button
         type="submit"
         class="btn btn-danger btn-sm"
@@ -23,7 +25,9 @@
       </button>
     </form>
 
+    <!-- ✅ LOGOUT -->
     <form method="post" action="{{ url_for('admin.admin_logout') }}" class="m-0">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <button type="submit" class="btn btn-outline-secondary btn-sm">
         Déconnexion
       </button>
@@ -55,8 +59,9 @@
 
             <td>
 
+              <!-- ✅ UNBLOCK -->
               <form method="post" action="{{ url_for('admin.admin_unblock_ip') }}" class="m-0">
-
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <input type="hidden" name="ip" value="{{ ip }}">
 
                 <button
