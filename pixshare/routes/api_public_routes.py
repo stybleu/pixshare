@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import json
 import os
 import secrets
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from flask import Blueprint, current_app, jsonify, request, send_from_directory
+from flask import Blueprint, Response, current_app, request, send_from_directory
 from werkzeug.utils import secure_filename
 
 from pixshare.services.api_auth_service import (
@@ -24,23 +25,31 @@ api_bp = Blueprint("api", __name__, url_prefix="/api")
 # Helpers
 # ---------------------------------------------------------
 
+def pretty_json_response(payload: dict[str, Any], status_code: int = 200) -> Response:
+    return Response(
+        json.dumps(payload, ensure_ascii=False, indent=2),
+        status=status_code,
+        mimetype="application/json",
+    )
+
+
 def api_error(status_code: int, error_code: str, message: str):
-    return jsonify({
+    return pretty_json_response({
         "success": False,
         "status": status_code,
         "error": {
             "code": error_code,
             "message": message,
         }
-    }), status_code
+    }, status_code=status_code)
 
 
 def api_success(data: dict[str, Any], status_code: int = 200):
-    return jsonify({
+    return pretty_json_response({
         "success": True,
         "status": status_code,
         "data": data,
-    }), status_code
+    }, status_code=status_code)
 
 
 def allowed_extensions() -> set[str]:
