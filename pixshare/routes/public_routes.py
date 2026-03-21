@@ -359,3 +359,10 @@ Volume estimé : {estimated_uploads}
 
     flash("Demande envoyée avec succès.")
     return redirect("/api")
+    
+@public_bp.route("/api/key", methods=["GET"], endpoint="api_request_key_page")
+def api_request_key_page():
+    return render_template(
+        "api_request_key.html",
+        version=current_app.config["APP_VERSION"],
+    )

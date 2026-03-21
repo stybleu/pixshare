@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -34,28 +35,34 @@ def pretty_json_response(payload: dict[str, Any], status_code: int = 200) -> Res
 
 
 def api_error(status_code: int, error_code: str, message: str):
-    return pretty_json_response({
-        "success": False,
-        "status": status_code,
-        "error": {
-            "code": error_code,
-            "message": message,
-        }
-    }, status_code=status_code)
+    return pretty_json_response(
+        {
+            "success": False,
+            "status": status_code,
+            "error": {
+                "code": error_code,
+                "message": message,
+            },
+        },
+        status_code=status_code,
+    )
 
 
 def api_success(data: dict[str, Any], status_code: int = 200):
-    return pretty_json_response({
-        "success": True,
-        "status": status_code,
-        "data": data,
-    }, status_code=status_code)
+    return pretty_json_response(
+        {
+            "success": True,
+            "status": status_code,
+            "data": data,
+        },
+        status_code=status_code,
+    )
 
 
 def allowed_extensions() -> set[str]:
     values = current_app.config.get(
         "ALLOWED_EXTENSIONS",
-        {"png", "jpg", "jpeg", "gif", "webp", "bmp", "tif", "tiff", "mp4", "webm"}
+        {"png", "jpg", "jpeg", "gif", "webp", "bmp", "tif", "tiff", "mp4", "webm"},
     )
     return {str(v).lower().lstrip(".") for v in values}
 
@@ -74,17 +81,59 @@ def ensure_upload_folder() -> Path:
     return path
 
 
-def build_file_id() -> str:
-    return secrets.token_urlsafe(8).replace("-", "").replace("_", "")
+def load_all_files() -> dict[str, Any]:
+    data = load_files()
+    if not isinstance(data, dict):
+        return {}
+    return data
 
 
-def build_storage_name(original_filename: str) -> str:
+def save_all_files(data: dict[str, Any]) -> None:
+    save_files(data)
+
+
+def get_real_ip() -> str:
+    x_forwarded_for = (request.headers.get("X-Forwarded-For") or "").strip()
+    if x_forwarded_for:
+        return x_forwarded_for.split(",")[0].strip()
+
+    cf_connecting_ip = (request.headers.get("CF-Connecting-IP") or "").strip()
+    if cf_connecting_ip:
+        return cf_connecting_ip
+
+    return (request.remote_addr or "").strip()
+
+
+def hash_api_key(key_value: str) -> str:
+    return hashlib.sha256(key_value.encode("utf-8")).hexdigest()
+
+
+def build_file_id(files_data: dict[str, Any]) -> str:
+    while True:
+        file_id = secrets.token_urlsafe(8).replace("-", "").replace("_", "")
+        if file_id and file_id not in files_data:
+            return file_id
+
+
+def build_storage_name(original_filename: str, upload_folder: Path) -> str:
     ext = Path(original_filename).suffix.lower()
-    return f"{secrets.token_urlsafe(12).replace('-', '').replace('_', '')}{ext}"
+    while True:
+        filename = f"{secrets.token_urlsafe(12).replace('-', '').replace('_', '')}{ext}"
+        if not (upload_folder / filename).exists():
+            return filename
 
 
-def build_delete_token() -> str:
-    return secrets.token_urlsafe(16).replace("-", "").replace("_", "")
+def build_delete_token(files_data: dict[str, Any]) -> str:
+    existing_tokens = {
+        str(record.get("delete_token", "")).strip()
+        for record in files_data.values()
+        if isinstance(record, dict)
+    }
+
+    while True:
+        token = secrets.token_urlsafe(16).replace("-", "").replace("_", "")
+        if token and token not in existing_tokens:
+            return token
 
 
 def get_file_size(file_path: Path) -> int:
@@ -161,15 +210,55 @@ def serialize_file_record(file_record: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def load_all_files() -> dict[str, Any]:
-    data = load_files()
-    if not isinstance(data, dict):
-        return {}
-    return data
+def parse_iso_datetime(value: str | None) -> datetime | None:
+    if not value:
+        return None
+
+    try:
+        normalized = value.replace("Z", "+00:00")
+        return datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
 
 
-def save_all_files(data: dict[str, Any]) -> None:
-    save_files(data)
+def is_file_expired(file_record: dict[str, Any]) -> bool:
+    if file_record.get("is_permanent", False):
+        return False
+
+    expires_at = parse_iso_datetime(file_record.get("expires_at"))
+    if expires_at is None:
+        return False
+
+    now = datetime.now(timezone.utc)
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+
+    return expires_at <= now
+
+
+def file_belongs_to_key(file_record: dict[str, Any], key_value: str) -> bool:
+    if not key_value:
+        return False
+
+    expected_hash = file_record.get("api_key_hash", "")
+    if expected_hash:
+        return expected_hash == hash_api_key(key_value)
+
+    # compatibilité temporaire avec anciens enregistrements
+    old_key_value = file_record.get("api_key_value", "")
+    return old_key_value == key_value
+
+
+def find_file_by_stored_filename(files_data: dict[str, Any], filename: str) -> dict[str, Any] | None:
+    for record in files_data.values():
+        if not isinstance(record, dict):
+            continue
+
+        stored_filename = record.get("stored_filename") or record.get("server_name", "")
+        if stored_filename == filename:
+            return record
+
+    return None
 
 
 # ---------------------------------------------------------
@@ -183,21 +272,23 @@ def api_account():
         return api_error(
             auth.status_code,
             auth.error or "auth_error",
-            auth.message or "Accès refusé."
+            auth.message or "Accès refusé.",
         )
 
     key_data = auth.key_data or {}
     limits = remaining_uploads_info(key_data)
 
-    return api_success({
-        "key_name": key_data.get("name", ""),
-        "is_active": bool(key_data.get("is_active", False)),
-        "max_file_size_mb": int(key_data.get("max_file_size_mb", 0)),
-        "allow_permanent": bool(key_data.get("allow_permanent", False)),
-        "default_lifetime_minutes": int(key_data.get("default_lifetime_minutes", 10)),
-        "allowed_lifetimes": key_data.get("allowed_lifetimes", []),
-        "limits": limits,
-    })
+    return api_success(
+        {
+            "key_name": key_data.get("name", ""),
+            "is_active": bool(key_data.get("is_active", False)),
+            "max_file_size_mb": int(key_data.get("max_file_size_mb", 0)),
+            "allow_permanent": bool(key_data.get("allow_permanent", False)),
+            "default_lifetime_minutes": int(key_data.get("default_lifetime_minutes", 10)),
+            "allowed_lifetimes": key_data.get("allowed_lifetimes", []),
+            "limits": limits,
+        }
+    )
 
 
 @api_bp.route("/upload", methods=["POST"])
@@ -207,7 +298,7 @@ def api_upload():
         return api_error(
             auth.status_code,
             auth.error or "auth_error",
-            auth.message or "Accès refusé."
+            auth.message or "Accès refusé.",
         )
 
     key_value = auth.key_value or ""
@@ -237,27 +328,31 @@ def api_upload():
         return api_error(
             413,
             "file_too_large",
-            f"Fichier trop volumineux. Taille max autorisée : {key_data.get('max_file_size_mb', 10)} MB."
+            f"Fichier trop volumineux. Taille max autorisée : {key_data.get('max_file_size_mb', 10)} MB.",
         )
 
     expiration_minutes = parse_expiration_minutes(key_data)
     now = datetime.utcnow()
     expires_at = None if expiration_minutes is None else (now + timedelta(minutes=expiration_minutes))
 
+    files_data = load_all_files()
     upload_folder = ensure_upload_folder()
-    stored_filename = build_storage_name(original_filename)
+
+    stored_filename = build_storage_name(original_filename, upload_folder)
     destination = upload_folder / stored_filename
 
-    uploaded_file.save(destination)
+    try:
+        uploaded_file.save(destination)
+    except OSError:
+        return api_error(500, "upload_save_failed", "Impossible d'enregistrer le fichier.")
 
     real_size = get_file_size(destination)
     ext = Path(original_filename).suffix.lower().lstrip(".")
     mime = uploaded_file.mimetype or "application/octet-stream"
 
-    file_id = build_file_id()
-    delete_token = build_delete_token()
+    file_id = build_file_id(files_data)
+    delete_token = build_delete_token(files_data)
 
-    files_data = load_all_files()
     file_record = {
         "id": file_id,
         "delete_token": delete_token,
@@ -279,25 +374,37 @@ def api_upload():
 
         "is_permanent": expires_at is None,
         "api_key_name": key_data.get("name", ""),
-        "api_key_value": key_value,
+        "api_key_hash": hash_api_key(key_value),
         "source": "api",
 
         # cohérence avec le reste du site
         "views": 0,
         "status": "active",
-        "ip": request.headers.get("X-Forwarded-For", request.remote_addr or ""),
+        "ip": get_real_ip(),
     }
 
     files_data[file_id] = file_record
-    save_all_files(files_data)
+
+    try:
+        save_all_files(files_data)
+    except Exception:
+        try:
+            if destination.exists():
+                destination.unlink()
+        except OSError:
+            pass
+        return api_error(500, "metadata_save_failed", "Impossible d'enregistrer les métadonnées du fichier.")
 
     updated_key_data = consume_upload_for_key(key_value)
     limits = remaining_uploads_info(updated_key_data or key_data)
 
-    return api_success({
-        **serialize_file_record(file_record),
-        "limits": limits,
-    }, status_code=200)
+    return api_success(
+        {
+            **serialize_file_record(file_record),
+            "limits": limits,
+        },
+        status_code=200,
+    )
 
 
 @api_bp.route("/file/<file_id>", methods=["GET"])
@@ -307,14 +414,21 @@ def api_file_info(file_id: str):
         return api_error(
             auth.status_code,
             auth.error or "auth_error",
-            auth.message or "Accès refusé."
+            auth.message or "Accès refusé.",
         )
 
+    key_value = auth.key_value or ""
     files_data = load_all_files()
     file_record = files_data.get(file_id)
 
     if not file_record:
         return api_error(404, "file_not_found", "Fichier introuvable.")
+
+    if not file_belongs_to_key(file_record, key_value):
+        return api_error(403, "forbidden_file_access", "Cette clé API ne peut pas accéder à ce fichier.")
+
+    if is_file_expired(file_record):
+        return api_error(410, "file_expired", "Ce fichier a expiré.")
 
     return api_success(serialize_file_record(file_record))
 
@@ -326,7 +440,7 @@ def api_delete_file(file_id: str):
         return api_error(
             auth.status_code,
             auth.error or "auth_error",
-            auth.message or "Accès refusé."
+            auth.message or "Accès refusé.",
         )
 
     key_value = auth.key_value or ""
@@ -336,7 +450,7 @@ def api_delete_file(file_id: str):
     if not file_record:
         return api_error(404, "file_not_found", "Fichier introuvable.")
 
-    if file_record.get("api_key_value") != key_value:
+    if not file_belongs_to_key(file_record, key_value):
         return api_error(403, "forbidden_file_access", "Cette clé API ne peut pas supprimer ce fichier.")
 
     upload_folder = ensure_upload_folder()
@@ -350,12 +464,18 @@ def api_delete_file(file_id: str):
             return api_error(500, "delete_failed", "Impossible de supprimer le fichier du disque.")
 
     files_data.pop(file_id, None)
-    save_all_files(files_data)
 
-    return api_success({
-        "id": file_id,
-        "deleted": True,
-    })
+    try:
+        save_all_files(files_data)
+    except Exception:
+        return api_error(500, "metadata_delete_failed", "Le fichier a été supprimé du disque, mais la base n'a pas pu être mise à jour.")
+
+    return api_success(
+        {
+            "id": file_id,
+            "deleted": True,
+        }
+    )
 
 
 @api_bp.route("/delete/<token>", methods=["GET", "DELETE"])
@@ -385,18 +505,42 @@ def api_delete_by_token(token: str):
             return api_error(500, "delete_failed", "Impossible de supprimer le fichier.")
 
     files_data.pop(file_id, None)
-    save_all_files(files_data)
 
-    return api_success({
-        "id": file_id,
-        "deleted": True,
-    })
+    try:
+        save_all_files(files_data)
+    except Exception:
+        return api_error(500, "metadata_delete_failed", "Le fichier a été supprimé du disque, mais la base n'a pas pu être mise à jour.")
+
+    return api_success(
+        {
+            "id": file_id,
+            "deleted": True,
+        }
+    )
 
 
 @api_bp.route("/raw/<path:filename>", methods=["GET"])
 def api_raw_file(filename: str):
+    files_data = load_all_files()
+    file_record = find_file_by_stored_filename(files_data, filename)
+
+    if not file_record:
+        return api_error(404, "file_not_found", "Fichier introuvable.")
+
+    if is_file_expired(file_record):
+        return api_error(410, "file_expired", "Ce fichier a expiré.")
+
     upload_folder = ensure_upload_folder()
-    return send_from_directory(upload_folder, filename)
+    stored_filename = file_record.get("stored_filename") or file_record.get("server_name", "")
+
+    if not stored_filename:
+        return api_error(404, "file_not_found", "Fichier introuvable.")
+
+    file_path = upload_folder / stored_filename
+    if not file_path.exists():
+        return api_error(404, "file_not_found", "Fichier introuvable sur le disque.")
+
+    return send_from_directory(upload_folder, stored_filename)
 
 
 api_public_bp = api_bp
