@@ -44,3 +44,6 @@ class Config:
     SESSION_COOKIE_SAMESITE = "Lax"
 
     API_DEFAULT_MAX_FILE_SIZE_MB = 10
+    
+    API_MAX_DIMENSION = 6000
+    

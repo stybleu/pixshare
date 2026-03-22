@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import os
 import secrets
@@ -8,7 +9,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-from flask import Blueprint, Response, current_app, request, send_from_directory
+from PIL import Image
+from flask import Blueprint, Response, current_app, request, send_file, send_from_directory
 from werkzeug.utils import secure_filename
 
 from pixshare.services.api_auth_service import (
@@ -21,7 +23,8 @@ from pixshare.services.json_services import load_files, save_files
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
 
-
+from pixshare.config import Config
+config = Config()
 # ---------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------
@@ -261,6 +264,23 @@ def find_file_by_stored_filename(files_data: dict[str, Any], filename: str) -> d
     return None
 
 
+def get_output_format_from_filename(filename: str) -> str:
+    ext = Path(filename).suffix.lower().lstrip(".")
+
+    mapping = {
+        "jpg": "JPEG",
+        "jpeg": "JPEG",
+        "png": "PNG",
+        "webp": "WEBP",
+        "bmp": "BMP",
+        "gif": "GIF",
+        "tif": "TIFF",
+        "tiff": "TIFF",
+    }
+
+    return mapping.get(ext, "PNG")
+
+
 # ---------------------------------------------------------
 # Routes
 # ---------------------------------------------------------
@@ -280,13 +300,40 @@ def api_account():
 
     return api_success(
         {
-            "key_name": key_data.get("name", ""),
-            "is_active": bool(key_data.get("is_active", False)),
-            "max_file_size_mb": int(key_data.get("max_file_size_mb", 0)),
-            "allow_permanent": bool(key_data.get("allow_permanent", False)),
-            "default_lifetime_minutes": int(key_data.get("default_lifetime_minutes", 10)),
-            "allowed_lifetimes": key_data.get("allowed_lifetimes", []),
-            "limits": limits,
+            "key": {
+                "name": key_data.get("name", ""),
+                "is_active": bool(key_data.get("is_active", False)),
+            },
+            "quota": {
+                "total": {
+                    "used": limits["used_total"],
+                    "max": limits["max_total"],
+                    "remaining": limits["remaining_total"],
+                },
+                "daily": {
+                    "used": limits["used_today"],
+                    "max": limits["max_per_day"],
+                    "remaining": limits["remaining_today"],
+                },
+            },
+            "limits": {
+                "max_file_size_mb": int(key_data.get("max_file_size_mb", 0)),
+                "allow_permanent": bool(key_data.get("allow_permanent", False)),
+            },
+            "upload_config": {
+    "default_lifetime_minutes": int(key_data.get("default_lifetime_minutes", 10)),
+    "allowed_lifetimes": key_data.get("allowed_lifetimes", []),
+
+    "resize": {
+        "enabled": True,
+        "mode": "ratio_only",
+        "ratio": {
+            "min": 0.1,
+            "max": 3.0
+        },
+        "max_dimension": config.API_MAX_DIMENSION
+    }
+}
         }
     )
 
@@ -350,37 +397,65 @@ def api_upload():
     ext = Path(original_filename).suffix.lower().lstrip(".")
     mime = uploaded_file.mimetype or "application/octet-stream"
 
+    image_width = None
+    image_height = None
+    resize_info = None
+
+    try:
+        with Image.open(destination) as img:
+            image_width, image_height = img.size
+
+            max_dim = 4000
+            global_ratio_max = 3.0
+            global_ratio_min = 0.1
+
+            max_ratio_for_this_image = min(
+                max_dim / image_width,
+                max_dim / image_height,
+                global_ratio_max,
+            )
+
+            resize_info = {
+                "enabled": True,
+                "mode": "ratio_only",
+                "ratio": {
+                    "min": global_ratio_min,
+                    "max": global_ratio_max,
+                    "max_for_this_image": round(max_ratio_for_this_image, 4),
+                },
+                "max_dimension": max_dim,
+            }
+    except Exception:
+        # Ce n'est pas une image lisible par PIL ou le format ne permet pas l'analyse.
+        image_width = None
+        image_height = None
+        resize_info = None
+
     file_id = build_file_id(files_data)
     delete_token = build_delete_token(files_data)
 
     file_record = {
         "id": file_id,
         "delete_token": delete_token,
-
-        # format historique du site public
         "original_name": original_filename,
         "server_name": stored_filename,
         "permanent": expires_at is None,
-
-        # format API
         "original_filename": original_filename,
         "stored_filename": stored_filename,
         "extension": ext,
         "mime": mime,
         "size": real_size,
-
         "uploaded_at": now.isoformat() + "Z",
         "expires_at": None if expires_at is None else expires_at.isoformat() + "Z",
-
         "is_permanent": expires_at is None,
         "api_key_name": key_data.get("name", ""),
         "api_key_hash": hash_api_key(key_value),
         "source": "api",
-
-        # cohérence avec le reste du site
         "views": 0,
         "status": "active",
         "ip": get_real_ip(),
+        "width": image_width,
+        "height": image_height,
     }
 
     files_data[file_id] = file_record
@@ -398,14 +473,22 @@ def api_upload():
     updated_key_data = consume_upload_for_key(key_value)
     limits = remaining_uploads_info(updated_key_data or key_data)
 
+    response_data = {
+        **serialize_file_record(file_record),
+        "limits": limits,
+    }
+
+    if image_width is not None and image_height is not None:
+        response_data["width"] = image_width
+        response_data["height"] = image_height
+
+    if resize_info is not None:
+        response_data["resize"] = resize_info
+
     return api_success(
-        {
-            **serialize_file_record(file_record),
-            "limits": limits,
-        },
+        response_data,
         status_code=200,
     )
-
 
 @api_bp.route("/file/<file_id>", methods=["GET"])
 def api_file_info(file_id: str):
@@ -540,7 +623,80 @@ def api_raw_file(filename: str):
     if not file_path.exists():
         return api_error(404, "file_not_found", "Fichier introuvable sur le disque.")
 
-    return send_from_directory(upload_folder, stored_filename)
+    ratio = request.args.get("ratio", type=float)
+
+    if ratio is None:
+        return send_from_directory(upload_folder, stored_filename)
+
+    if ratio < 0.1 or ratio > 3.0:
+        return api_error(400, "invalid_ratio", "Le ratio doit être entre 0.1 et 3.0.")
+
+    try:
+        with Image.open(file_path) as img:
+            original_width, original_height = img.size
+    
+            MAX_DIM = config.API_MAX_DIMENSION
+    
+            # 👉 Calcul du ratio max réel pour cette image
+            max_ratio_for_this_image = min(
+                MAX_DIM / original_width,
+                MAX_DIM / original_height,
+                3.0  # ton max global actuel
+            )
+    
+            # 👉 Calcul des nouvelles dimensions demandées
+            new_width = int(original_width * ratio)
+            new_height = int(original_height * ratio)
+    
+            # 👉 Vérification
+            if new_width > MAX_DIM or new_height > MAX_DIM:
+                return api_error(
+                    400,
+                    "image_too_large",
+                    f"Dimensions trop grandes. Ratio max autorisé pour cette image : {round(max_ratio_for_this_image, 2)}"
+                )
+
+            output_format = get_output_format_from_filename(stored_filename)
+
+            if output_format == "JPEG":
+                if img.mode in ("RGBA", "LA", "P"):
+                    background = Image.new("RGB", img.size, (255, 255, 255))
+                    if "A" in img.getbands():
+                        background.paste(img, mask=img.getchannel("A"))
+                    else:
+                        background.paste(img)
+                    img = background
+                elif img.mode != "RGB":
+                    img = img.convert("RGB")
+
+            img = img.resize((new_width, new_height), Image.LANCZOS)
+
+            buffer = io.BytesIO()
+
+            mime_types = {
+                "JPEG": "image/jpeg",
+                "PNG": "image/png",
+                "WEBP": "image/webp",
+                "BMP": "image/bmp",
+                "GIF": "image/gif",
+                "TIFF": "image/tiff",
+            }
+
+            if output_format not in mime_types:
+                output_format = "PNG"
+
+            img.save(buffer, format=output_format)
+            buffer.seek(0)
+
+            return send_file(
+                buffer,
+                mimetype=mime_types[output_format],
+                as_attachment=False,
+                download_name=stored_filename,
+            )
+
+    except Exception:
+        return api_error(400, "processing_error", "Erreur lors du traitement de l'image.")
 
 
 api_public_bp = api_bp

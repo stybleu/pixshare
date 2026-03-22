@@ -19,22 +19,51 @@
   <div class="card shadow-sm mb-4">
     <div class="card-body">
       <h2 class="h5">Authentification</h2>
-      <p class="mb-2">
-        Toutes les routes protégées utilisent l’un des headers suivants :
+      <p class="mb-3">
+        Le header recommandé est <code>Authorization: Bearer ...</code>.
       </p>
 
-      <div class="d-flex justify-content-end mb-2">
-        <button class="btn btn-outline-secondary btn-sm" type="button"
-                onclick="copyBlock('authHeader', this)">
+      <label class="form-label fw-semibold">Header recommandé</label>
+      <div class="input-group mb-3">
+        <input
+          type="text"
+          id="authHeaderBearer"
+          class="form-control"
+          value="Authorization: Bearer VOTRE_CLE_API"
+          readonly
+        >
+        <button class="btn btn-outline-secondary" type="button"
+                onclick="copyInput('authHeaderBearer', this)">
           Copier
         </button>
       </div>
 
-      <pre id="authHeader" class="bg-dark text-light p-3 rounded mb-0" style="white-space: pre-wrap;">Authorization: Bearer VOTRE_CLE_API
-X-API-Key: VOTRE_CLE_API</pre>
+      <details class="mb-0">
+        <summary class="small text-muted" style="cursor:pointer;">
+          Afficher le header alternatif de compatibilité
+        </summary>
+
+        <div class="mt-3">
+          <label class="form-label fw-semibold">Header alternatif</label>
+          <div class="input-group">
+            <input
+              type="text"
+              id="authHeaderXApi"
+              class="form-control"
+              value="X-API-Key: VOTRE_CLE_API"
+              readonly
+            >
+            <button class="btn btn-outline-secondary" type="button"
+                    onclick="copyInput('authHeaderXApi', this)">
+              Copier
+            </button>
+          </div>
+        </div>
+      </details>
 
       <div class="alert alert-warning mt-3 mb-0">
-        <strong>Authorization: Bearer ...</strong> et <strong>X-API-Key</strong> sont tous les deux acceptés.
+        <strong>Authorization: Bearer ...</strong> est la méthode recommandée.
+        <strong>X-API-Key</strong> reste accepté en compatibilité.
         Si tu utilises <code>Authorization</code>, le mot <code>Bearer</code> est obligatoire.
       </div>
     </div>
@@ -64,19 +93,39 @@ X-API-Key: VOTRE_CLE_API</pre>
   "success": true,
   "status": 200,
   "data": {
-    "key_name": "string",
-    "is_active": true,
-    "max_file_size_mb": 10,
-    "allow_permanent": false,
-    "default_lifetime_minutes": 10,
-    "allowed_lifetimes": [5, 10, 20, 30, 60],
+    "key": {
+      "name": "api-client",
+      "is_active": true
+    },
+    "quota": {
+      "total": {
+        "used": 0,
+        "max": 100,
+        "remaining": 100
+      },
+      "daily": {
+        "used": 0,
+        "max": 10,
+        "remaining": 10
+      }
+    },
     "limits": {
-      "remaining_total": 0,
-      "remaining_today": 0,
-      "used_total": 0,
-      "used_today": 0,
-      "max_total": 0,
-      "max_per_day": 0
+      "max_file_size_mb": 10,
+      "allow_permanent": false
+    },
+    "upload_config": {
+      "default_lifetime_minutes": 10,
+      "allowed_lifetimes": [5, 10, 20, 30, 60],
+      
+      "resize": {
+        "enabled": true,
+        "mode": "ratio_only",
+        "ratio": {
+          "min": 0.1,
+          "max": 3.0
+        },
+        "max_dimension": {{ max_dim }}
+      }
     }
   }
 }</pre>
@@ -105,7 +154,7 @@ X-API-Key: VOTRE_CLE_API</pre>
 -H "Authorization: Bearer VOTRE_CLE_API" \
 -F "file=@image.jpg" \
 -F "expiration=10"</pre>
-
+      
       <p class="small text-muted mb-1">Exemple (Android / Termux) :</p>
       <div class="d-flex justify-content-end mb-2">
         <button class="btn btn-outline-secondary btn-sm" type="button"
@@ -122,7 +171,14 @@ X-API-Key: VOTRE_CLE_API</pre>
       <div class="alert alert-info mt-3 mb-3">
         Le champ attendu est <code>expiration</code>, pas <code>lifetime</code>.
       </div>
+      <div class="alert alert-info mt-3">
+  <strong>Redimensionnement des images :</strong><br>
+  Utilise le paramètre <code>?ratio=</code> sur l’URL du fichier.
+</div>
 
+<pre class="bg-dark text-light p-3 rounded">
+GET /api/raw/filename.png?ratio=0.5
+</pre>
       <p class="small fw-semibold mb-1">Type de réponse JSON :</p>
       <div class="d-flex justify-content-end mb-2">
         <button class="btn btn-outline-secondary btn-sm" type="button"
@@ -150,6 +206,24 @@ X-API-Key: VOTRE_CLE_API</pre>
     "expiration": "ISO-8601 string | null",
     "is_permanent": false,
     "uploader_api_key_name": "string",
+    
+    <tr class="table-secondary">
+  <td colspan="3"><strong>Champs spécifiques aux images</strong></td>
+</tr>
+
+    "width": 0,
+    "height": 0,
+    "resize": {
+      "enabled": true,
+      "mode": "ratio_only",
+      "ratio": {
+        "min": 0.1,
+        "max": 3.0,
+        "max_for_this_image": 2.5
+      },
+      "max_dimension": {{ max_dim }}
+    },
+
     "limits": {
       "remaining_total": 0,
       "remaining_today": 0,
@@ -177,7 +251,14 @@ X-API-Key: VOTRE_CLE_API</pre>
 
       <pre id="curlInfo" class="bg-dark text-light p-3 rounded mb-3" style="white-space: pre-wrap;">curl -X GET {{ request.host_url[:-1] }}/api/file/ID \
 -H "Authorization: Bearer VOTRE_CLE_API"</pre>
+        <div class="alert alert-info mt-3">
+  <strong>Redimensionnement des images :</strong><br>
+  Utilise le paramètre <code>?ratio=</code> sur l’URL du fichier.
+</div>
 
+<pre class="bg-dark text-light p-3 rounded">
+GET /api/raw/filename.png?ratio=0.5
+</pre>
       <p class="small fw-semibold mb-1">Type de réponse JSON :</p>
       <pre class="bg-dark text-light p-3 rounded mb-0" style="white-space: pre-wrap;">{
   "success": true,
@@ -197,7 +278,24 @@ X-API-Key: VOTRE_CLE_API</pre>
     "uploaded_at": "ISO-8601 string",
     "expiration": "ISO-8601 string | null",
     "is_permanent": false,
-    "uploader_api_key_name": "string"
+    "uploader_api_key_name": "string",
+    
+    <tr class="table-secondary">
+  <td colspan="3"><strong>Champs spécifiques aux images</strong></td>
+    </tr>
+    
+    "width": 0,
+    "height": 0,
+    "resize": {
+      "enabled": true,
+      "mode": "ratio_only",
+      "ratio": {
+        "min": 0.1,
+        "max": 3.0,
+        "max_for_this_image": 2.5
+      },
+      "max_dimension": {{ max_dim }}
+    }
   }
 }</pre>
     </div>
@@ -409,21 +507,118 @@ X-API-Key: VOTRE_CLE_API</pre>
               <td>object</td>
               <td>État des quotas après l’upload.</td>
             </tr>
+            <tr>
+            <td><code>data.width</code></td>
+            <td>int | null</td>
+            <td>Largeur de l’image en pixels. Présent uniquement pour les fichiers image.</td>
+          </tr>
+          <tr>
+            <td><code>data.height</code></td>
+            <td>int | null</td>
+            <td>Hauteur de l’image en pixels. Présent uniquement pour les fichiers image.</td>
+          </tr>
+          <tr>
+            <td><code>data.resize</code></td>
+            <td>object | null</td>
+            <td>Informations de redimensionnement disponibles pour l’image. Présent uniquement pour les fichiers image.</td>
+          </tr>
+          <tr>
+            <td><code>data.resize.enabled</code></td>
+            <td>bool</td>
+            <td>Indique si le redimensionnement est disponible pour ce fichier.</td>
+          </tr>
+          <tr>
+            <td><code>data.resize.mode</code></td>
+            <td>string</td>
+            <td>Mode de redimensionnement autorisé. Actuellement <code>ratio_only</code>.</td>
+          </tr>
+          <tr>
+            <td><code>data.resize.ratio.min</code></td>
+            <td>float</td>
+            <td>Ratio minimum autorisé pour le redimensionnement.</td>
+          </tr>
+          <tr>
+            <td><code>data.resize.ratio.max</code></td>
+            <td>float</td>
+            <td>Ratio maximum global autorisé par l’API.</td>
+          </tr>
+          <tr>
+            <td><code>data.resize.ratio.max_for_this_image</code></td>
+            <td>float</td>
+            <td>Ratio maximum réellement autorisé pour cette image selon ses dimensions et la limite serveur.</td>
+          </tr>
+          <tr>
+            <td><code>data.resize.max_dimension</code></td>
+            <td>int</td>
+            <td>Dimension maximale autorisée en largeur ou hauteur après redimensionnement.</td>
+          </tr>
           </tbody>
         </table>
       </div>
     </div>
   </div>
 
-  <div class="card shadow-sm">
+  <div class="card shadow-sm" id="api-request">
     <div class="card-body">
-      <h2 class="h5">Demande de clé API</h2>
+      <h2 class="h5">Clé API démo ou demande API standard</h2>
       <p class="text-muted">
-        Besoin d’un accès API pour ton projet ? Fais une demande ci-dessous.
+        La <strong>clé API démo</strong> est générée automatiquement pour tester l’intégration.
+        La <strong>clé API standard</strong> reste soumise à ton autorisation manuelle.
       </p>
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <div class="border rounded p-3 h-100 bg-light">
+            <div class="fw-semibold mb-2">Clé API démo</div>
+            <div class="small text-muted mb-2">Génération immédiate, sans intervention admin.</div>
+            <ul class="small mb-0 ps-3">
+              <li>mêmes endpoints que l’API standard</li>
+              <li>5 uploads / jour</li>
+              <li>20 uploads total</li>
+              <li>durées autorisées : 2 ou 5 minutes</li>
+              <li>pas de mode permanent</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="border rounded p-3 h-100 bg-light">
+            <div class="fw-semibold mb-2">API standard</div>
+            <div class="small text-muted mb-2">Réservée à un usage réel après validation manuelle.</div>
+            <ul class="small mb-0 ps-3">
+              <li>création uniquement par l’administrateur</li>
+              <li>quotas adaptés à ton projet</li>
+              <li>accès plus concret pour la production</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      {% if generated_demo_key %}
+      <div class="alert alert-success">
+        <div class="fw-semibold mb-2">Ta clé API démo a été générée ✅</div>
+        <div class="input-group mb-3">
+          <input type="text" class="form-control" id="generatedDemoKey" value="{{ generated_demo_key }}" readonly>
+          <button class="btn btn-outline-secondary" type="button" onclick="copyKeyInput('generatedDemoKey', this)">Copier</button>
+        </div>
+        <div class="small">
+          Limites : {{ generated_demo_key_info.max_uploads_per_day }} uploads/jour,
+          {{ generated_demo_key_info.max_uploads_total }} uploads total,
+          expirations autorisées : {{ generated_demo_key_info.allowed_lifetimes | join(', ') }} min.
+        </div>
+        <div class="small mt-2">
+          Exemple curl :
+        </div>
+        <pre class="bg-dark text-light p-3 rounded mt-2 mb-0" style="white-space: pre-wrap;">curl -X POST {{ request.host_url[:-1] }}/api/upload \
+-H "Authorization: Bearer {{ generated_demo_key }}" \
+-F "file=@image.jpg" \
+-F "expiration=5"</pre>
+      </div>
+      {% endif %}
 
       <form method="post" action="{{ url_for('public.request_api_key') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="request_type" id="requestTypeInput" value="demo">
 
         <div class="row g-3">
           <div class="col-md-6">
@@ -451,8 +646,9 @@ X-API-Key: VOTRE_CLE_API</pre>
             <textarea name="usage_details" class="form-control" rows="4" placeholder="Explique ton besoin"></textarea>
           </div>
 
-          <div class="col-12">
-            <button type="submit" class="btn btn-primary">Envoyer la demande</button>
+          <div class="col-12 d-flex flex-wrap gap-2">
+            <button type="submit" class="btn btn-outline-primary" onclick="setRequestType('demo')">Obtenir une clé API démo</button>
+            <button type="submit" class="btn btn-primary" onclick="setRequestType('standard')">Demander une API standard</button>
           </div>
         </div>
       </form>
@@ -461,39 +657,68 @@ X-API-Key: VOTRE_CLE_API</pre>
 </div>
 
 <script>
-function copyBlock(id, button) {
-  const text = document.getElementById(id).innerText;
+function setRequestType(type) {
+  const input = document.getElementById('requestTypeInput');
+  if (input) {
+    input.value = type;
+  }
+}
+
+function flashCopied(button) {
+  if (!button) return;
+  const oldText = button.textContent;
+  button.textContent = 'Copié ✅';
+  setTimeout(() => {
+    button.textContent = oldText;
+  }, 1200);
+}
+
+function fallbackCopyText(text, button) {
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'absolute';
+  textarea.style.left = '-9999px';
+  document.body.appendChild(textarea);
+  textarea.select();
+  textarea.setSelectionRange(0, 99999);
+  document.execCommand('copy');
+  document.body.removeChild(textarea);
+  flashCopied(button);
+}
+
+function copyInput(inputId, button) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+
+  const text = input.value;
 
   if (navigator.clipboard && window.isSecureContext) {
-    navigator.clipboard.writeText(text).then(() => {
-      const oldText = button.textContent;
-      button.textContent = "Copié ✅";
-      setTimeout(() => {
-        button.textContent = oldText;
-      }, 1200);
-    }).catch(() => {
-      fallbackCopyText(text, button);
-    });
+    navigator.clipboard.writeText(text)
+      .then(() => flashCopied(button))
+      .catch(() => fallbackCopyText(text, button));
   } else {
     fallbackCopyText(text, button);
   }
 }
 
-function fallbackCopyText(text, button) {
-  const textarea = document.createElement("textarea");
-  textarea.value = text;
-  textarea.style.position = "fixed";
-  textarea.style.opacity = "0";
-  document.body.appendChild(textarea);
-  textarea.select();
-  document.execCommand("copy");
-  document.body.removeChild(textarea);
+function copyKeyInput(inputId, button) {
+  copyInput(inputId, button);
+}
 
-  const oldText = button.textContent;
-  button.textContent = "Copié ✅";
-  setTimeout(() => {
-    button.textContent = oldText;
-  }, 1200);
+function copyBlock(blockId, button) {
+  const block = document.getElementById(blockId);
+  if (!block) return;
+
+  const text = block.innerText || block.textContent || '';
+
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text)
+      .then(() => flashCopied(button))
+      .catch(() => fallbackCopyText(text, button));
+  } else {
+    fallbackCopyText(text, button);
+  }
 }
 </script>
 
