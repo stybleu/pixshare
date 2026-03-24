@@ -4,6 +4,11 @@
 {% block head %}
 <meta name="robots" content="index, follow">
 <meta name="description" content="Documentation de l'API PixShare : upload, récupération d'informations et suppression de fichiers avec clé API.">
+<style>
+  html {
+    scroll-behavior: smooth;
+  }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -16,9 +21,66 @@
     </p>
   </div>
 
-  <div class="card shadow-sm mb-4">
+  <div class="alert alert-success mb-4">
+    <strong>PixShare API</strong> : API simple, rapide et hébergée en Europe.
+  </div>
+
+  <div class="card shadow-sm mb-4 border-success">
     <div class="card-body">
-      <h2 class="h5">Authentification</h2>
+      <h2 class="h5 mb-3">🚀 Démarrage rapide</h2>
+
+      <div class="d-flex justify-content-end mb-2">
+        <button class="btn btn-outline-secondary btn-sm" type="button"
+                onclick="copyBlock('quickStartCurl', this)">
+          Copier
+        </button>
+      </div>
+
+      <pre id="quickStartCurl" class="bg-dark text-light p-3 rounded mb-2" style="white-space: pre-wrap;">curl -X POST {{ request.host_url[:-1] }}/api/upload \
+-H "Authorization: Bearer VOTRE_CLE_API" \
+-F "file=@image.jpg"</pre>
+
+      <p class="small text-muted mb-0">
+        Envoyez une image et récupérez immédiatement un lien direct, un lien d’affichage et un lien de suppression.
+      </p>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mb-4" id="sommaire">
+    <div class="card-body">
+      <h2 class="h5 mb-3">Sommaire</h2>
+      <div class="row g-2">
+        <div class="col-md-6">
+          <ul class="mb-0">
+            <li><a href="#auth">Authentification</a></li>
+            <li><a href="#account">1. Vérifier son compte API</a></li>
+            <li><a href="#upload">2. Upload d’un fichier</a></li>
+            <li><a href="#integrations">3. Exemple d'intégration</a></li>
+            
+            <li><a href="#read-file">4. Lire un fichier</a></li>
+            <li><a href="#delete-api">5. Supprimer un fichier par clé API</a></li>
+          </ul>
+        </div>
+        <div class="col-md-6">
+          <ul class="mb-0">
+            <li><a href="#delete-public">6. Suppression par lien public</a></li>
+            <li><a href="#example-upload">7. Exemple réel de réponse d’upload</a></li>
+            <li><a href="#errors">8. Codes d’erreur API</a></li>
+            <li><a href="#fields">9.Signification des champs</a></li>
+            <li><a href="#api-request">10.Clé API démo ou demande API standard</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mb-4" id="auth">
+    <div class="card-body">
+      <h2 class="h5 mb-1">Authentification</h2>
+      <div class="mb-3">
+        <a href="#sommaire" class="small">↑ Retour au sommaire</a>
+      </div>
+
       <p class="mb-3">
         Le header recommandé est <code>Authorization: Bearer ...</code>.
       </p>
@@ -63,15 +125,19 @@
 
       <div class="alert alert-warning mt-3 mb-0">
         <strong>Authorization: Bearer ...</strong> est la méthode recommandée.
-        <strong>X-API-Key</strong> reste accepté en compatibilité.
-        Si tu utilises <code>Authorization</code>, le mot <code>Bearer</code> est obligatoire.
+        <strong>X-API-Key</strong> reste accepté pour compatibilité.
+        Si vous utilisez <code>Authorization</code>, le mot <code>Bearer</code> est obligatoire.
       </div>
     </div>
   </div>
 
-  <div class="card shadow-sm mb-4">
+  <div class="card shadow-sm mb-4" id="account">
     <div class="card-body">
-      <h2 class="h5">1. Vérifier son compte API</h2>
+      <h2 class="h5 mb-1">1. Vérifier son compte API</h2>
+      <div class="mb-3">
+        <a href="#sommaire" class="small">↑ Retour au sommaire</a>
+      </div>
+
       <p class="mb-2"><strong>Route :</strong> <code>GET /api/account</code></p>
 
       <div class="d-flex justify-content-end mb-2">
@@ -85,7 +151,7 @@
 -H "Authorization: Bearer VOTRE_CLE_API"</pre>
 
       <p class="text-muted small mb-2">
-        Retourne les informations de la clé, les limites et les options autorisées.
+        Retourne les informations de la clé API, les limites et les options autorisées.
       </p>
 
       <p class="small fw-semibold mb-1">Type de réponse JSON :</p>
@@ -116,7 +182,6 @@
     "upload_config": {
       "default_lifetime_minutes": 10,
       "allowed_lifetimes": [5, 10, 20, 30, 60],
-      
       "resize": {
         "enabled": true,
         "mode": "ratio_only",
@@ -132,9 +197,13 @@
     </div>
   </div>
 
-  <div class="card shadow-sm mb-4">
+  <div class="card shadow-sm mb-4" id="upload">
     <div class="card-body">
-      <h2 class="h5">2. Upload d’un fichier</h2>
+      <h2 class="h5 mb-1">2. Upload d’un fichier</h2>
+      <div class="mb-3">
+        <a href="#sommaire" class="small">↑ Retour au sommaire</a>
+      </div>
+
       <p class="mb-2"><strong>Route :</strong> <code>POST /api/upload</code></p>
 
       <ul class="mb-3">
@@ -154,7 +223,7 @@
 -H "Authorization: Bearer VOTRE_CLE_API" \
 -F "file=@image.jpg" \
 -F "expiration=10"</pre>
-      
+
       <p class="small text-muted mb-1">Exemple (Android / Termux) :</p>
       <div class="d-flex justify-content-end mb-2">
         <button class="btn btn-outline-secondary btn-sm" type="button"
@@ -171,14 +240,14 @@
       <div class="alert alert-info mt-3 mb-3">
         Le champ attendu est <code>expiration</code>, pas <code>lifetime</code>.
       </div>
-      <div class="alert alert-info mt-3">
-  <strong>Redimensionnement des images :</strong><br>
-  Utilise le paramètre <code>?ratio=</code> sur l’URL du fichier.
-</div>
 
-<pre class="bg-dark text-light p-3 rounded">
-GET /api/raw/filename.png?ratio=0.5
-</pre>
+      <div class="alert alert-info mb-3">
+        <strong>Redimensionnement des images :</strong><br>
+        Utilisez le paramètre <code>?ratio=</code> sur l’URL du fichier brut.
+      </div>
+
+      <pre class="bg-dark text-light p-3 rounded mb-3" style="white-space: pre-wrap;">GET /api/raw/filename.png?ratio=0.5</pre>
+
       <p class="small fw-semibold mb-1">Type de réponse JSON :</p>
       <div class="d-flex justify-content-end mb-2">
         <button class="btn btn-outline-secondary btn-sm" type="button"
@@ -206,11 +275,8 @@ GET /api/raw/filename.png?ratio=0.5
     "expiration": "ISO-8601 string | null",
     "is_permanent": false,
     "uploader_api_key_name": "string",
-    
-    <tr class="table-secondary">
-  <td colspan="3"><strong>Champs spécifiques aux images</strong></td>
-</tr>
 
+    "//": "Champs spécifiques aux images",
     "width": 0,
     "height": 0,
     "resize": {
@@ -236,10 +302,149 @@ GET /api/raw/filename.png?ratio=0.5
 }</pre>
     </div>
   </div>
+  
+  <div class="card shadow-sm mb-4" id="integrations">
+  <div class="card-body">
+    <h2 class="h5 mb-1">3. Exemples d’intégration</h2>
+    <div class="mb-3">
+      <a href="#sommaire" class="small">↑ Retour au sommaire</a>
+    </div>
 
-  <div class="card shadow-sm mb-4">
+    <p class="text-muted mb-4">
+      Exemples d’intégration de l’API PixShare dans plusieurs langages pour envoyer un fichier via
+      <code>POST /api/upload</code>.
+    </p>
+
+    <h3 class="h6">Python (requests)</h3>
+    <div class="d-flex justify-content-end mb-2">
+      <button class="btn btn-outline-secondary btn-sm" type="button"
+              onclick="copyBlock('codePythonUpload', this)">
+        Copier
+      </button>
+    </div>
+    <pre id="codePythonUpload" class="bg-dark text-light p-3 rounded mb-4" style="white-space: pre-wrap;">import requests
+
+url = "https://pixshare.fr/api/upload"
+
+headers = {
+    "Authorization": "Bearer VOTRE_CLE_API"
+}
+
+data = {
+    "expiration": 10
+}
+
+try:
+    with open("image.jpg", "rb") as f:
+        files = {
+            "file": f
+        }
+
+        response = requests.post(url, headers=headers, files=files, data=data)
+
+    response.raise_for_status()  # vérifie erreur HTTP
+
+    result = response.json()
+
+    if result.get("success"):
+        print("Upload réussi ✅")
+        print("URL :", result["data"]["url"])
+    else:
+        print("Erreur API :", result.get("error"))
+
+except requests.exceptions.RequestException as e:
+    print("Erreur réseau :", e)
+
+except Exception as e:
+    print("Erreur :", e)</pre>
+
+    <h3 class="h6">JavaScript (Fetch API)</h3>
+    <div class="d-flex justify-content-end mb-2">
+      <button class="btn btn-outline-secondary btn-sm" type="button"
+              onclick="copyBlock('codeJsUpload', this)">
+        Copier
+      </button>
+    </div>
+    <pre id="codeJsUpload" class="bg-dark text-light p-3 rounded mb-4" style="white-space: pre-wrap;">const formData = new FormData();
+
+formData.append("file", fileInput.files[0]);
+formData.append("expiration", 10);
+
+fetch("https://pixshare.fr/api/upload", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer VOTRE_CLE_API"
+  },
+  body: formData
+})
+  .then(res => res.json())
+  .then(data => console.log(data))
+  .catch(err => console.error(err));</pre>
+
+    <h3 class="h6">Node.js (Axios)</h3>
+    <div class="d-flex justify-content-end mb-2">
+      <button class="btn btn-outline-secondary btn-sm" type="button"
+              onclick="copyBlock('codeNodeUpload', this)">
+        Copier
+      </button>
+    </div>
+    <pre id="codeNodeUpload" class="bg-dark text-light p-3 rounded mb-4" style="white-space: pre-wrap;">const axios = require("axios");
+const FormData = require("form-data");
+const fs = require("fs");
+
+const form = new FormData();
+form.append("file", fs.createReadStream("image.jpg"));
+form.append("expiration", 10);
+
+axios.post("https://pixshare.fr/api/upload", form, {
+  headers: {
+    ...form.getHeaders(),
+    Authorization: "Bearer VOTRE_CLE_API"
+  }
+})
+  .then(res => console.log(res.data))
+  .catch(err => console.error(err.response?.data || err.message));</pre>
+
+    <h3 class="h6">PHP (cURL)</h3>
+    <div class="d-flex justify-content-end mb-2">
+      <button class="btn btn-outline-secondary btn-sm" type="button"
+              onclick="copyBlock('codePhpUpload', this)">
+        Copier
+      </button>
+    </div>
+    <pre id="codePhpUpload" class="bg-dark text-light p-3 rounded mb-0" style="white-space: pre-wrap;">&lt;?php
+
+$url = "https://pixshare.fr/api/upload";
+
+$ch = curl_init();
+
+$data = [
+    "file" =&gt; new CURLFile("image.jpg"),
+    "expiration" =&gt; 10
+];
+
+curl_setopt($ch, CURLOPT_URL, $url);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer VOTRE_CLE_API"
+]);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+$response = curl_exec($ch);
+curl_close($ch);
+
+echo $response;</pre>
+  </div>
+</div>
+
+  <div class="card shadow-sm mb-4" id="read-file">
     <div class="card-body">
-      <h2 class="h5">3. Lire un fichier</h2>
+      <h2 class="h5 mb-1">4. Lire un fichier</h2>
+      <div class="mb-3">
+        <a href="#sommaire" class="small">↑ Retour au sommaire</a>
+      </div>
+
       <p class="mb-2"><strong>Route :</strong> <code>GET /api/file/&lt;id&gt;</code></p>
 
       <div class="d-flex justify-content-end mb-2">
@@ -251,14 +456,12 @@ GET /api/raw/filename.png?ratio=0.5
 
       <pre id="curlInfo" class="bg-dark text-light p-3 rounded mb-3" style="white-space: pre-wrap;">curl -X GET {{ request.host_url[:-1] }}/api/file/ID \
 -H "Authorization: Bearer VOTRE_CLE_API"</pre>
-        <div class="alert alert-info mt-3">
-  <strong>Redimensionnement des images :</strong><br>
-  Utilise le paramètre <code>?ratio=</code> sur l’URL du fichier.
-</div>
 
-<pre class="bg-dark text-light p-3 rounded">
-GET /api/raw/filename.png?ratio=0.5
-</pre>
+      <p class="text-muted small mb-3">
+        Pour obtenir une version redimensionnée d’une image, utilisez ensuite l’URL brute
+        <code>/api/raw/filename.png?ratio=0.5</code>.
+      </p>
+
       <p class="small fw-semibold mb-1">Type de réponse JSON :</p>
       <pre class="bg-dark text-light p-3 rounded mb-0" style="white-space: pre-wrap;">{
   "success": true,
@@ -279,11 +482,8 @@ GET /api/raw/filename.png?ratio=0.5
     "expiration": "ISO-8601 string | null",
     "is_permanent": false,
     "uploader_api_key_name": "string",
-    
-    <tr class="table-secondary">
-  <td colspan="3"><strong>Champs spécifiques aux images</strong></td>
-    </tr>
-    
+
+    "//": "Champs spécifiques aux images",
     "width": 0,
     "height": 0,
     "resize": {
@@ -301,9 +501,13 @@ GET /api/raw/filename.png?ratio=0.5
     </div>
   </div>
 
-  <div class="card shadow-sm mb-4">
+  <div class="card shadow-sm mb-4" id="delete-api">
     <div class="card-body">
-      <h2 class="h5">4. Supprimer un fichier par clé API</h2>
+      <h2 class="h5 mb-1">5. Supprimer un fichier par clé API</h2>
+      <div class="mb-3">
+        <a href="#sommaire" class="small">↑ Retour au sommaire</a>
+      </div>
+
       <p class="mb-2"><strong>Route :</strong> <code>DELETE /api/file/&lt;id&gt;</code></p>
 
       <div class="d-flex justify-content-end mb-2">
@@ -317,7 +521,7 @@ GET /api/raw/filename.png?ratio=0.5
 -H "Authorization: Bearer VOTRE_CLE_API"</pre>
 
       <div class="alert alert-warning mt-3 mb-3">
-        Doit utiliser la <strong>même clé API</strong> que celle utilisée pour l’upload.
+        La suppression doit être effectuée avec la <strong>même clé API</strong> que celle utilisée lors de l’upload.
       </div>
 
       <p class="small fw-semibold mb-1">Type de réponse JSON :</p>
@@ -332,14 +536,18 @@ GET /api/raw/filename.png?ratio=0.5
     </div>
   </div>
 
-  <div class="card shadow-sm mb-4">
+  <div class="card shadow-sm mb-4" id="delete-public">
     <div class="card-body">
-      <h2 class="h5">5. Suppression par lien public</h2>
-      <p class="mb-2"><strong>Route :</strong> <code>GET /api/delete/&lt;token&gt;</code> ou <code>DELETE /api/delete/&lt;token&gt;</code> selon ton implémentation</p>
+      <h2 class="h5 mb-1">6. Suppression par lien public</h2>
+      <div class="mb-3">
+        <a href="#sommaire" class="small">↑ Retour au sommaire</a>
+      </div>
+
+      <p class="mb-2"><strong>Route :</strong> <code>GET /api/delete/&lt;token&gt;</code> ou <code>DELETE /api/delete/&lt;token&gt;</code> selon l’implémentation du service</p>
 
       <div class="alert alert-secondary mb-3">
-        <strong>Important :</strong> ce lien n’est valide que si ton backend stocke bien un
-        <code>delete_token</code> pour chaque fichier. Si le token n’existe pas encore,
+        <strong>Important :</strong> ce lien n’est valide que si le service stocke un
+        <code>delete_token</code> pour chaque fichier. Si aucun token n’existe,
         <code>delete_url</code> peut être vide ou incomplet.
       </div>
 
@@ -355,9 +563,12 @@ GET /api/raw/filename.png?ratio=0.5
     </div>
   </div>
 
-  <div class="card shadow-sm mb-4">
+  <div class="card shadow-sm mb-4" id="example-upload">
     <div class="card-body">
-      <h2 class="h5">Exemple réel de réponse d’upload</h2>
+      <h2 class="h5 mb-1">7. Exemple réel de réponse d’upload</h2>
+      <div class="mb-3">
+        <a href="#sommaire" class="small">↑ Retour au sommaire</a>
+      </div>
 
       <div class="d-flex justify-content-end mb-2">
         <button class="btn btn-outline-secondary btn-sm" type="button"
@@ -399,14 +610,59 @@ GET /api/raw/filename.png?ratio=0.5
       <div class="alert alert-warning mb-0">
         <strong>Attention :</strong> si <code>delete_url</code> vaut seulement
         <code>{{ request.host_url[:-1] }}/api/delete/</code>, cela signifie généralement que le
-        <code>delete_token</code> n’a pas été enregistré côté backend.
+        <code>delete_token</code> n’a pas été enregistré côté service.
       </div>
     </div>
   </div>
 
-  <div class="card shadow-sm mb-4">
+  <div class="card shadow-sm mb-4" id="errors">
     <div class="card-body">
-      <h2 class="h5">Signification des champs</h2>
+      <h2 class="h5 mb-1">8. Codes d’erreur API</h2>
+      <div class="mb-3">
+        <a href="#sommaire" class="small">↑ Retour au sommaire</a>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-bordered align-middle mb-0">
+          <thead>
+            <tr>
+              <th>HTTP</th>
+              <th>Code</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><code>400</code></td><td><code>bad_request</code></td><td>Requête invalide ou incomplète.</td></tr>
+            <tr><td><code>401</code></td><td><code>invalid_api_key</code></td><td>Clé API absente ou invalide.</td></tr>
+            <tr><td><code>403</code></td><td><code>forbidden</code></td><td>Accès refusé à cette ressource.</td></tr>
+            <tr><td><code>404</code></td><td><code>not_found</code></td><td>Ressource introuvable.</td></tr>
+            <tr><td><code>413</code></td><td><code>file_too_large</code></td><td>Fichier trop volumineux.</td></tr>
+            <tr><td><code>415</code></td><td><code>unsupported_file_type</code></td><td>Type de fichier non supporté.</td></tr>
+            <tr><td><code>429</code></td><td><code>limit_reached</code></td><td>Limite d’utilisation API atteinte.</td></tr>
+            <tr><td><code>500</code></td><td><code>server_error</code></td><td>Erreur interne du serveur.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="small fw-semibold mt-3 mb-1">Exemple de réponse d’erreur :</p>
+      <pre class="bg-dark text-light p-3 rounded mb-0" style="white-space: pre-wrap;">{
+  "success": false,
+  "status": 401,
+  "error": {
+    "code": "invalid_api_key",
+    "message": "Clé API invalide"
+  }
+}</pre>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mb-4" id="fields">
+    <div class="card-body">
+      <h2 class="h5 mb-1">9. Signification des champs</h2>
+      <div class="mb-3">
+        <a href="#sommaire" class="small">↑ Retour au sommaire</a>
+      </div>
+
       <div class="table-responsive">
         <table class="table table-bordered align-middle mb-0">
           <thead>
@@ -455,7 +711,7 @@ GET /api/raw/filename.png?ratio=0.5
             <tr>
               <td><code>data.display_url</code></td>
               <td>string</td>
-              <td>Lien direct affichable, identique à <code>url</code> dans ton implémentation actuelle.</td>
+              <td>Lien direct affichable, identique à <code>url</code> dans l’implémentation actuelle.</td>
             </tr>
             <tr>
               <td><code>data.url_viewer</code></td>
@@ -465,7 +721,7 @@ GET /api/raw/filename.png?ratio=0.5
             <tr>
               <td><code>data.delete_url</code></td>
               <td>string</td>
-              <td>Lien public de suppression par token. Peut être vide/incomplet si aucun token n’est enregistré.</td>
+              <td>Lien public de suppression par token. Peut être vide ou incomplet si aucun token n’est enregistré.</td>
             </tr>
             <tr>
               <td><code>data.mime</code></td>
@@ -490,7 +746,7 @@ GET /api/raw/filename.png?ratio=0.5
             <tr>
               <td><code>data.expiration</code></td>
               <td>string | null</td>
-              <td>Date d’expiration au format ISO 8601 UTC, ou <code>null</code> si permanent.</td>
+              <td>Date d’expiration au format ISO 8601 UTC, ou <code>null</code> si le fichier est permanent.</td>
             </tr>
             <tr>
               <td><code>data.is_permanent</code></td>
@@ -508,50 +764,50 @@ GET /api/raw/filename.png?ratio=0.5
               <td>État des quotas après l’upload.</td>
             </tr>
             <tr>
-            <td><code>data.width</code></td>
-            <td>int | null</td>
-            <td>Largeur de l’image en pixels. Présent uniquement pour les fichiers image.</td>
-          </tr>
-          <tr>
-            <td><code>data.height</code></td>
-            <td>int | null</td>
-            <td>Hauteur de l’image en pixels. Présent uniquement pour les fichiers image.</td>
-          </tr>
-          <tr>
-            <td><code>data.resize</code></td>
-            <td>object | null</td>
-            <td>Informations de redimensionnement disponibles pour l’image. Présent uniquement pour les fichiers image.</td>
-          </tr>
-          <tr>
-            <td><code>data.resize.enabled</code></td>
-            <td>bool</td>
-            <td>Indique si le redimensionnement est disponible pour ce fichier.</td>
-          </tr>
-          <tr>
-            <td><code>data.resize.mode</code></td>
-            <td>string</td>
-            <td>Mode de redimensionnement autorisé. Actuellement <code>ratio_only</code>.</td>
-          </tr>
-          <tr>
-            <td><code>data.resize.ratio.min</code></td>
-            <td>float</td>
-            <td>Ratio minimum autorisé pour le redimensionnement.</td>
-          </tr>
-          <tr>
-            <td><code>data.resize.ratio.max</code></td>
-            <td>float</td>
-            <td>Ratio maximum global autorisé par l’API.</td>
-          </tr>
-          <tr>
-            <td><code>data.resize.ratio.max_for_this_image</code></td>
-            <td>float</td>
-            <td>Ratio maximum réellement autorisé pour cette image selon ses dimensions et la limite serveur.</td>
-          </tr>
-          <tr>
-            <td><code>data.resize.max_dimension</code></td>
-            <td>int</td>
-            <td>Dimension maximale autorisée en largeur ou hauteur après redimensionnement.</td>
-          </tr>
+              <td><code>data.width</code></td>
+              <td>int | null</td>
+              <td>Largeur de l’image en pixels. Présent uniquement pour les fichiers image.</td>
+            </tr>
+            <tr>
+              <td><code>data.height</code></td>
+              <td>int | null</td>
+              <td>Hauteur de l’image en pixels. Présent uniquement pour les fichiers image.</td>
+            </tr>
+            <tr>
+              <td><code>data.resize</code></td>
+              <td>object | null</td>
+              <td>Informations de redimensionnement disponibles pour l’image. Présent uniquement pour les fichiers image.</td>
+            </tr>
+            <tr>
+              <td><code>data.resize.enabled</code></td>
+              <td>bool</td>
+              <td>Indique si le redimensionnement est disponible pour ce fichier.</td>
+            </tr>
+            <tr>
+              <td><code>data.resize.mode</code></td>
+              <td>string</td>
+              <td>Mode de redimensionnement autorisé. Actuellement <code>ratio_only</code>.</td>
+            </tr>
+            <tr>
+              <td><code>data.resize.ratio.min</code></td>
+              <td>float</td>
+              <td>Ratio minimum autorisé pour le redimensionnement.</td>
+            </tr>
+            <tr>
+              <td><code>data.resize.ratio.max</code></td>
+              <td>float</td>
+              <td>Ratio maximum global autorisé par l’API.</td>
+            </tr>
+            <tr>
+              <td><code>data.resize.ratio.max_for_this_image</code></td>
+              <td>float</td>
+              <td>Ratio maximum réellement autorisé pour cette image selon ses dimensions et la limite serveur.</td>
+            </tr>
+            <tr>
+              <td><code>data.resize.max_dimension</code></td>
+              <td>int</td>
+              <td>Dimension maximale autorisée en largeur ou hauteur après redimensionnement.</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -560,17 +816,21 @@ GET /api/raw/filename.png?ratio=0.5
 
   <div class="card shadow-sm" id="api-request">
     <div class="card-body">
-      <h2 class="h5">Clé API démo ou demande API standard</h2>
+      <h2 class="h5 mb-1">10. Clé API démo ou demande API standard</h2>
+      <div class="mb-3">
+        <a href="#sommaire" class="small">↑ Retour au sommaire</a>
+      </div>
+
       <p class="text-muted">
         La <strong>clé API démo</strong> est générée automatiquement pour tester l’intégration.
-        La <strong>clé API standard</strong> reste soumise à ton autorisation manuelle.
+        La <strong>clé API standard</strong> est attribuée après validation.
       </p>
 
       <div class="row g-3 mb-3">
         <div class="col-md-6">
           <div class="border rounded p-3 h-100 bg-light">
             <div class="fw-semibold mb-2">Clé API démo</div>
-            <div class="small text-muted mb-2">Génération immédiate, sans intervention admin.</div>
+            <div class="small text-muted mb-2">Génération immédiate, sans validation manuelle.</div>
             <ul class="small mb-0 ps-3">
               <li>mêmes endpoints que l’API standard</li>
               <li>5 uploads / jour</li>
@@ -584,11 +844,11 @@ GET /api/raw/filename.png?ratio=0.5
         <div class="col-md-6">
           <div class="border rounded p-3 h-100 bg-light">
             <div class="fw-semibold mb-2">API standard</div>
-            <div class="small text-muted mb-2">Réservée à un usage réel après validation manuelle.</div>
+            <div class="small text-muted mb-2">Destinée aux usages réels après validation.</div>
             <ul class="small mb-0 ps-3">
-              <li>création uniquement par l’administrateur</li>
-              <li>quotas adaptés à ton projet</li>
-              <li>accès plus concret pour la production</li>
+              <li>création après validation</li>
+              <li>quotas adaptés selon l’usage déclaré</li>
+              <li>accès destiné à une utilisation plus avancée ou en production</li>
             </ul>
           </div>
         </div>
@@ -596,7 +856,7 @@ GET /api/raw/filename.png?ratio=0.5
 
       {% if generated_demo_key %}
       <div class="alert alert-success">
-        <div class="fw-semibold mb-2">Ta clé API démo a été générée ✅</div>
+        <div class="fw-semibold mb-2">Votre clé API démo a été générée ✅</div>
         <div class="input-group mb-3">
           <input type="text" class="form-control" id="generatedDemoKey" value="{{ generated_demo_key }}" readonly>
           <button class="btn btn-outline-secondary" type="button" onclick="copyKeyInput('generatedDemoKey', this)">Copier</button>
@@ -638,12 +898,12 @@ GET /api/raw/filename.png?ratio=0.5
 
           <div class="col-md-6">
             <label class="form-label">Uploads estimés</label>
-            <input type="text" name="estimated_uploads" class="form-control" placeholder="Ex: 100/jour">
+            <input type="text" name="estimated_uploads" class="form-control" placeholder="Ex : 100/jour">
           </div>
 
           <div class="col-12">
             <label class="form-label">Détails</label>
-            <textarea name="usage_details" class="form-control" rows="4" placeholder="Explique ton besoin"></textarea>
+            <textarea name="usage_details" class="form-control" rows="4" placeholder="Décrivez votre besoin"></textarea>
           </div>
 
           <div class="col-12 d-flex flex-wrap gap-2">

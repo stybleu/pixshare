@@ -19,7 +19,7 @@ class Config:
     UPLOAD_FOLDER = "tmp/fichiers"
     APP_VERSION = (os.environ.get("RENDER_GIT_COMMIT", "")[:7] or "dev")
 
-    MAX_CONTENT_LENGTH = 100 * 1024 * 1024
+    MAX_CONTENT_LENGTH = 1000 * 1024 * 1024
     VISITOR_COOKIE_NAME = "visitor_token"
 
     MAX_FAILED_LOGINS = 5
