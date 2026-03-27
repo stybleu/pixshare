@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% set title = "Admin - Miniatures" %}
+
+{% block head %}
+<meta name="robots" content="noindex, nofollow, noarchive">
+
+<style>
+.thumb-card{
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 16px;
+  background: #fff;
+  overflow: hidden;
+  height: 100%;
+}
+
+.thumb-preview{
+  display: block;
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  background: #f8f9fa;
+}
+
+.thumb-meta{
+  font-size: .92rem;
+}
+
+.thumb-meta code{
+  word-break: break-all;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap gap-2 align-items-center justify-content-between mb-3">
+  <div>
+    <h1 class="h4 mb-0">Miniatures de modération</h1>
+    <div class="text-muted small">Affichage séparé des miniatures stockées dans <code>mod_thumbs</code>.</div>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a class="btn btn-outline-primary btn-sm" href="{{ url_for('admin.admin_panel') }}">Retour fichiers</a>
+    <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_messages') }}">Messages</a>
+    <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_blocked_ips') }}">IP bloquées</a>
+    <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_system') }}">Système</a>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('admin.admin_settings') }}">Paramètres</a>
+  </div>
+</div>
+
+{% if thumbnails %}
+  <div class="row g-3">
+    {% for f in thumbnails %}
+    <div class="col-12 col-md-6 col-xl-4">
+      <div class="thumb-card shadow-sm">
+        <a href="{{ f.thumb_url }}" target="_blank" rel="noopener">
+          <img src="{{ f.thumb_url }}" alt="Miniature de {{ f.original }}" class="thumb-preview" loading="lazy">
+        </a>
+
+        <div class="p-3">
+          <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+            <div>
+              <div class="fw-semibold">{{ f.original }}</div>
+              <div class="text-muted small">ID : <code>{{ f.id }}</code></div>
+            </div>
+
+            {% if f.status == "active" %}
+              <span class="badge text-bg-success">Actif</span>
+            {% elif f.status == "expired" %}
+              <span class="badge text-bg-secondary">Expiré</span>
+            {% else %}
+              <span class="badge text-bg-danger">Supprimé</span>
+            {% endif %}
+          </div>
+
+          <div class="thumb-meta text-muted small d-grid gap-1 mb-3">
+            <div>Date : {{ f.mtime_h }}</div>
+            <div>IP : {% if f.ip %}<code>{{ f.ip }}</code>{% else %}—{% endif %}</div>
+            <div>Expiration du fichier :
+              {% if f.status == "active" and f.remaining_time %}
+                <span class="badge text-bg-info">{{ f.remaining_time }}</span>
+              {% elif f.expires_at %}
+                <span>{{ f.expires_at }}</span>
+              {% else %}
+                <span>—</span>
+              {% endif %}
+            </div>
+            <div>Suppression auto de la miniature :
+              {% if f.thumb_delete_at %}
+                <code>{{ f.thumb_delete_at }}</code>
+              {% else %}
+                <span>Non programmée</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-outline-secondary btn-sm" href="{{ f.thumb_url }}" target="_blank" rel="noopener">Ouvrir miniature</a>
+
+            {% if f.has_public_file and f.public_url %}
+              <a class="btn btn-outline-primary btn-sm" href="{{ f.public_url }}" target="_blank" rel="noopener">Voir fichier</a>
+            {% endif %}
+
+            <form method="post"
+                  action="{{ url_for('admin.admin_delete_thumbnail') }}"
+                  class="m-0"
+                  onsubmit="return confirm('Supprimer cette miniature ?');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="file_id" value="{{ f.id }}">
+              <button class="btn btn-danger btn-sm" type="submit">Supprimer miniature</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="card shadow-sm">
+    <div class="card-body text-muted">
+      Aucune miniature disponible pour le moment.
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

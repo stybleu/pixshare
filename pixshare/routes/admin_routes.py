@@ -6,7 +6,7 @@ from flask import Blueprint, current_app, flash, redirect, render_template, requ
 from pixshare.security.csrf import validate_csrf
 from pixshare.services.auth_service import admin_required, process_admin_login
 from pixshare.services.api_auth_service import ensure_default_api_keys, remaining_uploads_info
-from pixshare.services.file_service import cleanup_expired, delete_by_id, get_thumbnail_abs_path, list_all_files
+from pixshare.services.file_service import cleanup_expired, delete_all_thumbnails, delete_by_id, delete_thumbnail_by_id, get_thumbnail_abs_path, list_all_files, list_all_thumbnails
 from pixshare.services.json_services import load_api_keys, load_blocked, load_contacts, save_api_keys, save_blocked, save_contacts
 from pixshare.services.settings_service import (
     get_valid_lifetime,
@@ -216,7 +216,7 @@ def admin_logout():
 def admin_panel():
     cleanup_expired()
 
-    files = list_all_files()
+    files = list_all_files(include_thumbnails=False)
 
     for f in files:
         f["remaining_time"] = get_remaining_time_label(f.get("expires_at")) if f.get("status") == "active" else ""
@@ -237,6 +237,36 @@ def admin_thumbnail(file_id):
     if not os.path.isfile(abs_path):
         abort(404)
     return send_file(abs_path, mimetype="image/jpeg", conditional=True, max_age=0)
+
+
+@admin_bp.route("/admin/thumbnails", methods=["GET"], endpoint="admin_thumbnails")
+@admin_required
+def admin_thumbnails():
+    cleanup_expired()
+
+    thumbnails = list_all_thumbnails()
+    for item in thumbnails:
+        item["remaining_time"] = get_remaining_time_label(item.get("expires_at")) if item.get("status") == "active" else ""
+
+    return render_template(
+        "admin_thumbnails.html",
+        thumbnails=thumbnails,
+        version=current_app.config["APP_VERSION"],
+    )
+
+
+@admin_bp.route("/admin/thumbnails/delete", methods=["POST"], endpoint="admin_delete_thumbnail")
+@admin_required
+def admin_delete_thumbnail():
+    validate_csrf()
+    file_id = (request.form.get("file_id") or "").strip()
+    if not file_id:
+        flash("ID miniature manquant.", "warning")
+        return redirect(url_for("admin.admin_thumbnails"))
+
+    ok = delete_thumbnail_by_id(file_id)
+    flash("Miniature supprimée ✅" if ok else "Miniature introuvable.", "success" if ok else "warning")
+    return redirect(url_for("admin.admin_thumbnails"))
 
 
 @admin_bp.route("/admin/settings", methods=["GET", "POST"], endpoint="admin_settings")
@@ -261,6 +291,8 @@ def admin_settings():
             flash("Temps d'expiration par défaut invalide.", "warning")
             return redirect(url_for("admin.admin_settings"))
 
+        keep_thumbnails = request.form.get("keep_thumbnails") == "1"
+
         try:
             thumbnail_retention_hours = int(request.form.get("thumbnail_retention_hours", settings.get("thumbnail_retention_hours", 24)))
         except (TypeError, ValueError):
@@ -275,13 +307,21 @@ def admin_settings():
             flash("Durée des miniatures invalide.", "warning")
             return redirect(url_for("admin.admin_settings"))
 
+        previous_keep_thumbnails = bool(settings.get("keep_thumbnails", True))
+
         settings = save_settings({
             "max_upload_size_mb": max_upload_size_mb,
             "allow_permanent_files": allow_permanent_files,
             "default_lifetime_minutes": default_lifetime_minutes,
             "thumbnail_retention_hours": thumbnail_retention_hours,
+            "keep_thumbnails": keep_thumbnails,
         })
-        flash("Paramètres enregistrés ✅", "success")
+
+        if previous_keep_thumbnails and not keep_thumbnails:
+            deleted_count = delete_all_thumbnails()
+            flash(f"Miniatures désactivées et {deleted_count} miniature(s) supprimée(s) ✅", "success")
+        else:
+            flash("Paramètres enregistrés ✅", "success")
         return redirect(url_for("admin.admin_settings"))
 
     return render_template(

@@ -11,6 +11,7 @@ DEFAULT_SETTINGS = {
     "allow_permanent_files": True,
     "default_lifetime_minutes": 10,
     "thumbnail_retention_hours": 24,
+    "keep_thumbnails": True,
 }
 
 ALLOWED_LIFETIMES = {5, 10, 20, 30, 60, 120}
@@ -40,6 +41,7 @@ def load_settings() -> dict:
     settings["allow_permanent_files"] = bool(settings.get("allow_permanent_files", True))
     settings["default_lifetime_minutes"] = get_valid_lifetime(settings.get("default_lifetime_minutes"))
     settings["thumbnail_retention_hours"] = get_valid_thumbnail_retention_hours(settings.get("thumbnail_retention_hours"))
+    settings["keep_thumbnails"] = bool(settings.get("keep_thumbnails", True))
     return settings
 
 
@@ -51,6 +53,7 @@ def save_settings(settings: dict) -> dict:
         "allow_permanent_files": bool(settings.get("allow_permanent_files", True)),
         "default_lifetime_minutes": get_valid_lifetime(settings.get("default_lifetime_minutes")),
         "thumbnail_retention_hours": get_valid_thumbnail_retention_hours(settings.get("thumbnail_retention_hours")),
+        "keep_thumbnails": bool(settings.get("keep_thumbnails", True)),
     }
 
     with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
@@ -104,3 +107,7 @@ def permanent_files_enabled() -> bool:
 
 def get_thumbnail_retention_hours() -> int:
     return int(load_settings().get("thumbnail_retention_hours", DEFAULT_SETTINGS["thumbnail_retention_hours"]))
+
+
+def thumbnails_enabled() -> bool:
+    return bool(load_settings().get("keep_thumbnails", DEFAULT_SETTINGS["keep_thumbnails"]))

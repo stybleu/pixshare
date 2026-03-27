@@ -16,7 +16,8 @@
   </div>
 
   <div class="d-flex gap-2">
-    <a class="btn btn-outline-primary btn-sm" href="{{ url_for('admin.admin_panel') }}">Retour admin</a>
+    <a class="btn btn-outline-primary btn-sm" href="{{ url_for('admin.admin_panel') }}">Fichiers</a>
+    <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_thumbnails') }}">Miniatures</a>
 
     <form method="post" action="{{ url_for('admin.admin_clear_messages') }}" class="m-0"
           onsubmit="return confirm('Supprimer tous les messages de contact ?');">

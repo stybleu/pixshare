@@ -42,24 +42,6 @@
 .status-badge{
   min-width: 88px;
 }
-
-.monitor-value{
-  font-size: 1.15rem;
-  font-weight: 700;
-}
-
-.monitor-label{
-  font-size: .9rem;
-  color: #6c757d;
-}
-
-.monitor-card{
-  border: 1px solid rgba(0,0,0,.08);
-  border-radius: 14px;
-  padding: 1rem;
-  background: #fff;
-  height: 100%;
-}
 </style>
 {% endblock %}
 
@@ -68,10 +50,11 @@
 <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between mb-3">
   <div>
     <h1 class="h4 mb-0">Panel Admin</h1>
-    <div class="text-muted small">Banque de fichiers + miniatures de modération + blocage IP.</div>
+    <div class="text-muted small">Banque de fichiers publique, blocage IP et accès aux miniatures séparées.</div>
   </div>
-  <div class="d-flex gap-2">
+  <div class="d-flex gap-2 flex-wrap">
     <a class="btn btn-outline-primary btn-sm" href="{{ url_for('public.index') }}">Voir page publique</a>
+    <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_thumbnails') }}">Miniatures</a>
     <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_messages') }}">Messages</a>
     <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_blocked_ips') }}">IP bloquées</a>
     <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_system') }}">Système</a>
@@ -104,7 +87,13 @@
 
 <div class="card shadow-sm">
   <div class="card-body">
-    <h2 class="h6 mb-3">Fichiers et traces récentes</h2>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+      <div>
+        <h2 class="h6 mb-0">Banque de fichiers</h2>
+        <div class="text-muted small">Les miniatures de modération ne sont plus affichées ici.</div>
+      </div>
+      <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_thumbnails') }}">Gérer les miniatures</a>
+    </div>
 
     {% if files %}
       <div class="table-responsive">
@@ -128,23 +117,7 @@
           {% for f in files %}
           <tr>
             <td style="width:90px;">
-              {% if f.thumb_url %}
-              <div class="admin-thumb-container">
-                <a href="{{ f.thumb_url }}" target="_blank" rel="noopener">
-                  <img
-                    src="{{ f.thumb_url }}"
-                    alt="Miniature de {{ f.original }}"
-                    class="admin-thumb"
-                    loading="lazy">
-                </a>
-
-                <img
-                  src="{{ f.thumb_url }}"
-                  alt="Zoom de {{ f.original }}"
-                  class="admin-thumb-zoom"
-                  loading="lazy">
-              </div>
-              {% elif f.previewable and f.raw_url %}
+              {% if f.previewable and f.raw_url %}
               <div class="admin-thumb-container">
                 <a href="{{ f.raw_url }}" target="_blank" rel="noopener">
                   <img
@@ -161,7 +134,7 @@
                   loading="lazy">
               </div>
               {% else %}
-              <span class="text-muted small">—</span>
+                <span class="text-muted small">—</span>
               {% endif %}
             </td>
 
@@ -181,10 +154,8 @@
             <td class="text-muted">{{ f.mtime_h }}</td>
 
             <td>
-              {% if f.status == "active" and f.remaining_time %}
-                <span class="badge text-bg-info">{{ f.remaining_time }}</span>
-              {% elif f.status != "active" and f.thumb_delete_at %}
-                <span class="text-muted small">Miniature temporaire</span>
+              {% if f.status == "active" and f.remaining_h %}
+                <span class="badge text-bg-info">{{ f.remaining_h }}</span>
               {% else %}
                 <span class="text-muted">—</span>
               {% endif %}
@@ -229,27 +200,6 @@
                     Télécharger
                   </a>
                 </div>
-
-                {% if f.thumb_url %}
-                <div class="input-group input-group-sm">
-                  <input
-                    class="form-control thumb-link"
-                    value="{{ f.thumb_url }}"
-                    readonly
-                    onclick="this.select()">
-
-                  <button
-                    type="button"
-                    class="btn btn-outline-secondary"
-                    onclick="copyLink(this)">
-                    Copier mini
-                  </button>
-
-                  <a class="btn btn-outline-secondary" href="{{ f.thumb_url }}" target="_blank" rel="noopener">
-                    Voir mini
-                  </a>
-                </div>
-                {% endif %}
               </div>
               {% else %}
                 <span class="text-muted small">Fichier public indisponible</span>

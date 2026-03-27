@@ -12,7 +12,8 @@
     <div class="text-muted small">Réglages minimum du site.</div>
   </div>
   <div class="d-flex gap-2">
-    <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_panel') }}">Retour admin</a>
+    <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_panel') }}">Fichiers</a>
+    <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_thumbnails') }}">Miniatures</a>
     <a class="btn btn-outline-primary btn-sm" href="{{ url_for('public.index') }}">Voir page publique</a>
   </div>
 </div>
@@ -59,6 +60,15 @@
       </div>
 
       <div class="col-12 col-md-6">
+        <label class="form-label fw-semibold">Garder les miniatures de modération</label>
+        <select name="keep_thumbnails" class="form-select">
+          <option value="1" {% if settings.keep_thumbnails %}selected{% endif %}>Oui</option>
+          <option value="0" {% if not settings.keep_thumbnails %}selected{% endif %}>Non</option>
+        </select>
+        <div class="form-text">Si tu mets “Non”, les nouvelles miniatures ne seront plus créées et celles déjà stockées seront supprimées.</div>
+      </div>
+
+      <div class="col-12 col-md-6">
         <label class="form-label fw-semibold">Conservation des miniatures de modération</label>
         <select name="thumbnail_retention_hours" class="form-select">
           <option value="0" {% if settings.thumbnail_retention_hours == 0 %}selected{% endif %}>Désactivée</option>
@@ -68,7 +78,7 @@
           <option value="24" {% if settings.thumbnail_retention_hours == 24 %}selected{% endif %}>24 heures</option>
           <option value="48" {% if settings.thumbnail_retention_hours == 48 %}selected{% endif %}>48 heures</option>
         </select>
-        <div class="form-text">Maximum 48 heures. Après suppression ou expiration du fichier public, la miniature reste temporairement visible dans l'admin puis est supprimée automatiquement.</div>
+        <div class="form-text">Ce réglage sert seulement si les miniatures sont activées. Après suppression ou expiration du fichier public, la miniature reste temporairement visible dans l'admin puis est supprimée automatiquement.</div>
       </div>
 
       <div class="col-12">

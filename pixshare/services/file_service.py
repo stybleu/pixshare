@@ -17,7 +17,7 @@ from .auth_service import is_admin
 from .json_services import load_db, save_db, load_views, save_views, load_votes, save_votes
 from .time_service import parse_dt, utcnow
 from .image_quality_service import can_enhance_extension, enhance_image_bytes
-from .settings_service import get_thumbnail_retention_hours, permanent_files_enabled
+from .settings_service import get_thumbnail_retention_hours, permanent_files_enabled, thumbnails_enabled
 
 
 IMAGE_EXTENSIONS = {
@@ -94,6 +94,9 @@ def get_thumbnail_abs_path(file_id: str) -> str:
 
 
 def create_thumbnail(source_path: str, file_id: str) -> str:
+    if not thumbnails_enabled():
+        return ""
+
     thumb_abs = get_thumbnail_abs_path(file_id)
     os.makedirs(os.path.dirname(thumb_abs), exist_ok=True)
 
@@ -126,6 +129,13 @@ def delete_thumbnail_file(thumb_path: str) -> bool:
 
 
 def schedule_thumbnail_cleanup(meta: dict, when: datetime | None = None) -> dict:
+    if not thumbnails_enabled():
+        if meta.get("thumb_path"):
+            delete_thumbnail_file(meta.get("thumb_path", ""))
+        meta["thumb_path"] = ""
+        meta["thumb_delete_at"] = ""
+        return meta
+
     retention_hours = get_thumbnail_retention_hours()
 
     if not meta.get("thumb_path"):
@@ -141,6 +151,40 @@ def schedule_thumbnail_cleanup(meta: dict, when: datetime | None = None) -> dict
     base_dt = when or utcnow()
     meta["thumb_delete_at"] = (base_dt + timedelta(hours=retention_hours)).isoformat(timespec="seconds")
     return meta
+
+
+def get_expected_thumb_delete_at(meta: dict) -> str:
+    thumb_path = (meta.get("thumb_path") or "").strip()
+    if not thumb_path:
+        return ""
+
+    thumb_delete_at = (meta.get("thumb_delete_at") or "").strip()
+    if thumb_delete_at:
+        return thumb_delete_at
+
+    if not thumbnails_enabled() or get_thumbnail_retention_hours() <= 0:
+        return ""
+
+    status = (meta.get("status") or "active").lower()
+
+    if status == "active":
+        if meta.get("permanent") or not meta.get("expires_at"):
+            return ""
+        try:
+            base_dt = parse_dt(meta.get("expires_at", ""))
+        except Exception:
+            return ""
+        return (base_dt + timedelta(hours=get_thumbnail_retention_hours())).isoformat(timespec="seconds")
+
+    deleted_at = (meta.get("deleted_at") or "").strip()
+    if deleted_at:
+        try:
+            base_dt = parse_dt(deleted_at)
+        except Exception:
+            return ""
+        return (base_dt + timedelta(hours=get_thumbnail_retention_hours())).isoformat(timespec="seconds")
+
+    return ""
 
 
 def purge_expired_thumbnails(db: dict | None = None) -> tuple[dict, bool]:
@@ -293,19 +337,34 @@ def file_meta(file_id: str):
         "thumb_url": url_for("admin.admin_thumbnail", file_id=file_id, _external=False) if thumb_exists else "",
         "has_public_file": public_exists,
         "has_thumb": thumb_exists,
-        "thumb_delete_at": meta.get("thumb_delete_at", ""),
+        "thumb_delete_at": get_expected_thumb_delete_at(meta),
     }
 
 
-def list_all_files():
+def list_all_files(include_thumbnails: bool = True):
     cleanup_expired()
     db = load_db()
     items = []
 
     for file_id in db.keys():
         fm = file_meta(file_id)
-        if fm:
-            items.append(fm)
+        if not fm:
+            continue
+        if not include_thumbnails:
+            fm["thumb_url"] = ""
+        items.append(fm)
+
+    items.sort(key=lambda x: (x.get("uploaded_at", ""), x.get("mtime_h", "")), reverse=True)
+    return items
+
+
+def list_all_thumbnails():
+    cleanup_expired()
+    items = []
+
+    for item in list_all_files(include_thumbnails=True):
+        if item.get("has_thumb") and item.get("thumb_url"):
+            items.append(item)
 
     items.sort(key=lambda x: (x.get("uploaded_at", ""), x.get("mtime_h", "")), reverse=True)
     return items
@@ -403,6 +462,8 @@ def save_uploaded_file(file_storage, original_name: str, client_ip: str, guest_t
         "thumb_path": thumb_path,
         "thumb_delete_at": "",
     }
+    if thumb_path:
+        db[file_id]["thumb_delete_at"] = get_expected_thumb_delete_at(db[file_id])
     save_db(db)
 
     return file_id, lifetime, permanent
@@ -491,6 +552,8 @@ def save_api_uploaded_file(
         "thumb_path": thumb_path,
         "thumb_delete_at": "",
     }
+    if thumb_path:
+        db[file_id]["thumb_delete_at"] = get_expected_thumb_delete_at(db[file_id])
     save_db(db)
 
     return file_id, lifetime, permanent
@@ -514,6 +577,46 @@ def get_file_record(file_id: str):
         return None, None, None
 
     return db, meta, server_name
+
+
+def delete_thumbnail_by_id(file_id: str) -> bool:
+    cleanup_expired()
+    db = load_db()
+    meta = db.get(file_id)
+
+    if not meta:
+        return False
+
+    thumb_path = (meta.get("thumb_path") or "").strip()
+    if not thumb_path:
+        return False
+
+    deleted = delete_thumbnail_file(thumb_path)
+    meta["thumb_path"] = ""
+    meta["thumb_delete_at"] = ""
+    db[file_id] = meta
+
+    db, _ = purge_expired_thumbnails(db)
+    save_db(db)
+    return deleted or True
+
+def delete_all_thumbnails() -> int:
+    cleanup_expired()
+    db = load_db()
+    deleted_count = 0
+
+    for file_id, meta in db.items():
+        thumb_path = (meta.get("thumb_path") or "").strip()
+        if thumb_path:
+            if delete_thumbnail_file(thumb_path):
+                deleted_count += 1
+            meta["thumb_path"] = ""
+            meta["thumb_delete_at"] = ""
+            db[file_id] = meta
+
+    db, _ = purge_expired_thumbnails(db)
+    save_db(db)
+    return deleted_count
 
 
 def delete_by_id(file_id: str, reason: str = "deleted") -> bool:

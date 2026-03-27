@@ -46,6 +46,75 @@
     </div>
   </div>
 
+  <div class="card shadow-sm mb-4 border-primary" id="api-account">
+    <div class="card-body">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <h2 class="h5 mb-0">Compte API</h2>
+        {% if api_user %}
+        <a href="{{ url_for('public.api_dashboard') }}" class="btn btn-outline-primary btn-sm">Ouvrir mon dashboard</a>
+        {% endif %}
+      </div>
+
+      {% if api_user %}
+      <div class="alert alert-success">
+        Connecté en tant que <strong>{{ api_user.pseudo }}</strong>.
+        {% if api_user_key %}<br>Votre clé API actuelle est déjà liée à ce compte.{% endif %}
+      </div>
+      {% endif %}
+
+      <div class="row g-4">
+        <div class="col-lg-6">
+          <h3 class="h6">Créer un compte API</h3>
+          <form method="post" action="{{ url_for('public.api_register') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <div class="mb-3">
+              <label class="form-label">Pseudo</label>
+              <input type="text" name="pseudo" class="form-control" minlength="3" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Mot de passe</label>
+              <div style="position: relative; max-width: 250px;">
+                <input id="password_register" name="password" type="password" class="form-control pe-5" placeholder="Mot de passe" required>
+                <span onclick="togglePassword('password_register')"
+                      style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer;">
+                  👁️
+                </span>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Créer mon compte API</button>
+          </form>
+        </div>
+
+        <div class="col-lg-6">
+          <h3 class="h6">Connexion</h3>
+          <form method="post" action="{{ url_for('public.api_login') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <div class="mb-3">
+              <label class="form-label">Pseudo</label>
+              <input type="text" name="pseudo" class="form-control" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Mot de passe</label>
+              <div style="position: relative; max-width: 250px;">
+                <input id="password_login" name="password" type="password" class="form-control pe-5" placeholder="Mot de passe" required>
+                <span onclick="togglePassword('password_login')"
+                      style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer;">
+                  👁️
+                </span>
+              </div>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+              <button type="submit" class="btn btn-outline-primary">Se connecter</button>
+              {% if api_user %}
+              <a href="{{ url_for('public.api_logout') }}" class="btn btn-outline-danger">Se déconnecter</a>
+              {% endif %}
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="card shadow-sm mb-4" id="sommaire">
     <div class="card-body">
       <h2 class="h5 mb-3">Sommaire</h2>
@@ -56,7 +125,6 @@
             <li><a href="#account">1. Vérifier son compte API</a></li>
             <li><a href="#upload">2. Upload d’un fichier</a></li>
             <li><a href="#integrations">3. Exemple d'intégration</a></li>
-            
             <li><a href="#read-file">4. Lire un fichier</a></li>
             <li><a href="#delete-api">5. Supprimer un fichier par clé API</a></li>
           </ul>
@@ -66,8 +134,7 @@
             <li><a href="#delete-public">6. Suppression par lien public</a></li>
             <li><a href="#example-upload">7. Exemple réel de réponse d’upload</a></li>
             <li><a href="#errors">8. Codes d’erreur API</a></li>
-            <li><a href="#fields">9.Signification des champs</a></li>
-            <li><a href="#api-request">10.Clé API démo ou demande API standard</a></li>
+            <li><a href="#fields">9. Signification des champs</a></li>
           </ul>
         </div>
       </div>
@@ -302,27 +369,27 @@
 }</pre>
     </div>
   </div>
-  
+
   <div class="card shadow-sm mb-4" id="integrations">
-  <div class="card-body">
-    <h2 class="h5 mb-1">3. Exemples d’intégration</h2>
-    <div class="mb-3">
-      <a href="#sommaire" class="small">↑ Retour au sommaire</a>
-    </div>
+    <div class="card-body">
+      <h2 class="h5 mb-1">3. Exemples d’intégration</h2>
+      <div class="mb-3">
+        <a href="#sommaire" class="small">↑ Retour au sommaire</a>
+      </div>
 
-    <p class="text-muted mb-4">
-      Exemples d’intégration de l’API PixShare dans plusieurs langages pour envoyer un fichier via
-      <code>POST /api/upload</code>.
-    </p>
+      <p class="text-muted mb-4">
+        Exemples d’intégration de l’API PixShare dans plusieurs langages pour envoyer un fichier via
+        <code>POST /api/upload</code>.
+      </p>
 
-    <h3 class="h6">Python (requests)</h3>
-    <div class="d-flex justify-content-end mb-2">
-      <button class="btn btn-outline-secondary btn-sm" type="button"
-              onclick="copyBlock('codePythonUpload', this)">
-        Copier
-      </button>
-    </div>
-    <pre id="codePythonUpload" class="bg-dark text-light p-3 rounded mb-4" style="white-space: pre-wrap;">import requests
+      <h3 class="h6">Python (requests)</h3>
+      <div class="d-flex justify-content-end mb-2">
+        <button class="btn btn-outline-secondary btn-sm" type="button"
+                onclick="copyBlock('codePythonUpload', this)">
+          Copier
+        </button>
+      </div>
+      <pre id="codePythonUpload" class="bg-dark text-light p-3 rounded mb-4" style="white-space: pre-wrap;">import requests
 
 url = "https://pixshare.fr/api/upload"
 
@@ -342,7 +409,7 @@ try:
 
         response = requests.post(url, headers=headers, files=files, data=data)
 
-    response.raise_for_status()  # vérifie erreur HTTP
+    response.raise_for_status()
 
     result = response.json()
 
@@ -358,14 +425,14 @@ except requests.exceptions.RequestException as e:
 except Exception as e:
     print("Erreur :", e)</pre>
 
-    <h3 class="h6">JavaScript (Fetch API)</h3>
-    <div class="d-flex justify-content-end mb-2">
-      <button class="btn btn-outline-secondary btn-sm" type="button"
-              onclick="copyBlock('codeJsUpload', this)">
-        Copier
-      </button>
-    </div>
-    <pre id="codeJsUpload" class="bg-dark text-light p-3 rounded mb-4" style="white-space: pre-wrap;">const formData = new FormData();
+      <h3 class="h6">JavaScript (Fetch API)</h3>
+      <div class="d-flex justify-content-end mb-2">
+        <button class="btn btn-outline-secondary btn-sm" type="button"
+                onclick="copyBlock('codeJsUpload', this)">
+          Copier
+        </button>
+      </div>
+      <pre id="codeJsUpload" class="bg-dark text-light p-3 rounded mb-4" style="white-space: pre-wrap;">const formData = new FormData();
 
 formData.append("file", fileInput.files[0]);
 formData.append("expiration", 10);
@@ -381,14 +448,14 @@ fetch("https://pixshare.fr/api/upload", {
   .then(data => console.log(data))
   .catch(err => console.error(err));</pre>
 
-    <h3 class="h6">Node.js (Axios)</h3>
-    <div class="d-flex justify-content-end mb-2">
-      <button class="btn btn-outline-secondary btn-sm" type="button"
-              onclick="copyBlock('codeNodeUpload', this)">
-        Copier
-      </button>
-    </div>
-    <pre id="codeNodeUpload" class="bg-dark text-light p-3 rounded mb-4" style="white-space: pre-wrap;">const axios = require("axios");
+      <h3 class="h6">Node.js (Axios)</h3>
+      <div class="d-flex justify-content-end mb-2">
+        <button class="btn btn-outline-secondary btn-sm" type="button"
+                onclick="copyBlock('codeNodeUpload', this)">
+          Copier
+        </button>
+      </div>
+      <pre id="codeNodeUpload" class="bg-dark text-light p-3 rounded mb-4" style="white-space: pre-wrap;">const axios = require("axios");
 const FormData = require("form-data");
 const fs = require("fs");
 
@@ -405,14 +472,14 @@ axios.post("https://pixshare.fr/api/upload", form, {
   .then(res => console.log(res.data))
   .catch(err => console.error(err.response?.data || err.message));</pre>
 
-    <h3 class="h6">PHP (cURL)</h3>
-    <div class="d-flex justify-content-end mb-2">
-      <button class="btn btn-outline-secondary btn-sm" type="button"
-              onclick="copyBlock('codePhpUpload', this)">
-        Copier
-      </button>
-    </div>
-    <pre id="codePhpUpload" class="bg-dark text-light p-3 rounded mb-0" style="white-space: pre-wrap;">&lt;?php
+      <h3 class="h6">PHP (cURL)</h3>
+      <div class="d-flex justify-content-end mb-2">
+        <button class="btn btn-outline-secondary btn-sm" type="button"
+                onclick="copyBlock('codePhpUpload', this)">
+          Copier
+        </button>
+      </div>
+      <pre id="codePhpUpload" class="bg-dark text-light p-3 rounded mb-0" style="white-space: pre-wrap;">&lt;?php
 
 $url = "https://pixshare.fr/api/upload";
 
@@ -435,8 +502,8 @@ $response = curl_exec($ch);
 curl_close($ch);
 
 echo $response;</pre>
+    </div>
   </div>
-</div>
 
   <div class="card shadow-sm mb-4" id="read-file">
     <div class="card-body">
@@ -813,114 +880,17 @@ echo $response;</pre>
       </div>
     </div>
   </div>
-
-  <div class="card shadow-sm" id="api-request">
-    <div class="card-body">
-      <h2 class="h5 mb-1">10. Clé API démo ou demande API standard</h2>
-      <div class="mb-3">
-        <a href="#sommaire" class="small">↑ Retour au sommaire</a>
-      </div>
-
-      <p class="text-muted">
-        La <strong>clé API démo</strong> est générée automatiquement pour tester l’intégration.
-        La <strong>clé API standard</strong> est attribuée après validation.
-      </p>
-
-      <div class="row g-3 mb-3">
-        <div class="col-md-6">
-          <div class="border rounded p-3 h-100 bg-light">
-            <div class="fw-semibold mb-2">Clé API démo</div>
-            <div class="small text-muted mb-2">Génération immédiate, sans validation manuelle.</div>
-            <ul class="small mb-0 ps-3">
-              <li>mêmes endpoints que l’API standard</li>
-              <li>5 uploads / jour</li>
-              <li>20 uploads total</li>
-              <li>durées autorisées : 2 ou 5 minutes</li>
-              <li>pas de mode permanent</li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="col-md-6">
-          <div class="border rounded p-3 h-100 bg-light">
-            <div class="fw-semibold mb-2">API standard</div>
-            <div class="small text-muted mb-2">Destinée aux usages réels après validation.</div>
-            <ul class="small mb-0 ps-3">
-              <li>création après validation</li>
-              <li>quotas adaptés selon l’usage déclaré</li>
-              <li>accès destiné à une utilisation plus avancée ou en production</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      {% if generated_demo_key %}
-      <div class="alert alert-success">
-        <div class="fw-semibold mb-2">Votre clé API démo a été générée ✅</div>
-        <div class="input-group mb-3">
-          <input type="text" class="form-control" id="generatedDemoKey" value="{{ generated_demo_key }}" readonly>
-          <button class="btn btn-outline-secondary" type="button" onclick="copyKeyInput('generatedDemoKey', this)">Copier</button>
-        </div>
-        <div class="small">
-          Limites : {{ generated_demo_key_info.max_uploads_per_day }} uploads/jour,
-          {{ generated_demo_key_info.max_uploads_total }} uploads total,
-          expirations autorisées : {{ generated_demo_key_info.allowed_lifetimes | join(', ') }} min.
-        </div>
-        <div class="small mt-2">
-          Exemple curl :
-        </div>
-        <pre class="bg-dark text-light p-3 rounded mt-2 mb-0" style="white-space: pre-wrap;">curl -X POST {{ request.host_url[:-1] }}/api/upload \
--H "Authorization: Bearer {{ generated_demo_key }}" \
--F "file=@image.jpg" \
--F "expiration=5"</pre>
-      </div>
-      {% endif %}
-
-      <form method="post" action="{{ url_for('public.request_api_key') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <input type="hidden" name="request_type" id="requestTypeInput" value="demo">
-
-        <div class="row g-3">
-          <div class="col-md-6">
-            <label class="form-label">Email</label>
-            <input type="email" name="email" class="form-control" required>
-          </div>
-
-          <div class="col-md-6">
-            <label class="form-label">Nom du projet</label>
-            <input type="text" name="project_name" class="form-control" required>
-          </div>
-
-          <div class="col-md-6">
-            <label class="form-label">Type d'utilisation</label>
-            <input type="text" name="usage_type" class="form-control" placeholder="Bot, site web, application mobile..." required>
-          </div>
-
-          <div class="col-md-6">
-            <label class="form-label">Uploads estimés</label>
-            <input type="text" name="estimated_uploads" class="form-control" placeholder="Ex : 100/jour">
-          </div>
-
-          <div class="col-12">
-            <label class="form-label">Détails</label>
-            <textarea name="usage_details" class="form-control" rows="4" placeholder="Décrivez votre besoin"></textarea>
-          </div>
-
-          <div class="col-12 d-flex flex-wrap gap-2">
-            <button type="submit" class="btn btn-outline-primary" onclick="setRequestType('demo')">Obtenir une clé API démo</button>
-            <button type="submit" class="btn btn-primary" onclick="setRequestType('standard')">Demander une API standard</button>
-          </div>
-        </div>
-      </form>
-    </div>
-  </div>
 </div>
 
 <script>
-function setRequestType(type) {
-  const input = document.getElementById('requestTypeInput');
-  if (input) {
-    input.value = type;
+function togglePassword(id) {
+  const input = document.getElementById(id);
+  if (!input) return;
+
+  if (input.type === "password") {
+    input.type = "text";
+  } else {
+    input.type = "password";
   }
 }
 

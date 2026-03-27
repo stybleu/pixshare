@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+{% set title = "Dashboard API PixShare" %}
+
+{% block head %}
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Dashboard API PixShare : consultez vos clés API, vos quotas et gérez vos accès.">
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <div class="mb-4">
+    <h1 class="mb-2">Dashboard API</h1>
+    <p class="text-muted mb-0">
+      Gérez vos clés API PixShare, choisissez la clé active et supprimez celles dont vous n’avez plus besoin.
+    </p>
+  </div>
+
+  <div class="card shadow-sm mb-4 border-primary">
+    <div class="card-body">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <h2 class="h5 mb-0">Mon compte API</h2>
+        <a href="{{ url_for('public.api_logout') }}" class="btn btn-outline-danger btn-sm">Se déconnecter</a>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-md-6">
+          <div class="border rounded p-3 h-100 bg-light">
+            <div class="small text-muted mb-1">Pseudo</div>
+            <div class="fw-semibold">{{ user.pseudo }}</div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="border rounded p-3 h-100 bg-light">
+            <div class="small text-muted mb-1">Créé le</div>
+            <div class="fw-semibold">{{ user.created_at }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mb-4 border-success">
+    <div class="card-body">
+      <h2 class="h5 mb-3">Clé active</h2>
+
+      {% if api_key %}
+      <div class="input-group mb-3">
+        <input type="text" class="form-control" id="apiKeyInput" value="{{ api_key }}" readonly>
+        <button class="btn btn-outline-secondary" type="button" onclick="copyInput('apiKeyInput', this)">
+          Copier
+        </button>
+      </div>
+      {% else %}
+      <div class="alert alert-warning mb-0">
+        Aucune clé active pour le moment.
+      </div>
+      {% endif %}
+
+      {% if key_data %}
+      <div class="small text-muted">
+        Nom : <strong>{{ key_data.name }}</strong>
+        · Type : <strong>{{ key_data.key_type or 'user' }}</strong>
+        · État API :
+        {% if key_data.is_active %}
+          <span class="text-success">active</span>
+        {% else %}
+          <span class="text-danger">inactive</span>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <h2 class="h5 mb-3">Mes quotas</h2>
+
+      {% if key_data %}
+      <div class="row g-3">
+        <div class="col-md-6">
+          <div class="border rounded p-3 h-100 bg-light">
+            <div class="small text-muted mb-1">Uploads aujourd’hui</div>
+            <div class="fw-semibold">
+              {{ key_data.daily_uploads_used }} / {{ key_data.max_uploads_per_day }}
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="border rounded p-3 h-100 bg-light">
+            <div class="small text-muted mb-1">Uploads totaux</div>
+            <div class="fw-semibold">
+              {{ key_data.uploads_used }} / {{ key_data.max_uploads_total }}
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="border rounded p-3 h-100 bg-light">
+            <div class="small text-muted mb-1">Taille max par fichier</div>
+            <div class="fw-semibold">{{ key_data.max_file_size_mb }} MB</div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="border rounded p-3 h-100 bg-light">
+            <div class="small text-muted mb-1">Upload permanent</div>
+            <div class="fw-semibold">
+              {% if key_data.allow_permanent %}Autorisé{% else %}Non autorisé{% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="alert alert-warning mb-0">
+        Impossible de charger les informations de quota pour cette clé.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <h2 class="h5 mb-3">Mes clés API</h2>
+
+      {% if user_keys %}
+      <div class="table-responsive">
+        <table class="table table-bordered align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Nom</th>
+              <th>Type</th>
+              <th>État API</th>
+              <th>Sélection</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in user_keys %}
+            <tr>
+              <td>
+                <div class="fw-semibold">{{ item.name }}</div>
+                <div class="small text-muted" style="word-break: break-all;">{{ item.value }}</div>
+              </td>
+              <td>{{ item.key_type or 'user' }}</td>
+              <td>
+                {% if item.is_active %}
+                  <span class="badge bg-success">Active</span>
+                {% else %}
+                  <span class="badge bg-secondary">Inactive</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if item.is_selected %}
+                  <span class="badge bg-primary">Clé active</span>
+                {% else %}
+                  <form method="post" action="{{ url_for('public.api_select_key') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="selected_key" value="{{ item.key_value }}">
+                    <button type="submit" class="btn btn-outline-primary btn-sm">Choisir</button>
+                  </form>
+                {% endif %}
+              </td>
+              <td>
+                <div class="d-flex flex-wrap gap-2">
+                  <form method="post" action="{{ url_for('public.api_toggle_key') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="key_to_toggle" value="{{ item.key_value }}">
+                    {% if item.is_active %}
+                    <button type="submit" class="btn btn-outline-warning btn-sm">Rendre inactive</button>
+                    {% else %}
+                    <button type="submit" class="btn btn-outline-success btn-sm">Réactiver</button>
+                    {% endif %}
+                  </form>
+
+                  <form method="post" action="{{ url_for('public.api_delete_key') }}" onsubmit="return confirm('Supprimer cette clé API ?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="key_to_delete" value="{{ item.key_value }}">
+                    <button type="submit" class="btn btn-outline-danger btn-sm">Supprimer</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="alert alert-warning mb-0">Aucune clé API liée à ce compte.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card shadow-sm mb-4 border-warning">
+    <div class="card-body">
+      <h2 class="h5 mb-2">Créer une clé standard</h2>
+      <p class="text-muted">
+        Cette nouvelle clé sera ajoutée à votre compte et deviendra automatiquement votre clé active.
+      </p>
+
+      <form method="post" action="{{ url_for('public.api_request_standard') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Type d’utilisation</label>
+            <input
+              type="text"
+              name="usage_type"
+              class="form-control"
+              placeholder="Bot, site web, application mobile..."
+              required
+            >
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">Uploads estimés</label>
+            <input
+              type="text"
+              name="estimated_uploads"
+              class="form-control"
+              placeholder="Ex : 100/jour"
+            >
+          </div>
+
+          <div class="col-12">
+            <label class="form-label">Détails</label>
+            <textarea
+              name="usage_details"
+              class="form-control"
+              rows="4"
+              placeholder="Décrivez votre besoin"
+            ></textarea>
+          </div>
+
+          <div class="col-12">
+            <button type="submit" class="btn btn-warning">
+              Créer une clé standard
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h2 class="h5 mb-3">Aide rapide</h2>
+      <p class="mb-2">
+        Utilisez votre clé active dans le header suivant :
+      </p>
+
+      <div class="input-group">
+        <input
+          type="text"
+          id="authHeaderBearer"
+          class="form-control"
+          value="Authorization: Bearer {{ api_key }}"
+          readonly
+        >
+        <button class="btn btn-outline-secondary" type="button" onclick="copyInput('authHeaderBearer', this)">
+          Copier
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function flashCopied(button) {
+  if (!button) return;
+  const oldText = button.textContent;
+  button.textContent = "Copié ✅";
+  setTimeout(() => {
+    button.textContent = oldText;
+  }, 1200);
+}
+
+function fallbackCopyText(text, button) {
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "absolute";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+  textarea.setSelectionRange(0, 99999);
+  document.execCommand("copy");
+  document.body.removeChild(textarea);
+  flashCopied(button);
+}
+
+function copyInput(inputId, button) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+
+  const text = input.value;
+
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text)
+      .then(() => flashCopied(button))
+      .catch(() => fallbackCopyText(text, button));
+  } else {
+    fallbackCopyText(text, button);
+  }
+}
+</script>
+{% endblock %}
