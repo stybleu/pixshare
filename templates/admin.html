@@ -5,42 +5,53 @@
 <meta name="robots" content="noindex, nofollow, noarchive">
 
 <style>
-.admin-thumb-container{
-  position: relative;
-  display: inline-block;
+.file-card{
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 16px;
+  background: #fff;
+  overflow: hidden;
+  height: 100%;
 }
 
-.admin-thumb{
-  width: 72px;
-  height: 72px;
+.file-preview{
+  display: block;
+  width: 100%;
+  height: 220px;
   object-fit: cover;
-  border-radius: 10px;
-  border: 1px solid rgba(0,0,0,.12);
-  box-shadow: 0 .125rem .25rem rgba(0,0,0,.08);
   background: #f8f9fa;
 }
 
-.admin-thumb-zoom{
-  position: absolute;
-  top: -10px;
-  left: 80px;
-  width: 300px;
-  height: 300px;
-  object-fit: contain;
-  border-radius: 12px;
-  border: 1px solid rgba(0,0,0,.2);
-  background: white;
-  box-shadow: 0 10px 30px rgba(0,0,0,.25);
-  display: none;
-  z-index: 1000;
-}
-
-.admin-thumb-container:hover .admin-thumb-zoom{
+.file-preview-video{
   display: block;
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  background: #000;
 }
 
-.status-badge{
-  min-width: 88px;
+.file-placeholder{
+  width: 100%;
+  height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8f9fa;
+  color: #6c757d;
+  font-size: .95rem;
+  text-align: center;
+  padding: 1rem;
+}
+
+.file-meta{
+  font-size: .92rem;
+}
+
+.file-meta code{
+  word-break: break-all;
+}
+
+.public-link{
+  font-size: .85rem;
 }
 </style>
 {% endblock %}
@@ -60,6 +71,7 @@
     <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_system') }}">Système</a>
     <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_api_keys') }}">Clés API</a>
     <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('admin.admin_settings') }}">Paramètres</a>
+
     <form method="post" action="{{ url_for('admin.admin_logout') }}" class="m-0">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <button class="btn btn-outline-secondary btn-sm" type="submit">Déconnexion</button>
@@ -85,130 +97,125 @@
   </div>
 </div>
 
-<div class="card shadow-sm">
-  <div class="card-body">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-      <div>
-        <h2 class="h6 mb-0">Banque de fichiers</h2>
-        <div class="text-muted small">Les miniatures de modération ne sont plus affichées ici.</div>
-      </div>
-      <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_thumbnails') }}">Gérer les miniatures</a>
-    </div>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <div>
+    <h2 class="h5 mb-0">Banque de fichiers</h2>
+    <div class="text-muted small">Affichage en cartes, comme la page des miniatures.</div>
+  </div>
+  <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_thumbnails') }}">Gérer les miniatures</a>
+</div>
 
-    {% if files %}
-      <div class="table-responsive">
-        <table class="table align-middle">
-          <thead>
-            <tr>
-              <th>Aperçu</th>
-              <th>Nom original</th>
-              <th>Statut</th>
-              <th>Taille</th>
-              <th>Date</th>
-              <th>Expiration</th>
-              <th>Vues</th>
-              <th>IP</th>
-              <th>Lien public</th>
-              <th class="text-end">Actions</th>
-            </tr>
-          </thead>
+{% if files %}
+  <div class="row g-3">
+    {% for f in files %}
+      {% set server_lower = (f.server or '')|lower %}
+      {% set is_video = server_lower.endswith('.mp4') or server_lower.endswith('.webm') or server_lower.endswith('.avi') %}
 
-          <tbody>
-          {% for f in files %}
-          <tr>
-            <td style="width:90px;">
-              {% if f.previewable and f.raw_url %}
-              <div class="admin-thumb-container">
-                <a href="{{ f.raw_url }}" target="_blank" rel="noopener">
-                  <img
-                    src="{{ f.raw_url }}"
-                    alt="Aperçu de {{ f.original }}"
-                    class="admin-thumb"
-                    loading="lazy">
-                </a>
+      <div class="col-12 col-md-6 col-xl-4">
+        <div class="file-card shadow-sm">
 
+          {% if f.has_public_file and f.raw_url and f.previewable %}
+            {% if is_video %}
+              <a href="{{ f.raw_url }}" target="_blank" rel="noopener">
+                <video class="file-preview-video" controls preload="metadata">
+                  <source src="{{ f.raw_url }}">
+                  Votre navigateur ne prend pas en charge la vidéo.
+                </video>
+              </a>
+            {% else %}
+              <a href="{{ f.raw_url }}" target="_blank" rel="noopener">
                 <img
                   src="{{ f.raw_url }}"
-                  alt="Zoom de {{ f.original }}"
-                  class="admin-thumb-zoom"
+                  alt="Aperçu de {{ f.original }}"
+                  class="file-preview"
                   loading="lazy">
+              </a>
+            {% endif %}
+          {% else %}
+            <div class="file-placeholder">
+              Aucun aperçu disponible
+            </div>
+          {% endif %}
+
+          <div class="p-3">
+            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+              <div>
+                <div class="fw-semibold">{{ f.original }}</div>
+                <div class="text-muted small">ID : <code>{{ f.id }}</code></div>
               </div>
-              {% else %}
-                <span class="text-muted small">—</span>
-              {% endif %}
-            </td>
 
-            <td class="fw-semibold">{{ f.original }}</td>
+              <div>
+                {% if f.status == "active" %}
+                  <span class="badge text-bg-success">Actif</span>
+                {% elif f.status == "expired" %}
+                  <span class="badge text-bg-secondary">Expiré</span>
+                {% else %}
+                  <span class="badge text-bg-danger">Supprimé</span>
+                {% endif %}
+              </div>
+            </div>
 
-            <td>
-              {% if f.status == "active" %}
-                <span class="badge text-bg-success status-badge">Actif</span>
-              {% elif f.status == "expired" %}
-                <span class="badge text-bg-secondary status-badge">Expiré</span>
-              {% else %}
-                <span class="badge text-bg-danger status-badge">Supprimé</span>
-              {% endif %}
-            </td>
+            <div class="file-meta text-muted small d-grid gap-1 mb-3">
+              <div>Taille : {{ f.size_h }}</div>
+              <div>Date : {{ f.mtime_h }}</div>
 
-            <td>{{ f.size_h }}</td>
-            <td class="text-muted">{{ f.mtime_h }}</td>
+              <div>
+                Expiration :
+                {% if f.status == "active" and f.remaining_h %}
+                  <span class="badge text-bg-info">{{ f.remaining_h }}</span>
+                {% else %}
+                  <span>—</span>
+                {% endif %}
+              </div>
 
-            <td>
-              {% if f.status == "active" and f.remaining_h %}
-                <span class="badge text-bg-info">{{ f.remaining_h }}</span>
-              {% else %}
-                <span class="text-muted">—</span>
-              {% endif %}
-            </td>
+              <div>
+                Vues :
+                <span class="badge text-bg-secondary">{{ f.views or 0 }}</span>
+              </div>
 
-            <td>
-              <span class="badge text-bg-secondary">{{ f.views or 0 }}</span>
-            </td>
+              <div>
+                IP :
+                {% if f.ip %}
+                  <code>{{ f.ip }}</code>
+                {% else %}
+                  —
+                {% endif %}
+              </div>
+            </div>
 
-            <td>
-              {% if f.ip %}
-                <code>{{ f.ip }}</code>
-              {% else %}
-                <span class="text-muted">—</span>
-              {% endif %}
-            </td>
-
-            <td style="min-width:360px;">
-              {% if f.has_public_file and f.public_url %}
-              <div class="d-flex flex-column gap-2">
+            {% if f.has_public_file and f.public_url %}
+              <div class="mb-3">
+                <label class="form-label small mb-1">Lien public</label>
                 <div class="input-group input-group-sm">
                   <input
                     class="form-control public-link"
                     value="{{ f.public_url }}"
                     readonly
                     onclick="this.select()">
-
                   <button
                     type="button"
                     class="btn btn-outline-primary"
                     onclick="copyLink(this)">
                     Copier
                   </button>
-
-                  {% if f.previewable and f.raw_url %}
-                    <a class="btn btn-outline-success" href="{{ f.raw_url }}" target="_blank" rel="noopener">
-                      Ouvrir
-                    </a>
-                  {% endif %}
-
-                  <a class="btn btn-outline-primary" href="{{ f.download_url }}">
-                    Télécharger
-                  </a>
                 </div>
               </div>
-              {% else %}
-                <span class="text-muted small">Fichier public indisponible</span>
-              {% endif %}
-            </td>
+            {% endif %}
 
-            <td class="text-end">
-              <div class="d-flex justify-content-end gap-2 flex-wrap">
-                {% if f.ip %}
+            <div class="d-flex flex-wrap gap-2">
+              {% if f.has_public_file and f.raw_url %}
+                <a class="btn btn-outline-success btn-sm" href="{{ f.raw_url }}" target="_blank" rel="noopener">
+                  Ouvrir
+                </a>
+              {% endif %}
+
+              {% if f.has_public_file and f.download_url %}
+                <a class="btn btn-outline-primary btn-sm" href="{{ f.download_url }}">
+                  Télécharger
+                </a>
+              {% endif %}
+
+              {% if f.ip %}
                 <form method="post"
                       action="{{ url_for('admin.admin_block_ip') }}"
                       class="m-0"
@@ -217,9 +224,9 @@
                   <input type="hidden" name="ip" value="{{ f.ip }}">
                   <button class="btn btn-warning btn-sm" type="submit">Bloquer IP</button>
                 </form>
-                {% endif %}
+              {% endif %}
 
-                {% if f.has_public_file %}
+              {% if f.has_public_file %}
                 <form method="post"
                       action="{{ url_for('admin.admin_delete') }}"
                       class="m-0"
@@ -228,21 +235,23 @@
                   <input type="hidden" name="file_id" value="{{ f.id }}">
                   <button class="btn btn-danger btn-sm" type="submit">Supprimer</button>
                 </form>
-                {% else %}
-                  <span class="text-muted small">Déjà retiré</span>
-                {% endif %}
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
-          </tbody>
-        </table>
+              {% else %}
+                <span class="text-muted small align-self-center">Déjà retiré</span>
+              {% endif %}
+            </div>
+
+          </div>
+        </div>
       </div>
-    {% else %}
-      <div class="text-muted">Aucun fichier dans la banque.</div>
-    {% endif %}
+    {% endfor %}
   </div>
-</div>
+{% else %}
+  <div class="card shadow-sm">
+    <div class="card-body text-muted">
+      Aucun fichier dans la banque.
+    </div>
+  </div>
+{% endif %}
 
 <script>
 function copyLink(btn){
@@ -260,4 +269,5 @@ function copyLink(btn){
     .catch(() => document.execCommand("copy"));
 }
 </script>
+
 {% endblock %}
