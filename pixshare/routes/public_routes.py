@@ -606,6 +606,10 @@ def delete_own_file(file_id):
     )
     return redirect(url_for("public.index"))
 
+@public_bp.route("/ads.txt")
+def ads_txt():
+    project_root = os.path.dirname(os.path.dirname(current_app.root_path))
+    return send_from_directory(project_root, "ads.txt", mimetype="text/plain")
 
 @public_bp.route("/cgu", endpoint="cgu")
 def cgu():
