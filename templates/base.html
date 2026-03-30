@@ -1,4 +1,3 @@
-<!-- base.html -->
 <!doctype html>
 
 <html lang="{{ current_lang or 'fr' }}">
@@ -20,20 +19,21 @@
 <link rel="icon" type="image/png" sizes="48x48" href="{{ url_for('static', filename='favicon.png') }}">
 <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='favicon.png') }}">
 <link rel="icon" type="image/png" sizes="512x512" href="{{ url_for('static', filename='favicon.png') }}">
-<link rel="canonical" href="{{ canonical_url or request.base_url }}">
+<link rel="canonical" href="{{ request.base_url }}">
 
-<title>{{ title or "PixShare – Hébergement d’image temporaire et partage sécurisé" }}</title>
+
+<title>{{ title or "PixShare – Hébergement d'image temporaire et partage sécurisé" }}</title>
 
 <meta name="description"
-      content="{{ description or \"PixShare permet d’héberger une image ou un fichier temporairement, avec un lien de partage sécurisé et une suppression automatique configurable.\" }}">
+content="PixShare permet d'héberger une image ou un fichier temporairement. Générez un lien de partage sécurisé avec suppression automatique.">
 
 <meta name="robots" content="index, follow">
 
 <!-- OpenGraph -->
-<meta property="og:title" content="{{ og_title or title or 'PixShare – Hébergement d’image temporaire et partage sécurisé' }}">
-<meta property="og:description" content="{{ og_description or description or \"Partagez vos images et fichiers rapidement avec un lien direct, une expiration configurable et une utilisation simple sans inscription.\" }}">
+<meta property="og:title" content="PixShare – Hébergement d'image temporaire">
+<meta property="og:description" content="Envoyez une image ou un fichier et récupérez un lien de partage rapide et sécurisé.">
 <meta property="og:image" content="https://pixshare.fr/static/images/pixshare_logo.png">
-<meta property="og:url" content="{{ canonical_url or request.base_url }}">
+<meta property="og:url" content="{{ request.url }}">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="{{ 'fr_FR' if current_lang=='fr' else 'en_US' }}">
 <meta property="og:locale:alternate" content="en_US">
@@ -41,8 +41,8 @@
 
 <!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="{{ twitter_title or og_title or title or 'PixShare – Hébergement d’image temporaire et partage sécurisé' }}">
-<meta name="twitter:description" content="{{ twitter_description or og_description or description or \"Envoyez une image ou un fichier, récupérez un lien direct et choisissez une durée de conservation adaptée à votre besoin.\" }}">
+<meta name="twitter:title" content="PixShare – Hébergement d'image temporaire">
+<meta name="twitter:description" content="Partagez une image ou un fichier via un lien direct avec expiration configurable.">
 <meta name="twitter:image" content="https://pixshare.fr/static/images/pixshare_logo.png">
 
 <!-- Bootstrap -->
@@ -129,6 +129,10 @@ footer {
 <body>
 
 <main class="container py-4">
+
+<h1 class="visually-hidden">
+Partager une image ou un fichier avec PixShare
+</h1>
 
 {% with messages = get_flashed_messages(with_categories=true) %}
 {% if messages %}
