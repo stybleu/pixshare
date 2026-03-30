@@ -1,12 +1,5 @@
-<!-- index.html -->
 {% extends "base.html" %}
-{% set title = "PixShare – Hébergement d’image temporaire et partage de fichiers" %}
-{% set description = "Hébergez une image ou un fichier en quelques secondes avec PixShare. Obtenez un lien direct, choisissez une durée de conservation et partagez simplement sans inscription." %}
-{% set og_title = "PixShare – Hébergement d’image temporaire" %}
-{% set og_description = "Partagez vos images et fichiers avec un lien direct, une expiration configurable et une mise en ligne rapide." %}
-{% set twitter_title = og_title %}
-{% set twitter_description = og_description %}
-{% set canonical_url = url_for('public.index', _external=True) %}
+{% set title = "PixShare – Hébergement d'image temporaire et partage de fichiers" %}
 
 {% block content %}
 
@@ -68,6 +61,10 @@
 
 <div class="df">
 
+<h1 class="visually-hidden">
+{{ _("hero_hidden_title") }}
+</h1>
+
 <!-- PUB ICI -->
 <div style="text-align:center; margin:20px 0;">
   <ins class="adsbygoogle"
@@ -81,10 +78,8 @@
 <script>
   (adsbygoogle = window.adsbygoogle || []).push({});
 </script>
-
 <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between mb-3">
   <div>
-    <h1 class="h3 mb-2">Hébergement d’image temporaire et partage de fichiers</h1>
     <p class="text-muted mb-0">
       {{ _("hero_subtitle") }}
     </p>
@@ -149,38 +144,36 @@
                   <label class="form-label mb-1">{{ _("height_px") }}</label>
                   <input id="resizeHeight" type="number" min="1" step="1" class="form-control" placeholder="{{ _('placeholder_height') }}">
                 </div>
+                          <div class="col-12">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="enhance_quality" value="1" id="enhanceQuality">
+            <label class="form-check-label" for="enhanceQuality">
+              {{ _("amelioration_image") }}
+            </label>
+          </div>
+        
+          <div class="form-text">
+            {{ _("option_image") }}
+          </div>
+        </div>
+                  <div class="col-12">
 
-                <div class="col-12">
-                  <div class="form-check">
-                    <input class="form-check-input" type="checkbox" name="enhance_quality" value="1" id="enhanceQuality">
-                    <label class="form-check-label" for="enhanceQuality">
-                      {{ _("amelioration_image") }}
-                    </label>
-                  </div>
+            <label class="form-label">{{ _("file_lifetime_default_10") }}</label>
 
-                  <div class="form-text">
-                    {{ _("option_image") }}
-                  </div>
-                </div>
+            <select name="lifetime" class="form-select">
+              <option value="5" {% if default_lifetime == 5 %}selected{% endif %}>{{ _("minutes_5") }}</option>
+              <option value="10" {% if default_lifetime == 10 %}selected{% endif %}>{{ _("minutes_10") }}</option>
+              <option value="20" {% if default_lifetime == 20 %}selected{% endif %}>{{ _("minutes_20") }}</option>
+              <option value="30" {% if default_lifetime == 30 %}selected{% endif %}>{{ _("minutes_30") }}</option>
+              <option value="60" {% if default_lifetime == 60 %}selected{% endif %}>{{ _("hour_1") }}</option>
+              <option value="120" {% if default_lifetime == 120 %}selected{% endif %}>{{ _("hours_2") }}</option>
+            </select>
 
-                <div class="col-12">
+            <div class="form-text">
+              {{ _("expiration_help") }}
+            </div>
 
-                  <label class="form-label">{{ _("file_lifetime_default_10") }}</label>
-
-                  <select name="lifetime" class="form-select">
-                    <option value="5" {% if default_lifetime == 5 %}selected{% endif %}>{{ _("minutes_5") }}</option>
-                    <option value="10" {% if default_lifetime == 10 %}selected{% endif %}>{{ _("minutes_10") }}</option>
-                    <option value="20" {% if default_lifetime == 20 %}selected{% endif %}>{{ _("minutes_20") }}</option>
-                    <option value="30" {% if default_lifetime == 30 %}selected{% endif %}>{{ _("minutes_30") }}</option>
-                    <option value="60" {% if default_lifetime == 60 %}selected{% endif %}>{{ _("hour_1") }}</option>
-                    <option value="120" {% if default_lifetime == 120 %}selected{% endif %}>{{ _("hours_2") }}</option>
-                  </select>
-
-                  <div class="form-text">
-                    {{ _("expiration_help") }}
-                  </div>
-
-                </div>
+          </div>
               </div>
 
               <div class="form-text mt-2">
@@ -189,8 +182,10 @@
 
               <div id="resizeInfo" class="small text-muted mt-2"></div>
             </div>
-
+            
           </div>
+
+
 
           {% if can_keep %}
 
@@ -270,6 +265,7 @@
           <div class="text-muted small mt-2">
             {{ f.size_h }} — {{ f.mtime_h }} —
             {{ f.views }} {{ _("views_suffix") }} ·
+            
 
             {% if f.remaining_h %}
             <span class="ms-2 badge text-bg-warning">
@@ -348,57 +344,52 @@
 </div>
 
 <section class="mt-5">
-  <h2>Partager une image ou un fichier en quelques secondes</h2>
+  <h2>{{ _("section_host_image_title") }}</h2>
 
   <p>
-    PixShare permet d’envoyer rapidement une image, une capture d’écran, un document ou une courte vidéo,
-    puis de récupérer immédiatement un lien de partage. Le service est pensé pour les usages simples :
-    montrer un visuel, transmettre un fichier à un contact ou publier un contenu sans créer de compte.
+    {{ _("section_host_image_p1") }}
   </p>
 
   <p>
-    Vous pouvez choisir une durée de conservation adaptée à votre besoin, ou garder un envoi sans expiration
-    lorsque cette option est autorisée. L’objectif est de proposer un partage rapide, lisible et pratique,
-    sans complexité inutile.
+    {{ _("section_host_image_p2") }}
   </p>
 
   <ul>
-    <li>Envoi direct depuis le navigateur</li>
-    <li>Lien public prêt à copier et à partager</li>
-    <li>Gestion d’images, fichiers et courtes vidéos</li>
+    <li>{{ _("feature_screenshot") }}</li>
+    <li>{{ _("feature_share_image") }}</li>
+    <li>{{ _("feature_short_video") }}</li>
   </ul>
 </section>
 
 <section class="container mt-5">
-  <h2>Conserver la qualité d’origine de vos images</h2>
+  <h2>Hébergement d'image temporaire simple et rapide</h2>
 
   <p>
-    PixShare met l’accent sur un envoi simple et sur la restitution fidèle de vos fichiers.
-    Pour les images, le service évite les formulations agressives et met plutôt en avant
-    une mise en ligne propre, rapide et adaptée au partage quotidien.
+    PixShare permet d'envoyer une image ou un fichier en quelques secondes, puis de récupérer immédiatement
+    un lien de partage. Le service est pensé pour aller à l'essentiel, sans inscription obligatoire.
   </p>
 
-  <h3>Envoi rapide depuis votre navigateur</h3>
+  <h3>Envoi rapide depuis le navigateur</h3>
   <p>
-    Glissez votre fichier, sélectionnez une durée de conservation, puis récupérez votre lien en quelques instants.
-    L’interface a été conçue pour rester légère, claire et efficace, aussi bien sur mobile que sur ordinateur.
+    L'interface reste légère et pratique sur mobile comme sur ordinateur. Vous pouvez sélectionner un fichier,
+    prévisualiser une image et choisir une durée de conservation adaptée à votre besoin.
   </p>
 
-  <h3>Liens de partage immédiats</h3>
+  <h3>Lien direct prêt à partager</h3>
   <p>
-    Chaque envoi génère une URL accessible immédiatement. Cela permet de partager un visuel, un document ou une ressource
-    de travail sans passer par une plateforme plus lourde qu’un simple hébergement temporaire.
+    Chaque envoi génère une URL accessible immédiatement. C'est utile pour partager un visuel, un document,
+    une capture d'écran ou une ressource de travail sans passer par une plateforme plus lourde.
   </p>
 
-  <h3>Un service pensé pour la simplicité</h3>
-  <ul>
-    <li>Utilisation rapide sans inscription obligatoire</li>
-    <li>Durée d’expiration configurable selon le besoin</li>
-    <li>Prévisualisation des images avant l’envoi</li>
-    <li>Redimensionnement possible avant upload</li>
-    <li>Historique local des fichiers envoyés</li>
-    <li>API disponible pour automatiser certains usages</li>
-  </ul>
+<h3>Pourquoi utiliser PixShare ?</h3>
+<ul>
+  <li>Utilisation simple et rapide</li>
+  <li>Expiration configurable des fichiers</li>
+  <li>Prévisualisation des images avant envoi</li>
+  <li>Redimensionnement possible avant upload</li>
+  <li>Historique local des fichiers envoyés</li>
+  <li>API disponible pour automatiser certains usages</li>
+</ul>
 </section>
 
 </div>
@@ -627,4 +618,166 @@ function copyById(id){
     dz.addEventListener(evt, (e) => {
       e.preventDefault();
       e.stopPropagation();
-      dz.classList.remove("dragover
+      dz.classList.remove("dragover");
+    });
+  });
+
+  dz.addEventListener("drop", (e) => {
+    const files = e.dataTransfer && e.dataTransfer.files;
+    if (files && files.length) {
+      input.files = files;
+      showName();
+    }
+  });
+
+  input.addEventListener("change", showName);
+
+  function syncKeep() {
+    if (!keep || !lifetime) return;
+    lifetime.disabled = !!keep.checked;
+  }
+
+  if (keep && lifetime) {
+    keep.addEventListener("change", syncKeep);
+    syncKeep();
+  }
+
+  function dataURLToBlob(dataURL) {
+    const parts = dataURL.split(",");
+    const mime = parts[0].match(/:(.*?);/)[1];
+    const binary = atob(parts[1]);
+    const len = binary.length;
+    const bytes = new Uint8Array(len);
+
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+
+    return new Blob([bytes], { type: mime });
+  }
+
+  async function resizeImageFile(file, width, height) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = function(event) {
+        const img = new Image();
+
+        img.onload = function() {
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+
+          const originalType = file.type && file.type.startsWith("image/")
+            ? file.type
+            : "image/png";
+
+          const targetType = (
+            originalType === "image/png" ||
+            originalType === "image/jpeg" ||
+            originalType === "image/webp"
+          ) ? originalType : "image/png";
+
+          const quality = targetType === "image/jpeg" || targetType === "image/webp" ? 0.92 : undefined;
+
+          const dataURL = canvas.toDataURL(targetType, quality);
+          const blob = dataURLToBlob(dataURL);
+
+          const resizedFile = new File([blob], file.name, {
+            type: blob.type,
+            lastModified: Date.now()
+          });
+
+          resolve(resizedFile);
+        };
+
+        img.onerror = () => reject(new Error(I18N.loadImageResizeError));
+        img.src = event.target.result;
+      };
+
+      reader.onerror = () => reject(new Error(I18N.readFileError));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  form.addEventListener("submit", async (e) => {
+    const f = input.files && input.files[0];
+    if (!f) return;
+
+    const isImage = f.type && f.type.startsWith("image/");
+    if (!isImage) return;
+
+    let width = parseInt((resizeWidth?.value || "").trim(), 10);
+    let height = parseInt((resizeHeight?.value || "").trim(), 10);
+
+    const widthFilled = !Number.isNaN(width) && width > 0;
+    const heightFilled = !Number.isNaN(height) && height > 0;
+
+    if (!widthFilled && !heightFilled) {
+      return;
+    }
+
+    if (!originalWidth || !originalHeight) {
+      e.preventDefault();
+      alert(I18N.cannotReadOriginalDimensions);
+      return;
+    }
+
+    if (widthFilled && !heightFilled) {
+      height = Math.round(originalHeight * (width / originalWidth));
+      if (resizeHeight) resizeHeight.value = String(height);
+    } else if (heightFilled && !widthFilled) {
+      width = Math.round(originalWidth * (height / originalHeight));
+      if (resizeWidth) resizeWidth.value = String(width);
+    } else if (widthFilled && heightFilled) {
+      if (lastEditedField === "height") {
+        width = Math.round(originalWidth * (height / originalHeight));
+        if (resizeWidth) resizeWidth.value = String(width);
+      } else {
+        height = Math.round(originalHeight * (width / originalWidth));
+        if (resizeHeight) resizeHeight.value = String(height);
+      }
+    }
+
+    if (!width || !height || width <= 0 || height <= 0) {
+      e.preventDefault();
+      alert(I18N.invalidDimensions);
+      return;
+    }
+
+    e.preventDefault();
+
+    try {
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = I18N.resizingInProgress;
+      }
+
+      const resizedFile = await resizeImageFile(f, width, height);
+
+      const dt = new DataTransfer();
+      dt.items.add(resizedFile);
+      input.files = dt.files;
+
+      if (resizeInfo) {
+        resizeInfo.textContent = `${I18N.imageResizedBeforeUpload} ${width} × ${height} px.`;
+      }
+
+      form.submit();
+    } catch (err) {
+      alert(err.message || I18N.readFileError);
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = I18N.upload;
+      }
+    }
+  });
+
+  showName();
+})();
+</script>
+
+{% endblock %}
