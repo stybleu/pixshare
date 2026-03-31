@@ -119,5 +119,9 @@
   "site_version": "Version du site",
   "editing": "Éditeur",
   "contat_info_use": "Utilisez ce formulaire pour contacter PixShare ou signaler un contenu problématique.",
-  "contact_type_message": "Type de messages"
+  "contact_type_message": "Type de messages",
+  "import_url_label": "Importer depuis une URL",
+  "import_url_placeholder": "https://exemple.com/image.jpg",
+  "import_url_help": "Collez une URL directe d'image, ou glissez un lien dans la zone ci-dessus.",
+  "js_selected_url_prefix": "URL sélectionnée : "
 }

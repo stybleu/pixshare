@@ -120,7 +120,13 @@
               <div id="dz-file" class="mt-2 small text-muted"></div>
             </div>
 
-            <input id="fileInput" class="form-control mt-2" type="file" name="file"  required>
+            <input id="fileInput" class="form-control mt-2" type="file" name="file">
+
+            <div class="mt-3">
+              <label class="form-label">{{ _("import_url_label") }}</label>
+              <input id="imageUrlInput" class="form-control" type="url" name="image_url" placeholder="{{ _('import_url_placeholder') }}" inputmode="url" autocomplete="off">
+              <div class="form-text">{{ _("import_url_help") }}</div>
+            </div>
 
             <div id="previewBox" class="preview-box">
               <div class="small text-muted mb-2">{{ _("image_preview") }}</div>
@@ -414,6 +420,7 @@ function copyById(id){
   const input = document.getElementById("fileInput");
   const label = document.getElementById("dz-file");
   const keep = document.getElementById("keepChk");
+  const imageUrlInput = document.getElementById("imageUrlInput");
   const lifetime = document.querySelector('select[name="lifetime"]');
   const previewBox = document.getElementById("previewBox");
   const previewImg = document.getElementById("previewImg");
@@ -434,6 +441,7 @@ function copyById(id){
 
   const I18N = {
     selectedPrefix: {{ _("js_selected_prefix")|tojson }},
+    selectedUrlPrefix: {{ _("js_selected_url_prefix")|tojson }},
     dimensionsLabel: {{ _("dimensions_label")|tojson }},
     placeholderWidth: {{ _("placeholder_width")|tojson }},
     placeholderHeight: {{ _("placeholder_height")|tojson }},
@@ -544,7 +552,8 @@ function copyById(id){
 
   function showName() {
     const f = input.files && input.files[0];
-    label.textContent = f ? (I18N.selectedPrefix + f.name) : "";
+    const urlValue = (imageUrlInput?.value || "").trim();
+    label.textContent = f ? (I18N.selectedPrefix + f.name) : (urlValue ? (I18N.selectedUrlPrefix + urlValue) : "");
 
     if (!previewBox || !previewImg || !resizeBox) return;
 
@@ -626,11 +635,38 @@ function copyById(id){
     const files = e.dataTransfer && e.dataTransfer.files;
     if (files && files.length) {
       input.files = files;
+      if (imageUrlInput) imageUrlInput.value = "";
+      showName();
+      return;
+    }
+
+    const droppedUrl = (e.dataTransfer?.getData("text/uri-list") || e.dataTransfer?.getData("text/plain") || "").trim();
+    if (droppedUrl && /^https?:\/\//i.test(droppedUrl) && imageUrlInput) {
+      imageUrlInput.value = droppedUrl.split(/\r?\n/)[0].trim();
+      input.value = "";
       showName();
     }
   });
 
-  input.addEventListener("change", showName);
+  input.addEventListener("change", () => {
+    if (input.files && input.files.length && imageUrlInput) {
+      imageUrlInput.value = "";
+    }
+    showName();
+  });
+
+  if (imageUrlInput) {
+    imageUrlInput.addEventListener("input", () => {
+      if ((imageUrlInput.value || "").trim()) {
+        input.value = "";
+        if (previewBox) previewBox.style.display = "none";
+        if (previewImg) previewImg.src = "";
+        if (resizeBox) resizeBox.style.display = "none";
+        resetResizeUi();
+      }
+      showName();
+    });
+  }
 
   function syncKeep() {
     if (!keep || !lifetime) return;
@@ -705,7 +741,11 @@ function copyById(id){
 
   form.addEventListener("submit", async (e) => {
     const f = input.files && input.files[0];
-    if (!f) return;
+    const hasUrl = !!((imageUrlInput?.value || "").trim());
+    if (!f) {
+      if (hasUrl) return;
+      return;
+    }
 
     const isImage = f.type && f.type.startsWith("image/");
     if (!isImage) return;

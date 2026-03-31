@@ -397,7 +397,7 @@ def can_keep_uploads() -> bool:
     )
 
 
-def save_uploaded_file(file_storage, original_name: str, client_ip: str, guest_token: str, keep_requested: bool = False) -> tuple[str, int | None, bool]:
+def _prepare_file_destination(original_name: str) -> tuple[str, str, str, str]:
     ext = safe_ext(original_name)
 
     file_id = generate_file_id()
@@ -409,40 +409,34 @@ def save_uploaded_file(file_storage, original_name: str, client_ip: str, guest_t
         server_name = f"{file_id}{ext}"
         dest = os.path.join(current_app.config["UPLOAD_FOLDER"], server_name)
 
-    enhance_requested = request.form.get("enhance_quality") in {"1", "on", "true", "yes"}
+    return file_id, server_name, dest, ext
 
-    if enhance_requested and can_enhance_extension(ext):
-        file_bytes = file_storage.read()
-        try:
-            file_bytes = enhance_image_bytes(file_bytes, ext)
-        except Exception:
-            pass
 
-        with open(dest, "wb") as f:
-            f.write(file_bytes)
-    else:
-        file_storage.save(dest)
-
-    thumb_path = ""
-    if is_image_extension(ext):
-        try:
-            thumb_path = create_thumbnail(dest, file_id)
-        except Exception:
-            thumb_path = ""
-
+def _resolve_web_lifetime(keep_requested: bool) -> tuple[int | None, bool]:
     allow_keep = can_keep_uploads()
     if keep_requested and allow_keep:
-        lifetime = None
-        permanent = True
-    else:
-        permanent = False
-        try:
-            lifetime = int(request.form.get("lifetime", current_app.config["DEFAULT_LIFETIME_MIN"]))
-        except ValueError:
-            lifetime = current_app.config["DEFAULT_LIFETIME_MIN"]
+        return None, True
 
-        lifetime = max(1, min(lifetime, current_app.config["MAX_LIFETIME_MIN"]))
+    try:
+        lifetime = int(request.form.get("lifetime", current_app.config["DEFAULT_LIFETIME_MIN"]))
+    except ValueError:
+        lifetime = current_app.config["DEFAULT_LIFETIME_MIN"]
 
+    lifetime = max(1, min(lifetime, current_app.config["MAX_LIFETIME_MIN"]))
+    return lifetime, False
+
+
+def _register_saved_public_file(
+    *,
+    file_id: str,
+    server_name: str,
+    original_name: str,
+    client_ip: str,
+    guest_token: str,
+    lifetime: int | None,
+    permanent: bool,
+    thumb_path: str = "",
+) -> tuple[str, int | None, bool]:
     uploaded_at = utcnow()
     expires_at = None if permanent else uploaded_at + timedelta(minutes=int(lifetime))
 
@@ -467,6 +461,82 @@ def save_uploaded_file(file_storage, original_name: str, client_ip: str, guest_t
     save_db(db)
 
     return file_id, lifetime, permanent
+
+
+def save_saved_local_file(local_path: str, original_name: str, client_ip: str, guest_token: str, keep_requested: bool = False) -> tuple[str, int | None, bool]:
+    file_id, server_name, dest, ext = _prepare_file_destination(original_name)
+    lifetime, permanent = _resolve_web_lifetime(keep_requested)
+
+    try:
+        os.replace(local_path, dest)
+
+        thumb_path = ""
+        if is_image_extension(ext):
+            try:
+                thumb_path = create_thumbnail(dest, file_id)
+            except Exception:
+                thumb_path = ""
+
+        return _register_saved_public_file(
+            file_id=file_id,
+            server_name=server_name,
+            original_name=original_name,
+            client_ip=client_ip,
+            guest_token=guest_token,
+            lifetime=lifetime,
+            permanent=permanent,
+            thumb_path=thumb_path,
+        )
+    except Exception:
+        if os.path.exists(local_path):
+            try:
+                os.remove(local_path)
+            except OSError:
+                pass
+        if os.path.exists(dest):
+            try:
+                os.remove(dest)
+            except OSError:
+                pass
+        raise
+
+
+def save_uploaded_file(file_storage, original_name: str, client_ip: str, guest_token: str, keep_requested: bool = False) -> tuple[str, int | None, bool]:
+    file_id, server_name, dest, ext = _prepare_file_destination(original_name)
+
+    enhance_requested = request.form.get("enhance_quality") in {"1", "on", "true", "yes"}
+
+    if enhance_requested and can_enhance_extension(ext):
+        file_bytes = file_storage.read()
+        try:
+            file_bytes = enhance_image_bytes(file_bytes, ext)
+        except Exception:
+            pass
+
+        with open(dest, "wb") as f:
+            f.write(file_bytes)
+    else:
+        file_storage.save(dest)
+
+    thumb_path = ""
+    if is_image_extension(ext):
+        try:
+            thumb_path = create_thumbnail(dest, file_id)
+        except Exception:
+            thumb_path = ""
+
+    lifetime, permanent = _resolve_web_lifetime(keep_requested)
+
+    return _register_saved_public_file(
+        file_id=file_id,
+        server_name=server_name,
+        original_name=original_name,
+        client_ip=client_ip,
+        guest_token=guest_token,
+        lifetime=lifetime,
+        permanent=permanent,
+        thumb_path=thumb_path,
+    )
 
 
 def save_api_uploaded_file(

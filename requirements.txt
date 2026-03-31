@@ -4,3 +4,4 @@ Werkzeug
 Pillow
 pillow-heif
 psutil
+requests

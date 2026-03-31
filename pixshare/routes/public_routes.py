@@ -35,6 +35,7 @@ from pixshare.services.file_service import (
     get_or_create_visitor_token,
     list_guest_files,
     register_unique_view,
+    save_saved_local_file,
     save_uploaded_file,
 )
 from pixshare.services.json_services import (
@@ -51,6 +52,7 @@ from pixshare.services.settings_service import (
     get_max_upload_size_bytes,
     get_max_upload_size_mb,
 )
+from pixshare.services.url_import_service import UrlImportError, download_remote_image_to_temp
 
 public_bp = Blueprint("public", __name__)
 
@@ -346,42 +348,72 @@ def index():
         validate_csrf()
 
         f = request.files.get("file")
-        if not f or f.filename == "":
-            flash("Aucun fichier sélectionné.", "warning")
-            return redirect(url_for("public.index"))
-
-        original = f.filename
-        safe_name = secure_filename(original)
-        if not safe_name:
-            flash("Nom de fichier invalide.", "danger")
-            return redirect(url_for("public.index"))
-
-        if not allowed_file(safe_name):
-            allowed = ", ".join(sorted(current_app.config["ALLOWED_EXTENSIONS"]))
-            flash(f"Extension non autorisée. Autorisées : {allowed}", "danger")
-            return redirect(url_for("public.index"))
-
+        image_url = (request.form.get("image_url") or "").strip()
         max_size_bytes = get_max_upload_size_bytes()
-        content_length = request.content_length or 0
-        if content_length > max_size_bytes:
-            max_mb = get_max_upload_size_mb()
-            flash(f"Fichier trop volumineux. Taille maximale : {max_mb} Mo.", "danger")
+        keep = (request.form.get("keep", "") in {"1", "on", "true", "yes"})
+
+        if f and f.filename:
+            original = f.filename
+            safe_name = secure_filename(original)
+            if not safe_name:
+                flash("Nom de fichier invalide.", "danger")
+                return redirect(url_for("public.index"))
+
+            if not allowed_file(safe_name):
+                allowed = ", ".join(sorted(current_app.config["ALLOWED_EXTENSIONS"]))
+                flash(f"Extension non autorisée. Autorisées : {allowed}", "danger")
+                return redirect(url_for("public.index"))
+
+            content_length = request.content_length or 0
+            if content_length > max_size_bytes:
+                max_mb = get_max_upload_size_mb()
+                flash(f"Fichier trop volumineux. Taille maximale : {max_mb} Mo.", "danger")
+                return redirect(url_for("public.index"))
+
+            _, lifetime, permanent = save_uploaded_file(
+                f,
+                original_name=original,
+                client_ip=ip,
+                guest_token=guest_token,
+                keep_requested=keep,
+            )
+
+            if permanent:
+                flash("Fichier upload ✅ (sans expiration)", "success")
+            else:
+                flash(f"Fichier upload ✅ (expiration: {lifetime} min)", "success")
+
             return redirect(url_for("public.index"))
 
-        keep = (request.form.get("keep", "") in {"1", "on", "true", "yes"})
-        _, lifetime, permanent = save_uploaded_file(
-            f,
-            original_name=original,
-            client_ip=ip,
-            guest_token=guest_token,
-            keep_requested=keep,
-        )
+        if image_url:
+            try:
+                temp_path, original_name, _, _ = download_remote_image_to_temp(
+                    image_url,
+                    current_app.config["UPLOAD_FOLDER"],
+                    max_size_bytes,
+                )
+                _, lifetime, permanent = save_saved_local_file(
+                    temp_path,
+                    original_name=original_name,
+                    client_ip=ip,
+                    guest_token=guest_token,
+                    keep_requested=keep,
+                )
+            except UrlImportError as exc:
+                flash(str(exc), "danger")
+                return redirect(url_for("public.index"))
+            except Exception:
+                flash("Impossible d'importer cette image depuis l'URL fournie.", "danger")
+                return redirect(url_for("public.index"))
 
-        if permanent:
-            flash("Fichier upload ✅ (sans expiration)", "success")
-        else:
-            flash(f"Fichier upload ✅ (expiration: {lifetime} min)", "success")
+            if permanent:
+                flash("Image importée depuis l'URL ✅ (sans expiration)", "success")
+            else:
+                flash(f"Image importée depuis l'URL ✅ (expiration: {lifetime} min)", "success")
 
+            return redirect(url_for("public.index"))
+
+        flash("Choisis un fichier ou colle une URL d'image directe.", "warning")
         return redirect(url_for("public.index"))
 
     guest_files = list_guest_files()
