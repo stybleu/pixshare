@@ -99,6 +99,18 @@
               <a class="btn btn-outline-primary btn-sm" href="{{ f.public_url }}" target="_blank" rel="noopener">Voir fichier</a>
             {% endif %}
 
+            {% if f.ip %}
+            <form method="post"
+                  action="{{ url_for('admin.admin_block_thumbnail_ip') }}"
+                  class="m-0"
+                  onsubmit="return confirm('Bloquer l\\'IP {{ f.ip }} ?');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="file_id" value="{{ f.id }}">
+              <input type="hidden" name="ip" value="{{ f.ip }}">
+              <button class="btn btn-warning btn-sm" type="submit">Bloquer IP</button>
+            </form>
+            {% endif %}
+
             <form method="post"
                   action="{{ url_for('admin.admin_delete_thumbnail') }}"
                   class="m-0"
