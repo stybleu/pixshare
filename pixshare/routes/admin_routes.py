@@ -268,6 +268,35 @@ def admin_delete_thumbnail():
     flash("Miniature supprimée ✅" if ok else "Miniature introuvable.", "success" if ok else "warning")
     return redirect(url_for("admin.admin_thumbnails"))
 
+@admin_bp.route("/admin/thumbnails/block-ip", methods=["POST"])
+@admin_required
+def admin_block_thumbnail_ip():
+    token = request.form.get("csrf_token", "")
+    if token != session.get("csrf_token"):
+        flash("Token CSRF invalide.", "danger")
+        return redirect(url_for("admin.admin_thumbnails"))
+
+    ip = (request.form.get("ip") or "").strip()
+    file_id = (request.form.get("file_id") or "").strip()
+
+    if not ip:
+        flash("Aucune IP à bloquer.", "warning")
+        return redirect(url_for("admin.admin_thumbnails"))
+
+    blocked = load_blocked_ips()
+
+    if ip not in blocked:
+        blocked[ip] = {
+            "reason": f"Blocage depuis les miniatures (fichier {file_id})",
+            "created_at": datetime.utcnow().isoformat() + "Z"
+        }
+        save_blocked_ips(blocked)
+        flash(f"IP {ip} bloquée avec succès.", "success")
+    else:
+        flash(f"IP {ip} est déjà bloquée.", "info")
+
+    return redirect(url_for("admin.admin_thumbnails"))
+
 
 @admin_bp.route("/admin/settings", methods=["GET", "POST"], endpoint="admin_settings")
 @admin_required
