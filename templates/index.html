@@ -78,6 +78,7 @@
 <script>
   (adsbygoogle = window.adsbygoogle || []).push({});
 </script>
+
 <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between mb-3">
   <div>
     <p class="text-muted mb-0">
@@ -150,36 +151,36 @@
                   <label class="form-label mb-1">{{ _("height_px") }}</label>
                   <input id="resizeHeight" type="number" min="1" step="1" class="form-control" placeholder="{{ _('placeholder_height') }}">
                 </div>
-                          <div class="col-12">
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" name="enhance_quality" value="1" id="enhanceQuality">
-            <label class="form-check-label" for="enhanceQuality">
-              {{ _("amelioration_image") }}
-            </label>
-          </div>
-        
-          <div class="form-text">
-            {{ _("option_image") }}
-          </div>
-        </div>
-                  <div class="col-12">
 
-            <label class="form-label">{{ _("file_lifetime_default_10") }}</label>
+                <div class="col-12">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="enhance_quality" value="1" id="enhanceQuality">
+                    <label class="form-check-label" for="enhanceQuality">
+                      {{ _("amelioration_image") }}
+                    </label>
+                  </div>
 
-            <select name="lifetime" class="form-select">
-              <option value="5" {% if default_lifetime == 5 %}selected{% endif %}>{{ _("minutes_5") }}</option>
-              <option value="10" {% if default_lifetime == 10 %}selected{% endif %}>{{ _("minutes_10") }}</option>
-              <option value="20" {% if default_lifetime == 20 %}selected{% endif %}>{{ _("minutes_20") }}</option>
-              <option value="30" {% if default_lifetime == 30 %}selected{% endif %}>{{ _("minutes_30") }}</option>
-              <option value="60" {% if default_lifetime == 60 %}selected{% endif %}>{{ _("hour_1") }}</option>
-              <option value="120" {% if default_lifetime == 120 %}selected{% endif %}>{{ _("hours_2") }}</option>
-            </select>
+                  <div class="form-text">
+                    {{ _("option_image") }}
+                  </div>
+                </div>
 
-            <div class="form-text">
-              {{ _("expiration_help") }}
-            </div>
+                <div class="col-12">
+                  <label class="form-label">{{ _("file_lifetime_default_10") }}</label>
 
-          </div>
+                  <select name="lifetime" class="form-select">
+                    <option value="5" {% if default_lifetime == 5 %}selected{% endif %}>{{ _("minutes_5") }}</option>
+                    <option value="10" {% if default_lifetime == 10 %}selected{% endif %}>{{ _("minutes_10") }}</option>
+                    <option value="20" {% if default_lifetime == 20 %}selected{% endif %}>{{ _("minutes_20") }}</option>
+                    <option value="30" {% if default_lifetime == 30 %}selected{% endif %}>{{ _("minutes_30") }}</option>
+                    <option value="60" {% if default_lifetime == 60 %}selected{% endif %}>{{ _("hour_1") }}</option>
+                    <option value="120" {% if default_lifetime == 120 %}selected{% endif %}>{{ _("hours_2") }}</option>
+                  </select>
+
+                  <div class="form-text">
+                    {{ _("expiration_help") }}
+                  </div>
+                </div>
               </div>
 
               <div class="form-text mt-2">
@@ -188,13 +189,10 @@
 
               <div id="resizeInfo" class="small text-muted mt-2"></div>
             </div>
-            
+
           </div>
 
-
-
           {% if can_keep %}
-
           <div class="col-12">
             <div class="form-check">
               <input class="form-check-input" type="checkbox" name="keep" value="1" id="keepChk">
@@ -207,7 +205,6 @@
               {{ _("keep_option_help") }}
             </div>
           </div>
-
           {% endif %}
 
           <div class="col-12">
@@ -239,108 +236,100 @@
         <hr class="my-3">
 
         {% if guest_files and guest_files|length > 0 %}
+          {% for f in guest_files %}
+            {% set open_url = f.raw_url if f.previewable else f.download_url %}
 
-        {% for f in guest_files %}
-        {% set open_url = f.raw_url if f.previewable else f.download_url %}
+            <div class="mb-3 p-2 border rounded">
 
-        <div class="mb-3 p-2 border rounded">
+              <div class="d-flex align-items-center gap-2">
+                {% if f.previewable %}
+                <img
+                  src="{{ f.raw_url }}"
+                  alt="{{ f.original }}"
+                  style="
+                  width:50px;
+                  height:50px;
+                  object-fit:cover;
+                  border-radius:6px;
+                  border:1px solid #ddd;
+                ">
+                {% endif %}
 
-          <div class="d-flex align-items-center gap-2">
-
-            {% if f.previewable %}
-            <img
-              src="{{ f.raw_url }}"
-              alt="{{ f.original }}"
-              style="
-              width:50px;
-              height:50px;
-              object-fit:cover;
-              border-radius:6px;
-              border:1px solid #ddd;
-            ">
-            {% endif %}
-
-            <div>
-              <div class="fw-semibold">
-                {{ f.original }}
+                <div>
+                  <div class="fw-semibold">
+                    {{ f.original }}
+                  </div>
+                </div>
               </div>
+
+              <div class="text-muted small mt-2">
+                {{ f.size_h }} — {{ f.mtime_h }} —
+                {{ f.views }} {{ _("views_suffix") }} ·
+
+                {% if f.remaining_h %}
+                <span class="ms-2 badge text-bg-warning">
+                  {{ _("expires_in") }} {{ f.remaining_h }}
+                </span>
+                {% endif %}
+              </div>
+
+              <div class="d-flex flex-wrap gap-2 mt-2">
+                <a class="btn btn-success btn-sm"
+                   href="{{ open_url }}"
+                   target="_blank"
+                   rel="noopener">
+                  {{ _("open") }}
+                </a>
+
+                <a class="btn btn-primary btn-sm"
+                   href="{{ f.download_url }}">
+                  {{ _("download") }}
+                </a>
+
+                <form method="post"
+                      action="{{ url_for('public.delete_own_file', file_id=f.id) }}"
+                      class="m-0">
+
+                  <input type="hidden"
+                         name="csrf_token"
+                         value="{{ csrf_token }}">
+
+                  <button
+                    type="submit"
+                    class="btn btn-outline-danger btn-sm"
+                    onclick="return confirm('{{ _('confirm_delete_file') }}');">
+                    {{ _("delete") }}
+                  </button>
+                </form>
+              </div>
+
+              <div class="text-muted small mt-3 mb-1">
+                {{ _("public_share_link") }}
+              </div>
+
+              <div class="input-group">
+                <input
+                  id="publicLink_{{ f.id }}"
+                  class="form-control"
+                  value="{{ f.public_url }}"
+                  readonly
+                  onclick="this.select()">
+
+                <button
+                  type="button"
+                  class="btn btn-outline-primary"
+                  onclick="copyById('publicLink_{{ f.id }}')">
+                  {{ _("copy") }}
+                </button>
+              </div>
+
             </div>
-
-          </div>
-
-          <div class="text-muted small mt-2">
-            {{ f.size_h }} — {{ f.mtime_h }} —
-            {{ f.views }} {{ _("views_suffix") }} ·
-            
-
-            {% if f.remaining_h %}
-            <span class="ms-2 badge text-bg-warning">
-              {{ _("expires_in") }} {{ f.remaining_h }}
-            </span>
-            {% endif %}
-          </div>
-
-          <div class="d-flex flex-wrap gap-2 mt-2">
-            <a class="btn btn-success btn-sm"
-               href="{{ open_url }}"
-               target="_blank"
-               rel="noopener">
-              {{ _("open") }}
-            </a>
-
-            <a class="btn btn-primary btn-sm"
-               href="{{ f.download_url }}">
-              {{ _("download") }}
-            </a>
-
-            <form method="post"
-                  action="{{ url_for('public.delete_own_file', file_id=f.id) }}"
-                  class="m-0">
-
-              <input type="hidden"
-                     name="csrf_token"
-                     value="{{ csrf_token }}">
-
-              <button
-                type="submit"
-                class="btn btn-outline-danger btn-sm"
-                onclick="return confirm('{{ _('confirm_delete_file') }}');">
-                {{ _("delete") }}
-              </button>
-
-            </form>
-          </div>
-
-          <div class="text-muted small mt-3 mb-1">
-            {{ _("public_share_link") }}
-          </div>
-
-          <div class="input-group">
-            <input
-              id="publicLink_{{ f.id }}"
-              class="form-control"
-              value="{{ f.public_url }}"
-              readonly
-              onclick="this.select()">
-
-            <button
-              type="button"
-              class="btn btn-outline-primary"
-              onclick="copyById('publicLink_{{ f.id }}')">
-              {{ _("copy") }}
-            </button>
-          </div>
-
-        </div>
-        {% endfor %}
-
+          {% endfor %}
         {% else %}
-
         <p class="text-muted mb-0">
           {{ _("no_file_yet") }}
           <b>{{ _("upload") }}</b>.
         </p>
-
         {% endif %}
 
       </div>
@@ -387,15 +376,15 @@
     une capture d'écran ou une ressource de travail sans passer par une plateforme plus lourde.
   </p>
 
-<h3>Pourquoi utiliser PixShare ?</h3>
-<ul>
-  <li>Utilisation simple et rapide</li>
-  <li>Expiration configurable des fichiers</li>
-  <li>Prévisualisation des images avant envoi</li>
-  <li>Redimensionnement possible avant upload</li>
-  <li>Historique local des fichiers envoyés</li>
-  <li>API disponible pour automatiser certains usages</li>
-</ul>
+  <h3>Pourquoi utiliser PixShare ?</h3>
+  <ul>
+    <li>Utilisation simple et rapide</li>
+    <li>Expiration configurable des fichiers</li>
+    <li>Prévisualisation des images avant envoi</li>
+    <li>Redimensionnement possible avant upload</li>
+    <li>Historique local des fichiers envoyés</li>
+    <li>API disponible pour automatiser certains usages</li>
+  </ul>
 </section>
 
 </div>
@@ -498,6 +487,19 @@ function copyById(id){
     resizeInfo.textContent = I18N.fillWidthOrHeight;
   }
 
+  function gotoImageSettings() {
+    if (!resizeBox) return;
+
+    resizeBox.scrollIntoView({
+      behavior: "smooth",
+      block: "start"
+    });
+
+    setTimeout(() => {
+      resizeWidth?.focus();
+    }, 250);
+  }
+
   function syncHeightFromWidth() {
     if (!originalWidth || !originalHeight || !resizeWidth || !resizeHeight) return;
 
@@ -567,6 +569,7 @@ function copyById(id){
 
     if (f.type && f.type.startsWith("image/")) {
       const reader = new FileReader();
+
       reader.onload = function(e) {
         previewImg.src = e.target.result;
         previewBox.style.display = "block";
@@ -594,9 +597,12 @@ function copyById(id){
           }
 
           updateResizeInfo();
+          gotoImageSettings();
         };
+
         img.src = e.target.result;
       };
+
       reader.readAsDataURL(f);
     } else {
       previewBox.style.display = "none";
@@ -633,6 +639,7 @@ function copyById(id){
 
   dz.addEventListener("drop", (e) => {
     const files = e.dataTransfer && e.dataTransfer.files;
+
     if (files && files.length) {
       input.files = files;
       if (imageUrlInput) imageUrlInput.value = "";
@@ -644,7 +651,7 @@ function copyById(id){
     if (droppedUrl && /^https?:\/\//i.test(droppedUrl) && imageUrlInput) {
       imageUrlInput.value = droppedUrl.split(/\r?\n/)[0].trim();
       input.value = "";
-      showName();
+      imageUrlInput.dispatchEvent(new Event("input", { bubbles: true }));
     }
   });
 
@@ -657,14 +664,53 @@ function copyById(id){
 
   if (imageUrlInput) {
     imageUrlInput.addEventListener("input", () => {
-      if ((imageUrlInput.value || "").trim()) {
-        input.value = "";
-        if (previewBox) previewBox.style.display = "none";
-        if (previewImg) previewImg.src = "";
-        if (resizeBox) resizeBox.style.display = "none";
-        resetResizeUi();
+      const url = (imageUrlInput.value || "").trim();
+
+      if (!url) {
+        showName();
+        return;
       }
-      showName();
+
+      input.value = "";
+      resetResizeUi();
+      label.textContent = I18N.selectedUrlPrefix + url;
+
+      if (previewImg) {
+        previewImg.onload = function () {
+          originalWidth = previewImg.naturalWidth;
+          originalHeight = previewImg.naturalHeight;
+          lastEditedField = null;
+
+          if (previewBox) previewBox.style.display = "block";
+          if (resizeBox) resizeBox.style.display = "block";
+
+          if (resizeWidth) {
+            resizeWidth.value = "";
+            resizeWidth.placeholder = String(originalWidth);
+          }
+
+          if (resizeHeight) {
+            resizeHeight.value = "";
+            resizeHeight.placeholder = String(originalHeight);
+          }
+
+          if (dimsLabel) {
+            dimsLabel.textContent =
+              I18N.dimensionsLabel + " : " + originalWidth + " × " + originalHeight + " px";
+          }
+
+          updateResizeInfo();
+          gotoImageSettings();
+        };
+
+        previewImg.onerror = function () {
+          if (previewBox) previewBox.style.display = "none";
+          if (resizeBox) resizeBox.style.display = "none";
+          resetResizeUi();
+        };
+
+        previewImg.src = url;
+      }
     });
   }
 
@@ -742,6 +788,7 @@ function copyById(id){
   form.addEventListener("submit", async (e) => {
     const f = input.files && input.files[0];
     const hasUrl = !!((imageUrlInput?.value || "").trim());
+
     if (!f) {
       if (hasUrl) return;
       return;
