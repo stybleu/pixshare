@@ -49,6 +49,14 @@
     box-shadow: 0 .125rem .25rem rgba(0,0,0,.075);
   }
 
+  .df .preview-box canvas{
+    max-width: 100%;
+    max-height: 220px;
+    border-radius: 12px;
+    box-shadow: 0 .125rem .25rem rgba(0,0,0,.075);
+    background: #fff;
+  }
+
   .df .resize-box{
     display: none;
     margin-top: 14px;
@@ -131,7 +139,8 @@
 
             <div id="previewBox" class="preview-box">
               <div class="small text-muted mb-2">{{ _("image_preview") }}</div>
-              <img id="previewImg" src="" alt="{{ _('image_preview') }}">
+              <canvas id="previewCanvas"></canvas>
+              <img id="previewImg" src="" alt="{{ _('image_preview') }}" style="display:none;">
             </div>
 
             <div id="resizeBox" class="resize-box">
@@ -153,17 +162,35 @@
                 </div>
 
                 <div class="col-12">
-                  <div class="form-check">
-                    <input class="form-check-input" type="checkbox" name="enhance_quality" value="1" id="enhanceQuality">
-                    <label class="form-check-label" for="enhanceQuality">
-                      {{ _("amelioration_image") }}
-                    </label>
-                  </div>
-
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" name="enhance_quality" value="1" id="enhanceQuality">
+                  <label class="form-check-label" for="enhanceQuality">
+                    {{ _("amelioration_image") }}
+                  </label>
+                </div>
+              
+                <div class="mt-2">
+                  <label class="form-label mb-1" for="enhanceStrength">
+                    Valeur d'amélioration
+                  </label>
+                  <input
+                    id="enhanceStrength"
+                    type="range"
+                    name="enhance_strength"
+                    min="0"
+                    max="30"
+                    step="1"
+                    value="10"
+                    class="form-range">
                   <div class="form-text">
-                    {{ _("option_image") }}
+                    0 = aucune amélioration, 10 = léger, 20 = moyen, 30 = plus fort.
                   </div>
                 </div>
+              
+                <div class="form-text">
+                  {{ _("option_image") }}
+                </div>
+              </div>
 
                 <div class="col-12">
                   <label class="form-label">{{ _("file_lifetime_default_10") }}</label>
@@ -413,6 +440,8 @@ function copyById(id){
   const lifetime = document.querySelector('select[name="lifetime"]');
   const previewBox = document.getElementById("previewBox");
   const previewImg = document.getElementById("previewImg");
+  const previewCanvas = document.getElementById("previewCanvas");
+  const previewCtx = previewCanvas ? previewCanvas.getContext("2d") : null;
   const resizeBox = document.getElementById("resizeBox");
   const resizeWidth = document.getElementById("resizeWidth");
   const resizeHeight = document.getElementById("resizeHeight");
@@ -425,6 +454,7 @@ function copyById(id){
   let originalHeight = null;
   let isUpdatingResizeFields = false;
   let lastEditedField = null;
+  let sourceImage = null;
 
   if (!dz || !input || !form) return;
 
@@ -458,6 +488,13 @@ function copyById(id){
     if (dimsLabel) dimsLabel.textContent = I18N.dimensionsLabel + " : —";
     if (resizeWidth) resizeWidth.placeholder = I18N.placeholderWidth;
     if (resizeHeight) resizeHeight.placeholder = I18N.placeholderHeight;
+
+    sourceImage = null;
+    if (previewCanvas && previewCtx) {
+      previewCanvas.width = 1;
+      previewCanvas.height = 1;
+      previewCtx.clearRect(0, 0, 1, 1);
+    }
   }
 
   function updateResizeInfo() {
@@ -516,6 +553,7 @@ function copyById(id){
 
     isUpdatingResizeFields = false;
     updateResizeInfo();
+    renderLivePreview();
   }
 
   function syncWidthFromHeight() {
@@ -534,6 +572,7 @@ function copyById(id){
 
     isUpdatingResizeFields = false;
     updateResizeInfo();
+    renderLivePreview();
   }
 
   if (resizeWidth) {
@@ -550,6 +589,57 @@ function copyById(id){
       lastEditedField = "height";
       syncWidthFromHeight();
     });
+  }
+
+  function getTargetPreviewSize() {
+    if (!originalWidth || !originalHeight) {
+      return null;
+    }
+
+    let width = parseInt((resizeWidth?.value || "").trim(), 10);
+    let height = parseInt((resizeHeight?.value || "").trim(), 10);
+
+    const widthValid = !Number.isNaN(width) && width > 0;
+    const heightValid = !Number.isNaN(height) && height > 0;
+
+    if (!widthValid && !heightValid) {
+      return { width: originalWidth, height: originalHeight };
+    }
+
+    if (widthValid && !heightValid) {
+      height = Math.round(originalHeight * (width / originalWidth));
+    } else if (heightValid && !widthValid) {
+      width = Math.round(originalWidth * (height / originalHeight));
+    } else {
+      if (lastEditedField === "height") {
+        width = Math.round(originalWidth * (height / originalHeight));
+      } else {
+        height = Math.round(originalHeight * (width / originalWidth));
+      }
+    }
+
+    if (!width || !height || width <= 0 || height <= 0) {
+      return null;
+    }
+
+    return { width, height };
+  }
+
+  function renderLivePreview() {
+    if (!previewCanvas || !previewCtx || !sourceImage || !originalWidth || !originalHeight) {
+      return;
+    }
+
+    const target = getTargetPreviewSize();
+    if (!target) {
+      return;
+    }
+
+    previewCanvas.width = target.width;
+    previewCanvas.height = target.height;
+
+    previewCtx.clearRect(0, 0, target.width, target.height);
+    previewCtx.drawImage(sourceImage, 0, 0, target.width, target.height);
   }
 
   function showName() {
@@ -577,6 +667,7 @@ function copyById(id){
 
         const img = new Image();
         img.onload = function() {
+          sourceImage = img;
           originalWidth = img.width;
           originalHeight = img.height;
           lastEditedField = null;
@@ -597,6 +688,7 @@ function copyById(id){
           }
 
           updateResizeInfo();
+          renderLivePreview();
           gotoImageSettings();
         };
 
@@ -677,6 +769,7 @@ function copyById(id){
 
       if (previewImg) {
         previewImg.onload = function () {
+          sourceImage = previewImg;
           originalWidth = previewImg.naturalWidth;
           originalHeight = previewImg.naturalHeight;
           lastEditedField = null;
@@ -700,10 +793,12 @@ function copyById(id){
           }
 
           updateResizeInfo();
+          renderLivePreview();
           gotoImageSettings();
         };
 
         previewImg.onerror = function () {
+          sourceImage = null;
           if (previewBox) previewBox.style.display = "none";
           if (resizeBox) resizeBox.style.display = "none";
           resetResizeUi();

@@ -95,7 +95,7 @@ def enhance_image_bytes(file_bytes: bytes, ext: str) -> bytes:
 
             contrast = ImageEnhance.Contrast(img)
             img = contrast.enhance(1.04)
-
+            
             sharpness = ImageEnhance.Sharpness(img)
             img = sharpness.enhance(1.10)
 
