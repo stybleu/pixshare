@@ -330,24 +330,50 @@
                 </form>
               </div>
 
-              <div class="text-muted small mt-3 mb-1">
-                {{ _("public_share_link") }}
-              </div>
+              <div class="row g-2 mt-3">
+                <div class="col-12 col-lg-6">
+                  <div class="text-muted small mb-1">
+                    {{ _("public_share_link") }}
+                  </div>
 
-              <div class="input-group">
-                <input
-                  id="publicLink_{{ f.id }}"
-                  class="form-control"
-                  value="{{ f.public_url }}"
-                  readonly
-                  onclick="this.select()">
+                  <div class="input-group">
+                    <input
+                      id="publicLink_{{ f.id }}"
+                      class="form-control"
+                      value="{{ f.public_url }}"
+                      readonly
+                      onclick="this.select()">
 
-                <button
-                  type="button"
-                  class="btn btn-outline-primary"
-                  onclick="copyById('publicLink_{{ f.id }}')">
-                  {{ _("copy") }}
-                </button>
+                    <button
+                      type="button"
+                      class="btn btn-outline-primary"
+                      onclick="copyById('publicLink_{{ f.id }}')">
+                      {{ _("copy") }}
+                    </button>
+                  </div>
+                </div>
+
+                <div class="col-12 col-lg-6">
+                  <div class="text-muted small mb-1">
+                    Lien view
+                  </div>
+
+                  <div class="input-group">
+                    <input
+                      id="viewLink_{{ f.id }}"
+                      class="form-control"
+                      value="{{ f.raw_url }}"
+                      readonly
+                      onclick="this.select()">
+
+                    <button
+                      type="button"
+                      class="btn btn-outline-primary"
+                      onclick="copyById('viewLink_{{ f.id }}')">
+                      {{ _("copy") }}
+                    </button>
+                  </div>
+                </div>
               </div>
 
             </div>
