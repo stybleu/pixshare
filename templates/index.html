@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% set title = "PixShare – Hébergement d'image temporaire et partage de fichiers" %}
+{% set title = _("index_meta_title") %}
 
 {% block content %}
 
@@ -116,7 +116,7 @@
 </div>
 
 <div class="quick-upload-note text-muted mb-3">
-  Accès rapide : utilise le bouton ci-dessus pour descendre directement vers l’outil d’envoi.
+  {{ _("quick_upload_note") }}
 </div>
 
 <div class="row g-3 align-items-start">
@@ -189,7 +189,7 @@
               
                 <div class="mt-2">
                   <label class="form-label mb-1" for="enhanceStrength">
-                    Valeur d'amélioration
+                    {{ _("enhance_strength_label") }}
                   </label>
                   <input
                     id="enhanceStrength"
@@ -201,7 +201,7 @@
                     value="10"
                     class="form-range">
                   <div class="form-text">
-                    0 = aucune amélioration, 10 = léger, 20 = moyen, 30 = plus fort.
+                    {{ _("enhance_strength_help") }}
                   </div>
                 </div>
               
@@ -260,7 +260,7 @@
 
           <div class="col-12">
             <div class="alert alert-secondary small mb-3" role="note">
-              Un cookie technique peut être utilisé pour afficher l’historique de tes fichiers, sécuriser le service et transmettre un éventuel message de modération. Il n’est pas utilisé à des fins publicitaires.
+              {{ _("technical_cookie_notice") }}
             </div>
             <button id="submitBtn" class="btn btn-primary w-100" type="submit">
               {{ _("upload") }}
@@ -382,7 +382,7 @@
 
                 <div class="col-12 col-lg-6">
                   <div class="text-muted small mb-1">
-                    Lien view
+                    {{ _("view_link_label") }}
                   </div>
 
                   <div class="input-group">
@@ -437,33 +437,30 @@
 </section>
 
 <section class="container mt-5">
-  <h2>Hébergement d'image temporaire simple et rapide</h2>
+  <h2>{{ _("section_simple_title") }}</h2>
 
   <p>
-    PixShare permet d'envoyer une image ou un fichier en quelques secondes, puis de récupérer immédiatement
-    un lien de partage. Le service est pensé pour aller à l'essentiel, sans inscription obligatoire.
+    {{ _("section_simple_p1") }}
   </p>
 
-  <h3>Envoi rapide depuis le navigateur</h3>
+  <h3>{{ _("section_browser_upload_title") }}</h3>
   <p>
-    L'interface reste légère et pratique sur mobile comme sur ordinateur. Vous pouvez sélectionner un fichier,
-    prévisualiser une image et choisir une durée de conservation adaptée à votre besoin.
+    {{ _("section_browser_upload_p1") }}
   </p>
 
-  <h3>Lien direct prêt à partager</h3>
+  <h3>{{ _("section_direct_link_title") }}</h3>
   <p>
-    Chaque envoi génère une URL accessible immédiatement. C'est utile pour partager un visuel, un document,
-    une capture d'écran ou une ressource de travail sans passer par une plateforme plus lourde.
+    {{ _("section_direct_link_p1") }}
   </p>
 
-  <h3>Pourquoi utiliser PixShare ?</h3>
+  <h3>{{ _("section_why_use_title") }}</h3>
   <ul>
-    <li>Utilisation simple et rapide</li>
-    <li>Expiration configurable des fichiers</li>
-    <li>Prévisualisation des images avant envoi</li>
-    <li>Redimensionnement possible avant upload</li>
-    <li>Historique local des fichiers envoyés</li>
-    <li>API disponible pour automatiser certains usages</li>
+    <li>{{ _("feature_simple_fast") }}</li>
+    <li>{{ _("feature_configurable_expiration") }}</li>
+    <li>{{ _("feature_preview_before_upload") }}</li>
+    <li>{{ _("feature_resize_before_upload") }}</li>
+    <li>{{ _("feature_local_history") }}</li>
+    <li>{{ _("feature_api_available") }}</li>
   </ul>
 </section>
 
