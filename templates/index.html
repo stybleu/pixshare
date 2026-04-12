@@ -65,6 +65,17 @@
     border-radius: 12px;
     background: rgba(0,0,0,.02);
   }
+
+  .df .quick-upload-btn{
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    font-weight: 600;
+  }
+
+  .df .quick-upload-note{
+    font-size: .92rem;
+  }
 </style>
 
 <div class="df">
@@ -94,17 +105,24 @@
     </p>
   </div>
 
-  <div class="d-flex gap-2">
+  <div class="d-flex gap-2 flex-wrap justify-content-end">
+    <a class="btn btn-sm btn-primary quick-upload-btn" href="#upload-tool">
+      {{ _("upload") }}
+    </a>
     {% if admin %}
     <a class="btn btn-sm btn-outline-dark" href="{{ url_for('admin.admin_panel') }}">{{ _("admin") }}</a>
     {% endif %}
   </div>
 </div>
 
+<div class="quick-upload-note text-muted mb-3">
+  Accès rapide : utilise le bouton ci-dessus pour descendre directement vers l’outil d’envoi.
+</div>
+
 <div class="row g-3 align-items-start">
 
   <div class="col-12 col-lg-5">
-    <div class="card shadow-sm h-100">
+    <div id="upload-tool" class="card shadow-sm h-100">
       <div class="card-body">
 
         <h2 class="h6">{{ _("upload_card_title") }}</h2>

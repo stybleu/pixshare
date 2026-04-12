@@ -1,5 +1,4 @@
 <!doctype html>
-
 <html lang="{{ current_lang or 'fr' }}">
 <head>
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6064591871344346"
@@ -21,17 +20,15 @@
 <link rel="icon" type="image/png" sizes="512x512" href="{{ url_for('static', filename='favicon.png') }}">
 <link rel="canonical" href="{{ request.base_url }}">
 
-
-<title>{{ title or "PixShare – Hébergement d'image temporaire et partage sécurisé" }}</title>
+<title>{{ title or "PixShare – Partage d'images et de fichiers en lien privé" }}</title>
 
 <meta name="description"
-content="PixShare permet d'héberger une image ou un fichier temporairement. Générez un lien de partage sécurisé avec suppression automatique.">
+content="PixShare permet d'envoyer une image ou un fichier, de générer un lien de partage et de choisir une durée de conservation adaptée, dans une interface claire et rassurante.">
 
 <meta name="robots" content="index, follow">
 
-<!-- OpenGraph -->
-<meta property="og:title" content="PixShare – Hébergement d'image temporaire">
-<meta property="og:description" content="Envoyez une image ou un fichier et récupérez un lien de partage rapide et sécurisé.">
+<meta property="og:title" content="PixShare – Partage d'images et de fichiers en lien privé">
+<meta property="og:description" content="Un espace simple pour partager une image, une capture ou un document avec expiration configurable.">
 <meta property="og:image" content="https://pixshare.fr/static/images/pixshare_logo.png">
 <meta property="og:url" content="{{ request.url }}">
 <meta property="og:type" content="website">
@@ -39,32 +36,40 @@ content="PixShare permet d'héberger une image ou un fichier temporairement. Gé
 <meta property="og:locale:alternate" content="en_US">
 <meta property="og:locale:alternate" content="fr_FR">
 
-<!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="PixShare – Hébergement d'image temporaire">
-<meta name="twitter:description" content="Partagez une image ou un fichier via un lien direct avec expiration configurable.">
+<meta name="twitter:title" content="PixShare – Partage d'images et de fichiers en lien privé">
+<meta name="twitter:description" content="Envoyez un fichier, choisissez sa durée de vie, puis partagez-le avec un lien simple et propre.">
 <meta name="twitter:image" content="https://pixshare.fr/static/images/pixshare_logo.png">
 
-<!-- Bootstrap -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
 <style>
-
-/* 🔧 FIX Samsung + traduction */
 html {
   -webkit-text-size-adjust: 100%;
 }
 
+:root {
+  --pix-bg: #f4f7fb;
+  --pix-card: rgba(255, 255, 255, 0.88);
+  --pix-line: rgba(15, 23, 42, 0.08);
+  --pix-text: #172033;
+  --pix-muted: #667085;
+  --pix-primary: #4f46e5;
+  --pix-primary-soft: rgba(79, 70, 229, 0.10);
+  --pix-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+}
+
 body {
-  background: #f8f9fa;
+  margin: 0;
+  background:
+    radial-gradient(circle at top left, rgba(79, 70, 229, 0.10), transparent 28%),
+    radial-gradient(circle at top right, rgba(236, 72, 153, 0.10), transparent 24%),
+    linear-gradient(180deg, #f8fbff 0%, var(--pix-bg) 100%);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-
-  /* 🔧 police robuste */
+  color: var(--pix-text);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, Helvetica, sans-serif;
-
-  /* 🔧 amélioration rendu texte */
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }
@@ -73,146 +78,308 @@ main {
   flex: 1;
 }
 
-footer {
-  background: #ffffff;
-  border-top: 1px solid #dee2e6;
-  padding: 12px;
+.container-shell {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 20px 12px 32px;
 }
 
-/* animation logo PixShare */
+.site-header {
+  margin-bottom: 22px;
+}
 
-.pixshare-animated span {
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  border: 1px solid var(--pix-line);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--pix-shadow);
+}
+
+.brand-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.brand-link img {
+  height: 44px;
+  width: auto;
+}
+
+.brand-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.brand-kicker {
+  font-size: 0.82rem;
+  color: var(--pix-muted);
+}
+
+.brand-title {
+  display: inline-flex;
+  gap: 1px;
+  font-size: 1.45rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.brand-title span {
   display: inline-block;
-  font-weight: 700;
-  font-size: 1.4rem;
-
-  background: linear-gradient(
-      45deg,
-      #ff5bbd,
-      #7c5cff,
-      #4facfe
-  );
-
+  background: linear-gradient(45deg, #ff5bbd, #7c5cff, #4facfe);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-
   animation: letter-pop 2s infinite;
 }
 
-.pixshare-animated span:nth-child(1) { animation-delay: 0s; }
-.pixshare-animated span:nth-child(2) { animation-delay: 0.1s; }
-.pixshare-animated span:nth-child(3) { animation-delay: 0.2s; }
-.pixshare-animated span:nth-child(4) { animation-delay: 0.3s; }
-.pixshare-animated span:nth-child(5) { animation-delay: 0.4s; }
-.pixshare-animated span:nth-child(6) { animation-delay: 0.5s; }
-.pixshare-animated span:nth-child(7) { animation-delay: 0.6s; }
-.pixshare-animated span:nth-child(8) { animation-delay: 0.7s; }
+.brand-title span:nth-child(1) { animation-delay: 0s; }
+.brand-title span:nth-child(2) { animation-delay: 0.1s; }
+.brand-title span:nth-child(3) { animation-delay: 0.2s; }
+.brand-title span:nth-child(4) { animation-delay: 0.3s; }
+.brand-title span:nth-child(5) { animation-delay: 0.4s; }
+.brand-title span:nth-child(6) { animation-delay: 0.5s; }
+.brand-title span:nth-child(7) { animation-delay: 0.6s; }
+.brand-title span:nth-child(8) { animation-delay: 0.7s; }
 
 @keyframes letter-pop {
-  0%   { transform: scale(1); }
-  20%  { transform: scale(1.25); }
-  40%  { transform: scale(1); }
+  0% { transform: scale(1); }
+  20% { transform: scale(1.2); }
+  40% { transform: scale(1); }
   100% { transform: scale(1); }
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.header-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.header-nav a {
+  text-decoration: none;
+  color: var(--pix-muted);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.header-nav a:hover {
+  color: var(--pix-primary);
+}
+
+.language-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--pix-line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
 }
 
 .language-switcher a {
   text-decoration: none;
-  font-size: 1.2rem;
+  font-size: 1.15rem;
+  line-height: 1;
 }
 
+.flash-stack {
+  margin-bottom: 16px;
+}
+
+.alert {
+  border-radius: 16px;
+}
+
+.content-panel {
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 28px;
+}
+
+footer {
+  padding: 18px 12px 28px;
+}
+
+.footer-shell {
+  max-width: 1180px;
+  margin: 0 auto;
+  border: 1px solid var(--pix-line);
+  background: rgba(255, 255, 255, 0.82);
+  border-radius: 24px;
+  box-shadow: var(--pix-shadow);
+  padding: 22px 20px;
+}
+
+.footer-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.footer-title {
+  font-size: 1.02rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.footer-text,
+.footer-links a,
+.footer-meta {
+  color: var(--pix-muted);
+}
+
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.footer-links a {
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.footer-links a:hover {
+  color: var(--pix-primary);
+}
+
+.footer-meta {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--pix-line);
+  font-size: 0.92rem;
+}
+
+@media (max-width: 767.98px) {
+  .container-shell {
+    padding-inline: 10px;
+  }
+
+  .topbar {
+    padding: 14px;
+    border-radius: 18px;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .brand-link img {
+    height: 40px;
+  }
+
+  .brand-title {
+    font-size: 1.3rem;
+  }
+
+  .footer-shell {
+    border-radius: 18px;
+    padding: 18px 16px;
+  }
+}
 </style>
 
 {% block head %}{% endblock %}
-
 </head>
-
 <body>
 
-<main class="container py-4">
+<main>
+  <div class="container-shell">
+    <header class="site-header">
+      <h1 class="visually-hidden">Partager une image ou un fichier avec PixShare</h1>
 
-<h1 class="visually-hidden">
-Partager une image ou un fichier avec PixShare
-</h1>
+      <div class="topbar">
+        <a class="brand-link" href="{{ url_for('public.index') }}">
+          <img src="{{ url_for('static', filename='images/pixshare_logo.png') }}" alt="PixShare">
+          <div class="brand-meta">
+            <span class="brand-kicker">Partage temporaire d'images et de fichiers</span>
+            <span class="brand-title">
+              <span>P</span><span>i</span><span>x</span><span>S</span><span>h</span><span>a</span><span>r</span><span>e</span>
+            </span>
+          </div>
+        </a>
 
-{% with messages = get_flashed_messages(with_categories=true) %}
-{% if messages %}
-{% for cat,msg in messages %}
+        <div class="header-actions">
+          <nav class="header-nav" aria-label="Navigation principale">
+            <a href="{{ url_for('public.index') }}">Accueil</a>
+            <a href="{{ url_for('public.api_page') }}">API</a>
+            <a href="{{ url_for('public.contact') }}">Contact</a>
+            <a href="{{ url_for('public.cgu') }}">CGU</a>
+          </nav>
 
-<div class="alert alert-{{ cat }} alert-dismissible fade show" role="alert">
-{{ msg }}
-<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-</div>
+          <div class="language-switcher" aria-label="Langue">
+            <a href="{{ switch_lang_url('fr') }}" title="{{ _('lang_fr') }}">🇫🇷</a>
+            <a href="{{ switch_lang_url('en') }}" title="{{ _('lang_en') }}">🇬🇧</a>
+          </div>
+        </div>
+      </div>
+    </header>
 
-{% endfor %}
-{% endif %}
-{% endwith %}
+    <div class="flash-stack">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      {% for cat,msg in messages %}
+      <div class="alert alert-{{ cat }} alert-dismissible fade show" role="alert">
+        {{ msg }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+      {% endfor %}
+      {% endif %}
+      {% endwith %}
+    </div>
 
-<div class="d-flex align-items-center justify-content-between mb-3">
-
-  <a class="navbar-brand" href="{{ url_for('public.index') }}">
-    <img src="{{ url_for('static', filename='images/pixshare_logo.png') }}" height="40">
-
-    <span class="pixshare-animated">
-      <span>P</span>
-      <span>i</span>
-      <span>x</span>
-      <span>S</span>
-      <span>h</span>
-      <span>a</span>
-      <span>r</span>
-      <span>e</span>
-    </span>
-  </a>
-
-  <div class="language-switcher">
-    <a href="{{ switch_lang_url('fr') }}" class="me-2" title="{{ _('lang_fr') }}">🇫🇷</a>
-    <a href="{{ switch_lang_url('en') }}" title="{{ _('lang_en') }}">🇬🇧</a>
+    {% block content %}{% endblock %}
   </div>
-
-</div>
-
-{% block content %}{% endblock %}
-
 </main>
 
-<footer class="text-center text-muted small">
+<footer>
+  <div class="footer-shell">
+    <div class="footer-top">
+      <div>
+        <div class="footer-title">PixShare</div>
+        <div class="footer-text">
+          Un service pensé pour partager rapidement une image, une capture d'écran ou un document,
+          avec une durée de conservation claire et une interface simple à comprendre.
+        </div>
+      </div>
 
-<div class="mb-1">
+      <div class="footer-links">
+        <a href="{{ url_for('public.index') }}">{{ _('home') }}</a>
+        <a href="{{ url_for('public.api_page') }}">API</a>
+        <a href="{{ url_for('public.contact') }}">Contact</a>
+        <a href="{{ url_for('public.cgu') }}">{{ _('cgu') }}</a>
+        <a href="{{ url_for('public.mentions_legales') }}">{{ _('legal') }}</a>
+      </div>
+    </div>
 
-<a href="{{ url_for('public.cgu') }}">
-{{ _("cgu") }}
-</a>
-
-|
-
-<a href="{{ url_for('public.mentions_legales') }}">
-{{ _("legal") }}
-</a>
-
-|
-
-<a href="{{ url_for('public.index') }}">
-{{ _("home") }}
-</a>
-
-|
-
-<a href="{{ url_for('public.api_page') }}">
-API
-</a>
-
-</div>
-
-<div class="text-center text-muted small mt-4">
-  <div>PixShare © 2026</div>
-  <div>
-    API en version bêta — les fonctionnalités et réponses peuvent évoluer.
+    <div class="footer-meta">
+      <div>PixShare © 2026</div>
+      <div>API en version bêta — les fonctionnalités et réponses peuvent évoluer.</div>
+    </div>
   </div>
-</div>
-
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
 </body>
 </html>
