@@ -357,3 +357,14 @@ def load_named_dict(filename):
 
 def save_named_dict(filename, data):
     _write_json_file(_json_path(filename), data)
+
+# =========================================================
+# NOTICES DE MODÉRATION
+# =========================================================
+
+def load_moderation_notices():
+    return _read_json_file(_json_path("moderation_notices.json"), [])
+
+
+def save_moderation_notices(data):
+    _write_json_file(_json_path("moderation_notices.json"), data)

@@ -123,5 +123,11 @@
   "import_url_label": "Importer depuis une URL",
   "import_url_placeholder": "https://exemple.com/image.jpg",
   "import_url_help": "Collez une URL directe d'image, ou glissez un lien dans la zone ci-dessus.",
-  "js_selected_url_prefix": "URL sélectionnée : "
+  "js_selected_url_prefix": "URL sélectionnée : ",
+  "hours_6": "6 heures",
+  "hours_12": "12 heures",
+  "day_1": "1 jour",
+  "days_2": "2 jours",
+  "days_3": "3 jours",
+  "days_7": "7 jours"
 }

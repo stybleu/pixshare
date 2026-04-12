@@ -46,6 +46,12 @@
           <option value="30" {% if settings.default_lifetime_minutes == 30 %}selected{% endif %}>30 minutes</option>
           <option value="60" {% if settings.default_lifetime_minutes == 60 %}selected{% endif %}>1 heure</option>
           <option value="120" {% if settings.default_lifetime_minutes == 120 %}selected{% endif %}>2 heures</option>
+          <option value="360" {% if settings.default_lifetime_minutes == 360 %}selected{% endif %}>6 heures</option>
+          <option value="720" {% if settings.default_lifetime_minutes == 720 %}selected{% endif %}>12 heures</option>
+          <option value="1440" {% if settings.default_lifetime_minutes == 1440 %}selected{% endif %}>1 jour</option>
+          <option value="2880" {% if settings.default_lifetime_minutes == 2880 %}selected{% endif %}>2 jours</option>
+          <option value="4320" {% if settings.default_lifetime_minutes == 4320 %}selected{% endif %}>3 jours</option>
+          <option value="10080" {% if settings.default_lifetime_minutes == 10080 %}selected{% endif %}>7 jours</option>
         </select>
         <div class="form-text">Valeur présélectionnée sur la page d'upload.</div>
       </div>

@@ -31,6 +31,8 @@ from pixshare.services.file_service import (
     cleanup_expired,
     delete_by_id,
     get_file_record,
+    attach_guest_cookie,
+    get_existing_guest_token,
     get_guest_token,
     get_or_create_visitor_token,
     list_guest_files,
@@ -53,10 +55,25 @@ from pixshare.services.settings_service import (
     get_max_upload_size_mb,
 )
 from pixshare.services.url_import_service import UrlImportError, download_remote_image_to_temp
+from pixshare.services.moderation_service import pop_pending_notice
 
 public_bp = Blueprint("public", __name__)
 
 config = Config()
+
+
+@public_bp.before_request
+def flash_pending_moderation_notice():
+    guest_token = get_existing_guest_token()
+    if not guest_token:
+        return
+
+    notice = pop_pending_notice(guest_token)
+    if not notice:
+        return
+
+    flash(notice.get("message") or "Un de vos fichiers a été retiré par la modération.", notice.get("level") or "warning")
+
 
 REQUEST_FILE = "pixshare/data/api_requests.json"
 DEMO_KEY_DAILY_LIMIT = 5
@@ -357,18 +374,18 @@ def index():
             safe_name = secure_filename(original)
             if not safe_name:
                 flash("Nom de fichier invalide.", "danger")
-                return redirect(url_for("public.index"))
+                return attach_guest_cookie(redirect(url_for("public.index")))
 
             if not allowed_file(safe_name):
                 allowed = ", ".join(sorted(current_app.config["ALLOWED_EXTENSIONS"]))
                 flash(f"Extension non autorisée. Autorisées : {allowed}", "danger")
-                return redirect(url_for("public.index"))
+                return attach_guest_cookie(redirect(url_for("public.index")))
 
             content_length = request.content_length or 0
             if content_length > max_size_bytes:
                 max_mb = get_max_upload_size_mb()
                 flash(f"Fichier trop volumineux. Taille maximale : {max_mb} Mo.", "danger")
-                return redirect(url_for("public.index"))
+                return attach_guest_cookie(redirect(url_for("public.index")))
 
             _, lifetime, permanent = save_uploaded_file(
                 f,
@@ -383,7 +400,7 @@ def index():
             else:
                 flash(f"Fichier upload ✅ (expiration: {lifetime} min)", "success")
 
-            return redirect(url_for("public.index"))
+            return attach_guest_cookie(redirect(url_for("public.index")))
 
         if image_url:
             try:
@@ -401,20 +418,20 @@ def index():
                 )
             except UrlImportError as exc:
                 flash(str(exc), "danger")
-                return redirect(url_for("public.index"))
+                return attach_guest_cookie(redirect(url_for("public.index")))
             except Exception:
                 flash("Impossible d'importer cette image depuis l'URL fournie.", "danger")
-                return redirect(url_for("public.index"))
+                return attach_guest_cookie(redirect(url_for("public.index")))
 
             if permanent:
                 flash("Image importée depuis l'URL ✅ (sans expiration)", "success")
             else:
                 flash(f"Image importée depuis l'URL ✅ (expiration: {lifetime} min)", "success")
 
-            return redirect(url_for("public.index"))
+            return attach_guest_cookie(redirect(url_for("public.index")))
 
         flash("Choisis un fichier ou colle une URL d'image directe.", "warning")
-        return redirect(url_for("public.index"))
+        return attach_guest_cookie(redirect(url_for("public.index")))
 
     guest_files = list_guest_files()
     for item in guest_files:
@@ -428,7 +445,7 @@ def index():
         item["votes_down"] = summary["down"]
         item["score"] = summary["score"]
 
-    return render_template(
+    response = make_response(render_template(
         "index.html",
         guest_files=guest_files,
         max_mb=get_max_upload_size_mb(),
@@ -436,7 +453,8 @@ def index():
         version=current_app.config["APP_VERSION"],
         can_keep=can_keep_uploads(),
         default_lifetime=get_default_lifetime(),
-    )
+    ))
+    return attach_guest_cookie(response)
 
 
 @public_bp.route("/contact", methods=["GET", "POST"], endpoint="contact")
@@ -578,7 +596,7 @@ def public_file(file_id):
             visitor_token,
             max_age=60 * 60 * 24 * 365,
             httponly=True,
-            secure=True,
+            secure=not bool(current_app.debug),
             samesite="Lax",
         )
 

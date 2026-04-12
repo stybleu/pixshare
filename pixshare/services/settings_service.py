@@ -14,7 +14,7 @@ DEFAULT_SETTINGS = {
     "keep_thumbnails": True,
 }
 
-ALLOWED_LIFETIMES = {5, 10, 20, 30, 60, 120}
+ALLOWED_LIFETIMES = {5, 10, 20, 30, 60, 120, 360, 720, 1440, 2880, 4320, 10080}
 
 
 def ensure_settings_file() -> None:

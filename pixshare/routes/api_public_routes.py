@@ -156,7 +156,7 @@ def parse_expiration_minutes(auth_key_data: dict[str, Any]) -> int | None:
 
     allow_permanent = bool(auth_key_data.get("allow_permanent", False))
     default_lifetime = int(auth_key_data.get("default_lifetime_minutes", 10))
-    allowed_lifetimes = auth_key_data.get("allowed_lifetimes", [5, 10, 20, 30, 60])
+    allowed_lifetimes = auth_key_data.get("allowed_lifetimes", [5, 10, 20, 30, 60, 120, 360, 720, 1440, 2880, 4320, 10080])
 
     if requested == "":
         return default_lifetime

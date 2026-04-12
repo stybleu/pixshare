@@ -2,7 +2,7 @@ import os
 import secrets
 from datetime import datetime, timedelta
 
-from flask import current_app, request, session, url_for
+from flask import current_app, g, request, session, url_for
 from PIL import Image
 
 try:
@@ -62,11 +62,42 @@ def generate_file_id() -> str:
 
 
 def get_guest_token() -> str:
-    tok = session.get("guest_token")
+    cookie_name = current_app.config.get("GUEST_COOKIE_NAME", "guest_token")
+    tok = (request.cookies.get(cookie_name) or "").strip()
+
+    if tok:
+        session["guest_token"] = tok
+        return tok
+
+    tok = (session.get("guest_token") or "").strip()
     if not tok:
         tok = secrets.token_urlsafe(16)
-        session["guest_token"] = tok
+
+    session["guest_token"] = tok
+    g.guest_cookie_token = tok
     return tok
+
+
+def get_existing_guest_token() -> str:
+    cookie_name = current_app.config.get("GUEST_COOKIE_NAME", "guest_token")
+    tok = (request.cookies.get(cookie_name) or session.get("guest_token") or "").strip()
+    return tok
+
+
+def attach_guest_cookie(response):
+    tok = getattr(g, "guest_cookie_token", "")
+    if not tok:
+        return response
+
+    response.set_cookie(
+        current_app.config.get("GUEST_COOKIE_NAME", "guest_token"),
+        tok,
+        max_age=int(current_app.config.get("GUEST_COOKIE_MAX_AGE", 60 * 60 * 24 * 30)),
+        httponly=True,
+        secure=not bool(current_app.debug),
+        samesite="Lax",
+    )
+    return response
 
 
 def get_or_create_visitor_token() -> tuple[str, bool]:
@@ -573,7 +604,7 @@ def save_api_uploaded_file(
     allow_permanent = bool(key_data.get("allow_permanent", False))
     permanent = bool(keep_requested and allow_permanent)
 
-    allowed_lifetimes = key_data.get("allowed_lifetimes") or [5, 10, 20, 30, 60]
+    allowed_lifetimes = key_data.get("allowed_lifetimes") or [5, 10, 20, 30, 60, 120, 360, 720, 1440, 2880, 4320, 10080]
     clean_lifetimes = []
     for value in allowed_lifetimes:
         try:

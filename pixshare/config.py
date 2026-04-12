@@ -21,6 +21,8 @@ class Config:
 
     MAX_CONTENT_LENGTH = 1000 * 1024 * 1024
     VISITOR_COOKIE_NAME = "visitor_token"
+    GUEST_COOKIE_NAME = "guest_token"
+    GUEST_COOKIE_MAX_AGE = 60 * 60 * 24 * 30
 
     MAX_FAILED_LOGINS = 5
     FAILED_WINDOW_SEC = 10 * 60
@@ -32,7 +34,7 @@ class Config:
         "mp4", "webm", "avi", "heic", "heif"
     }
 
-    MAX_LIFETIME_MIN = 120
+    MAX_LIFETIME_MIN = 10080
     DEFAULT_LIFETIME_MIN = 5
 
     PERMANENT_UPLOADS_ENABLED = (os.environ.get("PERMANENT_UPLOADS", "0") == "0")

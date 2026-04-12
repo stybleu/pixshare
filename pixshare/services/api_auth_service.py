@@ -48,7 +48,7 @@ def ensure_default_api_keys() -> None:
         "max_file_size_mb": int(current_app.config.get("API_DEFAULT_MAX_FILE_SIZE_MB", 10)),
         "allow_permanent": False,
         "default_lifetime_minutes": 10,
-        "allowed_lifetimes": [5, 10, 20, 30, 60],
+        "allowed_lifetimes": [5, 10, 20, 30, 60, 120, 360, 720, 1440, 2880, 4320, 10080],
         "notes": "Clé de démonstration à remplacer avant mise en production."
     }
     save_api_keys(data)
@@ -113,9 +113,9 @@ def _normalize_key_data(key_data: dict[str, Any]) -> dict[str, Any]:
     except (TypeError, ValueError):
         normalized["default_lifetime_minutes"] = 10
 
-    allowed_lifetimes = normalized.get("allowed_lifetimes") or [5, 10, 20, 30, 60]
+    allowed_lifetimes = normalized.get("allowed_lifetimes") or [5, 10, 20, 30, 60, 120, 360, 720, 1440, 2880, 4320, 10080]
     if not isinstance(allowed_lifetimes, list):
-        allowed_lifetimes = [5, 10, 20, 30, 60]
+        allowed_lifetimes = [5, 10, 20, 30, 60, 120, 360, 720, 1440, 2880, 4320, 10080]
 
     clean_lifetimes = []
     for value in allowed_lifetimes:
@@ -126,7 +126,7 @@ def _normalize_key_data(key_data: dict[str, Any]) -> dict[str, Any]:
         if ivalue > 0 and ivalue not in clean_lifetimes:
             clean_lifetimes.append(ivalue)
 
-    normalized["allowed_lifetimes"] = sorted(clean_lifetimes or [5, 10, 20, 30, 60])
+    normalized["allowed_lifetimes"] = sorted(clean_lifetimes or [5, 10, 20, 30, 60, 120, 360, 720, 1440, 2880, 4320, 10080])
     normalized["default_lifetime_minutes"] = min(
         normalized["allowed_lifetimes"],
         key=lambda x: abs(x - normalized["default_lifetime_minutes"])
