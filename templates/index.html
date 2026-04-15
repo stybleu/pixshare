@@ -320,9 +320,9 @@
                 {{ f.size_h }} — {{ f.mtime_h }} —
                 {{ f.views }} {{ _("views_suffix") }} ·
 
-                {% if f.remaining_h %}
+                {% if f.remaining_time %}
                 <span class="ms-2 badge text-bg-warning">
-                  {{ _("expires_in") }} {{ f.remaining_h }}
+                  {{ f.remaining_time }}
                 </span>
                 {% endif %}
               </div>

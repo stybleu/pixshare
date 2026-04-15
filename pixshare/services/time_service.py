@@ -17,6 +17,32 @@ def parse_dt(value: str) -> datetime:
     return dt
 
 
+def format_duration_minutes(total_minutes: int) -> str:
+    try:
+        total_minutes = int(total_minutes)
+    except (TypeError, ValueError):
+        return "Moins d'1 min"
+
+    if total_minutes <= 0:
+        return "Moins d'1 min"
+
+    days = total_minutes // 1440
+    hours = (total_minutes % 1440) // 60
+    minutes = total_minutes % 60
+
+    if days > 0:
+        if hours > 0:
+            return f"{days} j {hours} h"
+        return f"{days} j"
+
+    if hours > 0:
+        if minutes > 0:
+            return f"{hours} h {minutes} min"
+        return f"{hours} h"
+
+    return f"{minutes} min"
+
+
 def get_remaining_time_label(expires_at: str | None) -> str:
     if not expires_at:
         return "Permanent"
@@ -29,22 +55,14 @@ def get_remaining_time_label(expires_at: str | None) -> str:
     now = utcnow()
     remaining = expiration - now
 
-    if remaining.total_seconds() <= 0:
+    total_seconds = int(remaining.total_seconds())
+
+    if total_seconds <= 0:
         return "Expiré"
 
-    seconds = int(remaining.total_seconds())
+    total_minutes = total_seconds // 60
 
-    days = seconds // 86400
-    hours = (seconds % 86400) // 3600
-    minutes = (seconds % 3600) // 60
+    if total_minutes <= 0:
+        return "Moins d'1 min"
 
-    if days > 0:
-        return f"{days}j {hours}h"
-
-    if hours > 0:
-        return f"{hours}h {minutes}min"
-
-    if minutes > 0:
-        return f"{minutes}min"
-
-    return "Moins d'1 min"
+    return format_duration_minutes(total_minutes)

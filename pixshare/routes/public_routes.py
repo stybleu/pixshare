@@ -57,6 +57,8 @@ from pixshare.services.settings_service import (
 from pixshare.services.url_import_service import UrlImportError, download_remote_image_to_temp
 from pixshare.services.moderation_service import pop_pending_notice
 
+from pixshare.services.time_service import get_remaining_time_label, format_duration_minutes
+
 public_bp = Blueprint("public", __name__)
 
 config = Config()
@@ -398,8 +400,8 @@ def index():
             if permanent:
                 flash("Fichier upload ✅ (sans expiration)", "success")
             else:
-                flash(f"Fichier upload ✅ (expiration: {lifetime} min)", "success")
-
+                flash(f"Fichier upload ✅ (expiration: {format_duration_minutes(lifetime)})", "success")
+                
             return attach_guest_cookie(redirect(url_for("public.index")))
 
         if image_url:
@@ -426,7 +428,7 @@ def index():
             if permanent:
                 flash("Image importée depuis l'URL ✅ (sans expiration)", "success")
             else:
-                flash(f"Image importée depuis l'URL ✅ (expiration: {lifetime} min)", "success")
+                flash(f"Image importée depuis l'URL ✅ (expiration: {format_duration_minutes(lifetime)})", "success")
 
             return attach_guest_cookie(redirect(url_for("public.index")))
 
@@ -438,12 +440,18 @@ def index():
         file_id = item.get("id") or item.get("file_id")
         if not file_id:
             continue
-
+    
         summary = get_vote_summary(file_id, ip)
         item["views"] = int(item.get("views", 0) or 0)
         item["votes_up"] = summary["up"]
         item["votes_down"] = summary["down"]
         item["score"] = summary["score"]
+
+        if item.get("status") == "active":
+            item["remaining_time"] = get_remaining_time_label(item.get("expires_at"))
+        else:
+            item["remaining_time"] = ""
+            
 
     response = make_response(render_template(
         "index.html",
@@ -500,13 +508,16 @@ def view_file(file_id):
     )
 
 
-@public_bp.route("/image/<file_id>", endpoint="image_page")
+public_bp.route("/image/<file_id>", endpoint="image_page")
 def image_page(file_id):
     cleanup_expired()
 
     _db, meta, _server_name = get_file_record(file_id)
     if not meta:
         abort(404)
+
+    meta = dict(meta)
+    meta["remaining_time"] = get_remaining_time_label(meta.get("expires_at"))
 
     original_name = meta.get("original_name", "")
     if not is_image_filename(original_name):
@@ -561,15 +572,18 @@ def download(file_id):
 @public_bp.route("/file/<file_id>", endpoint="public_file")
 def public_file(file_id):
     cleanup_expired()
-    db, meta, _server_name = get_file_record(file_id)
-    if not meta:
+    db, stored_meta, _server_name = get_file_record(file_id)
+    if not stored_meta:
         abort(404)
 
     visitor_token, must_set_cookie = get_or_create_visitor_token()
     if register_unique_view(file_id, visitor_token):
-        meta["views"] = int(meta.get("views", 0) or 0) + 1
-        db[file_id] = meta
+        stored_meta["views"] = int(stored_meta.get("views", 0) or 0) + 1
+        db[file_id] = stored_meta
         save_db(db)
+
+    meta = dict(stored_meta)
+    meta["remaining_time"] = get_remaining_time_label(meta.get("expires_at"))
 
     client_ip = get_client_ip()
     vote_summary = get_vote_summary(file_id, client_ip)

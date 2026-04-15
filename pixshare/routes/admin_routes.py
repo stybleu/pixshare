@@ -34,7 +34,7 @@ from pixshare.services.settings_service import (
     save_settings,
 )
 from pixshare.services.system_service import get_system_stats
-from pixshare.services.time_service import get_remaining_time_label, utcnow
+from pixshare.services.time_service import get_remaining_time_label, format_duration_minutes, utcnow
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -66,7 +66,7 @@ def _parse_positive_int(value, default, minimum=1):
 def _parse_allowed_lifetimes(raw_value: str, fallback: list[int] | None = None) -> list[int]:
     fallback = fallback or API_DEFAULT_ALLOWED_LIFETIMES
     values = []
-    for chunk in (raw_value or '').replace(';', ',').split(','):
+    for chunk in (raw_value or "").replace(";", ",").split(","):
         chunk = chunk.strip()
         if not chunk:
             continue
@@ -80,24 +80,26 @@ def _parse_allowed_lifetimes(raw_value: str, fallback: list[int] | None = None) 
 
 
 def _build_api_key_record_from_form(form):
-    allowed_lifetimes = _parse_allowed_lifetimes(form.get('allowed_lifetimes') or ','.join(str(x) for x in API_DEFAULT_ALLOWED_LIFETIMES))
-    default_lifetime = _parse_positive_int(form.get('default_lifetime_minutes'), 10)
+    allowed_lifetimes = _parse_allowed_lifetimes(
+        form.get("allowed_lifetimes") or ",".join(str(x) for x in API_DEFAULT_ALLOWED_LIFETIMES)
+    )
+    default_lifetime = _parse_positive_int(form.get("default_lifetime_minutes"), 10)
     if default_lifetime not in allowed_lifetimes:
         default_lifetime = min(allowed_lifetimes, key=lambda x: abs(x - default_lifetime))
 
     return {
-        'name': (form.get('name') or 'api-client').strip(),
-        'is_active': form.get('is_active', '1') == '1',
-        'max_uploads_total': _parse_positive_int(form.get('max_uploads_total'), 100),
-        'uploads_used': 0,
-        'max_uploads_per_day': _parse_positive_int(form.get('max_uploads_per_day'), 10),
-        'daily_uploads_used': 0,
-        'daily_reset_date': '',
-        'max_file_size_mb': _parse_positive_int(form.get('max_file_size_mb'), 10),
-        'allow_permanent': form.get('allow_permanent') == '1',
-        'default_lifetime_minutes': default_lifetime,
-        'allowed_lifetimes': allowed_lifetimes,
-        'notes': (form.get('notes') or '').strip(),
+        "name": (form.get("name") or "api-client").strip(),
+        "is_active": form.get("is_active", "1") == "1",
+        "max_uploads_total": _parse_positive_int(form.get("max_uploads_total"), 100),
+        "uploads_used": 0,
+        "max_uploads_per_day": _parse_positive_int(form.get("max_uploads_per_day"), 10),
+        "daily_uploads_used": 0,
+        "daily_reset_date": "",
+        "max_file_size_mb": _parse_positive_int(form.get("max_file_size_mb"), 10),
+        "allow_permanent": form.get("allow_permanent") == "1",
+        "default_lifetime_minutes": default_lifetime,
+        "allowed_lifetimes": allowed_lifetimes,
+        "notes": (form.get("notes") or "").strip(),
     }
 
 
@@ -106,19 +108,19 @@ def _decorate_api_keys(api_keys: dict) -> list[dict]:
     for key_value, key_data in api_keys.items():
         usage = remaining_uploads_info(key_data)
         rows.append({
-            'key_value': key_value,
-            'key_preview': f"{key_value[:16]}…{key_value[-8:]}" if len(key_value) > 28 else key_value,
-            'name': key_data.get('name') or 'api-client',
-            'is_active': bool(key_data.get('is_active', True)),
-            'max_file_size_mb': key_data.get('max_file_size_mb', 10),
-            'allow_permanent': bool(key_data.get('allow_permanent', False)),
-            'default_lifetime_minutes': key_data.get('default_lifetime_minutes', 10),
-            'allowed_lifetimes_text': ', '.join(str(x) for x in key_data.get('allowed_lifetimes', [])),
-            'notes': key_data.get('notes', ''),
-            'daily_reset_date': key_data.get('daily_reset_date', ''),
+            "key_value": key_value,
+            "key_preview": f"{key_value[:16]}…{key_value[-8:]}" if len(key_value) > 28 else key_value,
+            "name": key_data.get("name") or "api-client",
+            "is_active": bool(key_data.get("is_active", True)),
+            "max_file_size_mb": key_data.get("max_file_size_mb", 10),
+            "allow_permanent": bool(key_data.get("allow_permanent", False)),
+            "default_lifetime_minutes": key_data.get("default_lifetime_minutes", 10),
+            "allowed_lifetimes_text": ", ".join(str(x) for x in key_data.get("allowed_lifetimes", [])),
+            "notes": key_data.get("notes", ""),
+            "daily_reset_date": key_data.get("daily_reset_date", ""),
             **usage,
         })
-    rows.sort(key=lambda item: (not item['is_active'], item['name'].lower(), item['key_value']))
+    rows.sort(key=lambda item: (not item["is_active"], item["name"].lower(), item["key_value"]))
     return rows
 
 
@@ -143,7 +145,7 @@ def admin_messages():
     return render_template(
         "admin_messages.html",
         messages=items,
-        version=current_app.config["APP_VERSION"]
+        version=current_app.config["APP_VERSION"],
     )
 
 
@@ -184,7 +186,7 @@ def admin_blocked_ips():
     return render_template(
         "admin_blocked_ips.html",
         blocked_ips=blocked,
-        version=current_app.config["APP_VERSION"]
+        version=current_app.config["APP_VERSION"],
     )
 
 
@@ -253,13 +255,19 @@ def admin_panel():
     files = list_all_files(include_thumbnails=False)
 
     for f in files:
-        f["remaining_time"] = get_remaining_time_label(f.get("expires_at")) if f.get("status") == "active" else ""
+        if f.get("status") == "active":
+            label = get_remaining_time_label(f.get("expires_at"))
+            f["remaining_time"] = label
+            f["remaining_h"] = label
+        else:
+            f["remaining_time"] = ""
+            f["remaining_h"] = ""
 
     return render_template(
         "admin.html",
         files=files,
         expiration_options=ADMIN_EXPIRATION_OPTIONS,
-        version=current_app.config["APP_VERSION"]
+        version=current_app.config["APP_VERSION"],
     )
 
 
@@ -308,7 +316,7 @@ def admin_set_expiration():
     meta["expires_at"] = expires_at.isoformat(timespec="seconds")
     db[file_id] = meta
     save_db(db)
-    flash(f"Expiration mise à jour : {minutes} minute(s) à partir de maintenant ✅", "success")
+    flash(f"Expiration mise à jour : {format_duration_minutes(minutes)} à partir de maintenant ✅", "success")
     return redirect(url_for("admin.admin_panel"))
 
 
@@ -329,7 +337,13 @@ def admin_thumbnails():
 
     thumbnails = list_all_thumbnails()
     for item in thumbnails:
-        item["remaining_time"] = get_remaining_time_label(item.get("expires_at")) if item.get("status") == "active" else ""
+        if item.get("status") == "active":
+            label = get_remaining_time_label(item.get("expires_at"))
+            item["remaining_time"] = label
+            item["remaining_h"] = label
+        else:
+            item["remaining_time"] = ""
+            item["remaining_h"] = ""
 
     return render_template(
         "admin_thumbnails.html",
@@ -495,7 +509,7 @@ def admin_api_keys():
     return render_template(
         "admin_api_keys.html",
         api_keys=_decorate_api_keys(api_keys),
-        version=current_app.config["APP_VERSION"]
+        version=current_app.config["APP_VERSION"],
     )
 
 
@@ -602,5 +616,5 @@ def admin_system():
     return render_template(
         "admin_system.html",
         stats=stats,
-        version=current_app.config["APP_VERSION"]
+        version=current_app.config["APP_VERSION"],
     )
