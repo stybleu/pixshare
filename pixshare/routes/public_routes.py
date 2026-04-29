@@ -64,6 +64,38 @@ public_bp = Blueprint("public", __name__)
 config = Config()
 
 
+def _parse_view_limit_form() -> tuple[bool, int | None]:
+    """Retourne la limite de vues choisie pour CET upload uniquement.
+
+    Par défaut, la limite est désactivée pour ne pas donner l'impression
+    que toutes les images sont soumises à cette règle.
+    """
+    enabled = (request.form.get("view_limit_enabled") or "").strip().lower() in {"1", "on", "true", "yes"}
+    if not enabled:
+        return False, None
+
+    try:
+        max_views = int(request.form.get("max_views", 20))
+    except (TypeError, ValueError):
+        max_views = 20
+
+    max_views = max(1, min(max_views, 100))
+    return True, max_views
+
+
+def _view_limit_reached(meta: dict) -> bool:
+    if not bool(meta.get("view_limit_enabled", False)):
+        return False
+
+    try:
+        max_views = int(meta.get("max_views") or 0)
+        views = int(meta.get("views") or 0)
+    except (TypeError, ValueError):
+        return False
+
+    return max_views > 0 and views >= max_views
+
+
 @public_bp.before_request
 def flash_pending_moderation_notice():
     guest_token = get_existing_guest_token()
@@ -370,6 +402,7 @@ def index():
         image_url = (request.form.get("image_url") or "").strip()
         max_size_bytes = get_max_upload_size_bytes()
         keep = (request.form.get("keep", "") in {"1", "on", "true", "yes"})
+        view_limit_enabled, max_views = _parse_view_limit_form()
 
         if f and f.filename:
             original = f.filename
@@ -395,6 +428,8 @@ def index():
                 client_ip=ip,
                 guest_token=guest_token,
                 keep_requested=keep,
+                view_limit_enabled=view_limit_enabled,
+                max_views=max_views,
             )
 
             if permanent:
@@ -417,6 +452,8 @@ def index():
                     client_ip=ip,
                     guest_token=guest_token,
                     keep_requested=keep,
+                    view_limit_enabled=view_limit_enabled,
+                    max_views=max_views,
                 )
             except UrlImportError as exc:
                 flash(str(exc), "danger")
@@ -576,6 +613,13 @@ def public_file(file_id):
     if not stored_meta:
         abort(404)
 
+    # Limite de vues isolée : elle ne s'applique qu'aux fichiers
+    # uploadés avec l'option activée. La suppression est déclenchée
+    # uniquement lorsqu'une personne rouvre la page publique du fichier.
+    if _view_limit_reached(stored_meta):
+        delete_by_id(file_id, reason="view_limit")
+        abort(404)
+
     visitor_token, must_set_cookie = get_or_create_visitor_token()
     if register_unique_view(file_id, visitor_token):
         stored_meta["views"] = int(stored_meta.get("views", 0) or 0) + 1
@@ -598,6 +642,7 @@ def public_file(file_id):
             version=current_app.config["APP_VERSION"],
             meta=meta,
             views=int(meta.get("views", 0) or 0),
+            views_remaining=(max(0, int(meta.get("max_views", 0) or 0) - int(meta.get("views", 0) or 0)) if meta.get("view_limit_enabled") else None),
             vote_summary=vote_summary,
             is_image=is_image_filename(meta.get("original_name", "")),
         )

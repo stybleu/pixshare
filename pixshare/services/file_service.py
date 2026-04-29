@@ -362,6 +362,9 @@ def file_meta(file_id: str):
         "raw_url": url_for("public.view_file", file_id=file_id, _external=True) if public_exists else "",
         "previewable": previewable,
         "views": int(meta.get("views", 0) or 0),
+        "view_limit_enabled": bool(meta.get("view_limit_enabled", False)),
+        "max_views": int(meta.get("max_views", 0) or 0),
+        "views_remaining": (max(0, int(meta.get("max_views", 0) or 0) - int(meta.get("views", 0) or 0)) if meta.get("view_limit_enabled") else None),
         "status": status,
         "deleted_at": meta.get("deleted_at", ""),
         "delete_reason": meta.get("delete_reason", ""),
@@ -457,6 +460,21 @@ def _resolve_web_lifetime(keep_requested: bool) -> tuple[int | None, bool]:
     return lifetime, False
 
 
+
+
+def _normalize_view_limit(view_limit_enabled: bool = False, max_views: int | None = None) -> tuple[bool, int | None]:
+    if not view_limit_enabled:
+        return False, None
+
+    try:
+        clean_max_views = int(max_views or 20)
+    except (TypeError, ValueError):
+        clean_max_views = 20
+
+    clean_max_views = max(1, min(clean_max_views, 100))
+    return True, clean_max_views
+
+
 def _register_saved_public_file(
     *,
     file_id: str,
@@ -467,6 +485,8 @@ def _register_saved_public_file(
     lifetime: int | None,
     permanent: bool,
     thumb_path: str = "",
+    view_limit_enabled: bool = False,
+    max_views: int | None = None,
 ) -> tuple[str, int | None, bool]:
     uploaded_at = utcnow()
     expires_at = None if permanent else uploaded_at + timedelta(minutes=int(lifetime))
@@ -487,6 +507,11 @@ def _register_saved_public_file(
         "thumb_path": thumb_path,
         "thumb_delete_at": "",
     }
+    enabled, clean_max_views = _normalize_view_limit(view_limit_enabled, max_views)
+    if enabled:
+        db[file_id]["view_limit_enabled"] = True
+        db[file_id]["max_views"] = clean_max_views
+
     if thumb_path:
         db[file_id]["thumb_delete_at"] = get_expected_thumb_delete_at(db[file_id])
     save_db(db)
@@ -494,7 +519,15 @@ def _register_saved_public_file(
     return file_id, lifetime, permanent
 
 
-def save_saved_local_file(local_path: str, original_name: str, client_ip: str, guest_token: str, keep_requested: bool = False) -> tuple[str, int | None, bool]:
+def save_saved_local_file(
+    local_path: str,
+    original_name: str,
+    client_ip: str,
+    guest_token: str,
+    keep_requested: bool = False,
+    view_limit_enabled: bool = False,
+    max_views: int | None = None,
+) -> tuple[str, int | None, bool]:
     file_id, server_name, dest, ext = _prepare_file_destination(original_name)
     lifetime, permanent = _resolve_web_lifetime(keep_requested)
 
@@ -517,6 +550,8 @@ def save_saved_local_file(local_path: str, original_name: str, client_ip: str, g
             lifetime=lifetime,
             permanent=permanent,
             thumb_path=thumb_path,
+            view_limit_enabled=view_limit_enabled,
+            max_views=max_views,
         )
     except Exception:
         if os.path.exists(local_path):
@@ -532,7 +567,15 @@ def save_saved_local_file(local_path: str, original_name: str, client_ip: str, g
         raise
 
 
-def save_uploaded_file(file_storage, original_name: str, client_ip: str, guest_token: str, keep_requested: bool = False) -> tuple[str, int | None, bool]:
+def save_uploaded_file(
+    file_storage,
+    original_name: str,
+    client_ip: str,
+    guest_token: str,
+    keep_requested: bool = False,
+    view_limit_enabled: bool = False,
+    max_views: int | None = None,
+) -> tuple[str, int | None, bool]:
     file_id, server_name, dest, ext = _prepare_file_destination(original_name)
 
     enhance_requested = request.form.get("enhance_quality") in {"1", "on", "true", "yes"}
@@ -567,6 +610,8 @@ def save_uploaded_file(file_storage, original_name: str, client_ip: str, guest_t
         lifetime=lifetime,
         permanent=permanent,
         thumb_path=thumb_path,
+        view_limit_enabled=view_limit_enabled,
+        max_views=max_views,
     )
 
 

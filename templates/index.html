@@ -213,7 +213,7 @@
                 <div class="col-12">
                   <label class="form-label">{{ _("file_lifetime_default_10") }}</label>
 
-                  <select name="lifetime" class="form-select">
+                  <select id="lifetimeSelect" name="lifetime" class="form-select">
                     <option value="5" {% if default_lifetime == 5 %}selected{% endif %}>{{ _("minutes_5") }}</option>
                     <option value="10" {% if default_lifetime == 10 %}selected{% endif %}>{{ _("minutes_10") }}</option>
                     <option value="20" {% if default_lifetime == 20 %}selected{% endif %}>{{ _("minutes_20") }}</option>
@@ -230,6 +230,25 @@
 
                   <div class="form-text">
                     {{ _("expiration_help") }}
+                  </div>
+                </div>
+
+                <div class="col-12">
+                  <div class="border rounded p-3 bg-light">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" name="view_limit_enabled" value="1" id="viewLimitEnabled">
+                      <label class="form-check-label fw-semibold" for="viewLimitEnabled">
+                        Supprimer après un nombre de vues
+                      </label>
+                    </div>
+
+                    <div id="viewLimitBox" class="mt-2" style="display:none;">
+                      <label class="form-label mb-1" for="maxViewsInput">Nombre maximal de vues</label>
+                      <input id="maxViewsInput" class="form-control" type="number" name="max_views" min="1" max="100" step="1" value="20">
+                      <div class="form-text">
+                        Option isolée par fichier : si elle est décochée, l’image garde uniquement son expiration normale.
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -318,7 +337,13 @@
 
               <div class="text-muted small mt-2">
                 {{ f.size_h }} — {{ f.mtime_h }} —
-                {{ f.views }} {{ _("views_suffix") }} ·
+                {{ f.views }} {{ _("views_suffix") }}
+
+                {% if f.view_limit_enabled %}
+                · <span class="badge text-bg-info">{{ f.views_remaining }} vue(s) restante(s)</span>
+                {% endif %}
+
+                ·
 
                 {% if f.remaining_time %}
                 <span class="ms-2 badge text-bg-warning">
@@ -488,6 +513,9 @@ function copyById(id){
   const keep = document.getElementById("keepChk");
   const imageUrlInput = document.getElementById("imageUrlInput");
   const lifetime = document.querySelector('select[name="lifetime"]');
+  const viewLimitEnabled = document.getElementById("viewLimitEnabled");
+  const viewLimitBox = document.getElementById("viewLimitBox");
+  const maxViewsInput = document.getElementById("maxViewsInput");
   const previewBox = document.getElementById("previewBox");
   const previewImg = document.getElementById("previewImg");
   const previewCanvas = document.getElementById("previewCanvas");
@@ -859,13 +887,91 @@ function copyById(id){
     });
   }
 
+
+
+  function syncViewLimitUi() {
+    if (!viewLimitEnabled || !viewLimitBox) return;
+    viewLimitBox.style.display = viewLimitEnabled.checked ? "block" : "none";
+  }
+
+  function restoreUploadPreferences() {
+    try {
+      const savedLifetime = localStorage.getItem("pixshare:lastLifetime");
+      if (savedLifetime && lifetime) {
+        const option = Array.from(lifetime.options).find((item) => item.value === savedLifetime);
+        if (option) lifetime.value = savedLifetime;
+      }
+
+      const savedViewLimitEnabled = localStorage.getItem("pixshare:viewLimitEnabled");
+      if (viewLimitEnabled && savedViewLimitEnabled !== null) {
+        viewLimitEnabled.checked = savedViewLimitEnabled === "1";
+      }
+
+      const savedMaxViews = localStorage.getItem("pixshare:maxViews");
+      if (maxViewsInput && savedMaxViews) {
+        const parsed = Number.parseInt(savedMaxViews, 10);
+        if (Number.isFinite(parsed)) {
+          maxViewsInput.value = String(Math.min(100, Math.max(1, parsed)));
+        }
+      }
+    } catch (error) {
+      // localStorage peut être désactivé par certains navigateurs privés.
+    }
+
+    syncViewLimitUi();
+  }
+
+  function saveUploadPreferences() {
+    try {
+      if (lifetime && !lifetime.disabled) {
+        localStorage.setItem("pixshare:lastLifetime", lifetime.value);
+      }
+      if (viewLimitEnabled) {
+        localStorage.setItem("pixshare:viewLimitEnabled", viewLimitEnabled.checked ? "1" : "0");
+      }
+      if (maxViewsInput) {
+        const parsed = Number.parseInt(maxViewsInput.value || "20", 10);
+        const clean = Number.isFinite(parsed) ? Math.min(100, Math.max(1, parsed)) : 20;
+        maxViewsInput.value = String(clean);
+        localStorage.setItem("pixshare:maxViews", String(clean));
+      }
+    } catch (error) {
+      // localStorage peut être indisponible sans bloquer l'upload.
+    }
+  }
+
   function syncKeep() {
     if (!keep || !lifetime) return;
     lifetime.disabled = !!keep.checked;
   }
 
+  restoreUploadPreferences();
+
+  if (lifetime) {
+    lifetime.addEventListener("change", saveUploadPreferences);
+  }
+
+  if (viewLimitEnabled) {
+    viewLimitEnabled.addEventListener("change", () => {
+      syncViewLimitUi();
+      saveUploadPreferences();
+    });
+  }
+
+  if (maxViewsInput) {
+    maxViewsInput.addEventListener("change", saveUploadPreferences);
+    maxViewsInput.addEventListener("input", saveUploadPreferences);
+  }
+
+  if (form) {
+    form.addEventListener("submit", saveUploadPreferences);
+  }
+
   if (keep && lifetime) {
-    keep.addEventListener("change", syncKeep);
+    keep.addEventListener("change", () => {
+      syncKeep();
+      saveUploadPreferences();
+    });
     syncKeep();
   }
 

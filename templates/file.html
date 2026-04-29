@@ -81,6 +81,13 @@
         <div>♾️ Fichier permanent</div>
       {% endif %}
 
+      {% if meta and meta.view_limit_enabled %}
+        <div>👁️ Limite de vues : {{ views }} / {{ meta.max_views }}</div>
+        {% if views_remaining is not none %}
+          <div>⏳ Vues restantes : {{ views_remaining }}</div>
+        {% endif %}
+      {% endif %}
+
     </div>
 
   </div>
