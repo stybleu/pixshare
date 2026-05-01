@@ -133,6 +133,12 @@
           <a href="{{ url_for('public.cgu') }}">{{ _("cgu_short") }}</a>.
         </p>
 
+        {% if not uploads_enabled %}
+          <div class="alert alert-warning mb-3" role="alert">
+            Le service d'upload est temporairement suspendu. Les fichiers déjà publiés restent accessibles jusqu'à leur expiration.
+          </div>
+        {% endif %}
+
         <form id="uploadForm" method="POST" enctype="multipart/form-data" autocomplete="off" class="row g-2 align-items-end">
 
           <input type="hidden" name="csrf_token" value="{{ csrf_token|default('', true) }}">
@@ -147,11 +153,11 @@
               <div id="dz-file" class="mt-2 small text-muted"></div>
             </div>
 
-            <input id="fileInput" class="form-control mt-2" type="file" name="file">
+            <input id="fileInput" class="form-control mt-2" type="file" name="file" {% if not uploads_enabled %}disabled{% endif %}>
 
             <div class="mt-3">
               <label class="form-label">{{ _("import_url_label") }}</label>
-              <input id="imageUrlInput" class="form-control" type="url" name="image_url" placeholder="{{ _('import_url_placeholder') }}" inputmode="url" autocomplete="off">
+              <input id="imageUrlInput" class="form-control" type="url" name="image_url" placeholder="{{ _('import_url_placeholder') }}" inputmode="url" autocomplete="off" {% if not uploads_enabled %}disabled{% endif %}>
               <div class="form-text">{{ _("import_url_help") }}</div>
             </div>
 
@@ -281,8 +287,8 @@
             <div class="alert alert-secondary small mb-3" role="note">
               {{ _("technical_cookie_notice") }}
             </div>
-            <button id="submitBtn" class="btn btn-primary w-100" type="submit">
-              {{ _("upload") }}
+            <button id="submitBtn" class="btn btn-primary w-100" type="submit" {% if not uploads_enabled %}disabled{% endif %}>
+              {% if uploads_enabled %}{{ _("upload") }}{% else %}Upload suspendu{% endif %}
             </button>
           </div>
 

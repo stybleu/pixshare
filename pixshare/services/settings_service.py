@@ -7,6 +7,7 @@ DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 SETTINGS_FILE = DATA_DIR / "settings.json"
 
 DEFAULT_SETTINGS = {
+    "upload_service_enabled": True,
     "max_upload_size_mb": 100,
     "allow_permanent_files": True,
     "default_lifetime_minutes": 10,
@@ -37,6 +38,7 @@ def load_settings() -> dict:
 
     settings = DEFAULT_SETTINGS.copy()
     settings.update(data)
+    settings["upload_service_enabled"] = bool(settings.get("upload_service_enabled", True))
     settings["max_upload_size_mb"] = get_valid_max_upload_size_mb(settings.get("max_upload_size_mb"))
     settings["allow_permanent_files"] = bool(settings.get("allow_permanent_files", True))
     settings["default_lifetime_minutes"] = get_valid_lifetime(settings.get("default_lifetime_minutes"))
@@ -49,6 +51,7 @@ def save_settings(settings: dict) -> dict:
     ensure_settings_file()
 
     clean_settings = {
+        "upload_service_enabled": bool(settings.get("upload_service_enabled", True)),
         "max_upload_size_mb": get_valid_max_upload_size_mb(settings.get("max_upload_size_mb")),
         "allow_permanent_files": bool(settings.get("allow_permanent_files", True)),
         "default_lifetime_minutes": get_valid_lifetime(settings.get("default_lifetime_minutes")),
@@ -87,6 +90,10 @@ def get_valid_thumbnail_retention_hours(value) -> int:
     except (TypeError, ValueError):
         value = DEFAULT_SETTINGS["thumbnail_retention_hours"]
     return max(0, min(value, 48))
+
+
+def upload_service_enabled() -> bool:
+    return bool(load_settings().get("upload_service_enabled", True))
 
 
 def get_default_lifetime() -> int:

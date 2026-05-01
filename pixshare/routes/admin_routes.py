@@ -402,6 +402,7 @@ def admin_settings():
             flash("Taille maximale invalide.", "warning")
             return redirect(url_for("admin.admin_settings"))
 
+        upload_service_enabled_value = request.form.get("upload_service_enabled") == "1"
         allow_permanent_files = request.form.get("allow_permanent_files") == "1"
 
         try:
@@ -429,6 +430,7 @@ def admin_settings():
         previous_keep_thumbnails = bool(settings.get("keep_thumbnails", True))
 
         settings = save_settings({
+            "upload_service_enabled": upload_service_enabled_value,
             "max_upload_size_mb": max_upload_size_mb,
             "allow_permanent_files": allow_permanent_files,
             "default_lifetime_minutes": default_lifetime_minutes,

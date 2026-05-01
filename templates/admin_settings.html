@@ -23,6 +23,17 @@
     <form method="post" class="row g-3">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
+      <div class="col-12">
+        <div class="border rounded p-3 {% if settings.upload_service_enabled %}bg-light{% else %}bg-warning-subtle{% endif %}">
+          <label class="form-label fw-semibold">Service d'upload</label>
+          <select name="upload_service_enabled" class="form-select">
+            <option value="1" {% if settings.upload_service_enabled %}selected{% endif %}>Actif</option>
+            <option value="0" {% if not settings.upload_service_enabled %}selected{% endif %}>Suspendu</option>
+          </select>
+          <div class="form-text">Quand le service est suspendu, les visiteurs et l'API ne peuvent plus envoyer de nouveaux fichiers. Les fichiers déjà en ligne restent consultables jusqu'à leur expiration normale.</div>
+        </div>
+      </div>
+
       <div class="col-12 col-md-6">
         <label class="form-label fw-semibold">Taille maximale des fichiers (Mo)</label>
         <input

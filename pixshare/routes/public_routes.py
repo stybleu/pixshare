@@ -53,6 +53,7 @@ from pixshare.services.settings_service import (
     get_default_lifetime,
     get_max_upload_size_bytes,
     get_max_upload_size_mb,
+    upload_service_enabled,
 )
 from pixshare.services.url_import_service import UrlImportError, download_remote_image_to_temp
 from pixshare.services.moderation_service import pop_pending_notice
@@ -395,8 +396,14 @@ def index():
 
     guest_token = get_guest_token()
 
+    uploads_enabled = upload_service_enabled()
+
     if request.method == "POST":
         validate_csrf()
+
+        if not uploads_enabled:
+            flash("Le service d'upload est actuellement suspendu. Réessaie plus tard.", "warning")
+            return attach_guest_cookie(redirect(url_for("public.index")))
 
         f = request.files.get("file")
         image_url = (request.form.get("image_url") or "").strip()
@@ -498,6 +505,7 @@ def index():
         version=current_app.config["APP_VERSION"],
         can_keep=can_keep_uploads(),
         default_lifetime=get_default_lifetime(),
+        uploads_enabled=uploads_enabled,
     ))
     return attach_guest_cookie(response)
 

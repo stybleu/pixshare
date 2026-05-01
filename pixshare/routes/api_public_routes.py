@@ -20,6 +20,7 @@ from pixshare.services.api_auth_service import (
     remaining_uploads_info,
 )
 from pixshare.services.json_services import load_files, save_files
+from pixshare.services.settings_service import upload_service_enabled
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
 
@@ -340,6 +341,9 @@ def api_account():
 
 @api_bp.route("/upload", methods=["POST"])
 def api_upload():
+    if not upload_service_enabled():
+        return api_error(503, "upload_service_suspended", "Le service d'upload est temporairement suspendu.")
+
     auth = authenticate_api_key()
     if not auth.ok:
         return api_error(
