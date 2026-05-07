@@ -59,6 +59,7 @@ from pixshare.services.url_import_service import UrlImportError, download_remote
 from pixshare.services.moderation_service import pop_pending_notice
 
 from pixshare.services.time_service import get_remaining_time_label, format_duration_minutes
+from pixshare.services.usage_tracking_service import record_usage_event
 
 public_bp = Blueprint("public", __name__)
 
@@ -546,6 +547,8 @@ def view_file(file_id):
     if not meta:
         abort(404)
 
+    record_usage_event(file_id, "raw", stored_filename=server_name)
+
     return send_from_directory(
         current_app.config["UPLOAD_FOLDER"],
         server_name,
@@ -567,6 +570,8 @@ def image_page(file_id):
     original_name = meta.get("original_name", "")
     if not is_image_filename(original_name):
         abort(404)
+
+    record_usage_event(file_id, "image_page", stored_filename=meta.get("server_name", ""))
 
     client_ip = get_client_ip()
     vote_summary = get_vote_summary(file_id, client_ip)
@@ -606,6 +611,8 @@ def download(file_id):
     if not meta:
         abort(404)
 
+    record_usage_event(file_id, "download", stored_filename=server_name)
+
     return send_from_directory(
         current_app.config["UPLOAD_FOLDER"],
         server_name,
@@ -627,6 +634,8 @@ def public_file(file_id):
     if _view_limit_reached(stored_meta):
         delete_by_id(file_id, reason="view_limit")
         abort(404)
+
+    record_usage_event(file_id, "viewer", stored_filename=stored_meta.get("server_name", ""))
 
     visitor_token, must_set_cookie = get_or_create_visitor_token()
     if register_unique_view(file_id, visitor_token):

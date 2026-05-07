@@ -18,6 +18,7 @@ from .json_services import load_db, save_db, load_views, save_views, load_votes,
 from .time_service import parse_dt, utcnow
 from .image_quality_service import can_enhance_extension, enhance_image_bytes
 from .settings_service import get_thumbnail_retention_hours, permanent_files_enabled, thumbnails_enabled
+from .usage_tracking_service import build_usage_summary
 
 
 IMAGE_EXTENSIONS = {
@@ -372,6 +373,7 @@ def file_meta(file_id: str):
         "has_public_file": public_exists,
         "has_thumb": thumb_exists,
         "thumb_delete_at": get_expected_thumb_delete_at(meta),
+        "usage": build_usage_summary(file_id),
     }
 
 

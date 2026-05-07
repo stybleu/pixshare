@@ -21,6 +21,7 @@ from pixshare.services.api_auth_service import (
 )
 from pixshare.services.json_services import load_files, save_files
 from pixshare.services.settings_service import upload_service_enabled
+from pixshare.services.usage_tracking_service import record_usage_event
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
 
@@ -630,6 +631,7 @@ def api_raw_file(filename: str):
     ratio = request.args.get("ratio", type=float)
 
     if ratio is None:
+        record_usage_event(file_record.get("id", ""), "api_raw", stored_filename=stored_filename)
         return send_from_directory(upload_folder, stored_filename)
 
     if ratio < 0.1 or ratio > 3.0:
@@ -691,6 +693,8 @@ def api_raw_file(filename: str):
 
             img.save(buffer, format=output_format)
             buffer.seek(0)
+
+            record_usage_event(file_record.get("id", ""), "api_raw", stored_filename=stored_filename)
 
             return send_file(
                 buffer,

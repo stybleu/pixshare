@@ -368,3 +368,14 @@ def load_moderation_notices():
 
 def save_moderation_notices(data):
     _write_json_file(_json_path("moderation_notices.json"), data)
+
+
+# =========================================================
+# UTILISATION / SOURCES DES IMAGES
+# =========================================================
+
+def load_usage():
+    return _read_json_file(_json_path("image_usage.json"), {})
+
+def save_usage(data):
+    _write_json_file(_json_path("image_usage.json"), data)

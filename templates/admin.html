@@ -53,6 +53,23 @@
 .public-link{
   font-size: .85rem;
 }
+
+.usage-box{
+  border: 1px solid rgba(13,110,253,.18);
+  border-radius: 14px;
+  background: #f8fbff;
+  padding: .75rem;
+}
+
+.usage-event{
+  border-top: 1px solid rgba(0,0,0,.07);
+  padding-top: .45rem;
+  margin-top: .45rem;
+}
+
+.usage-event code, .usage-box code{
+  word-break: break-all;
+}
 </style>
 {% endblock %}
 
@@ -195,6 +212,65 @@
                 {% endif %}
               </div>
             </div>
+
+              {% set usage = f.usage or {} %}
+              <div class="usage-box mt-2">
+                <div class="fw-semibold text-primary mb-2">Utilisation de l'image détectée</div>
+
+                <div class="d-flex flex-wrap gap-1 mb-2">
+                  <span class="badge text-bg-secondary">Total accès : {{ usage.total or 0 }}</span>
+                  <span class="badge text-bg-info">Viewer : {{ usage.viewer or 0 }}</span>
+                  <span class="badge text-bg-success">Raw : {{ usage.raw or 0 }}</span>
+                  <span class="badge text-bg-primary">API raw : {{ usage.api_raw or 0 }}</span>
+                  <span class="badge text-bg-dark">Bots : {{ usage.bot_hits or 0 }}</span>
+                  {% if usage.external_hits %}
+                    <span class="badge text-bg-warning">Externes : {{ usage.external_hits }}</span>
+                  {% endif %}
+                  {% if usage.suspicious_hits %}
+                    <span class="badge text-bg-danger">À vérifier : {{ usage.suspicious_hits }}</span>
+                  {% endif %}
+                </div>
+
+                {% if usage.sources %}
+                  <div class="small mb-2">
+                    <span class="fw-semibold">Sources :</span>
+                    {% for src in usage.sources %}
+                      <span class="badge text-bg-light border">{{ src.name }} ×{{ src.count }}</span>
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <div class="small text-muted mb-2">Aucune source encore détectée.</div>
+                {% endif %}
+
+                {% if usage.external_sources %}
+                  <div class="small mb-2">
+                    <span class="fw-semibold">Sources externes :</span>
+                    {% for src in usage.external_sources %}
+                      <span class="badge text-bg-warning">{{ src.name }} ×{{ src.count }}</span>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+
+                {% if usage.last_events %}
+                  <details class="small">
+                    <summary>Derniers accès détectés</summary>
+                    {% for ev in usage.last_events %}
+                      <div class="usage-event">
+                        <div>
+                          <span class="badge text-bg-secondary">{{ ev.access_type }}</span>
+                          <strong>{{ ev.source_name }}</strong>
+                          <span class="text-muted">{{ ev.at }}</span>
+                        </div>
+                        <div>Catégorie : {{ ev.source_category }} — confiance : {{ ev.confidence }}</div>
+                        {% if ev.referer_domain %}<div>Domaine : <code>{{ ev.referer_domain }}</code></div>{% endif %}
+                        {% if ev.referer %}<div>Referer : <code>{{ ev.referer }}</code></div>{% endif %}
+                        {% if ev.ip %}<div>IP : <code>{{ ev.ip }}</code></div>{% endif %}
+                        {% if ev.user_agent %}<div>User-Agent : <code>{{ ev.user_agent }}</code></div>{% endif %}
+                      </div>
+                    {% endfor %}
+                  </details>
+                {% endif %}
+              </div>
 
             {% if f.has_public_file and f.public_url %}
               <div class="mb-3">
