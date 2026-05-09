@@ -543,17 +543,34 @@ def contact():
 @public_bp.route("/view/<file_id>", endpoint="view_file")
 def view_file(file_id):
     cleanup_expired()
-    _, meta, server_name = get_file_record(file_id)
+    db, meta, server_name = get_file_record(file_id)
     if not meta:
         abort(404)
 
-    record_usage_event(file_id, "raw", stored_filename=server_name)
+    visitor_token, must_set_cookie = get_or_create_visitor_token()
 
-    return send_from_directory(
+    if register_unique_view(file_id, visitor_token):
+        meta["views"] = int(meta.get("views", 0) or 0) + 1
+        db[file_id] = meta
+        save_db(db)
+
+    response = make_response(send_from_directory(
         current_app.config["UPLOAD_FOLDER"],
         server_name,
         as_attachment=False,
-    )
+    ))
+
+    if must_set_cookie:
+        response.set_cookie(
+            current_app.config["VISITOR_COOKIE_NAME"],
+            visitor_token,
+            max_age=60 * 60 * 24 * 365,
+            httponly=True,
+            secure=not bool(current_app.debug),
+            samesite="Lax",
+        )
+
+    return response
 
 
 public_bp.route("/image/<file_id>", endpoint="image_page")
