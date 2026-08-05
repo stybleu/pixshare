@@ -70,7 +70,10 @@ def moderation_key_required(view: F) -> F:
                 "L'API de modération n'est pas configurée.",
             )
 
-        if not provided_key or not hmac.compare_digest(provided_key, expected_key):
+        if not provided_key or not hmac.compare_digest(
+            provided_key.encode("utf-8"),
+            expected_key.encode("utf-8"),
+        ):
             return _json_error(401, "invalid_moderation_key", "Clé de modération invalide.")
 
         return view(*args, **kwargs)
