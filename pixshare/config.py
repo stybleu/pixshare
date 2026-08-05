@@ -5,6 +5,7 @@ import secrets
 class Config:
     ADMIN_USER = os.environ.get("ADMIN_USER") or "0"
     ADMIN_PASS = os.environ.get("ADMIN_PASS") or "0"
+    MODERATION_API_KEY = os.environ.get("MODERATION_API_KEY", "")
 
     DATA_DIR = "data"
     DB_FILE = os.path.join(DATA_DIR, "files.json")
