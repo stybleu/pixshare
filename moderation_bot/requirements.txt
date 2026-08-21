@@ -1,0 +1,2 @@
+requests>=2.32,<3
+nudenet==3.4.2

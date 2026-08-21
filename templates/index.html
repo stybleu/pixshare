@@ -317,11 +317,12 @@
         {% if guest_files and guest_files|length > 0 %}
           {% for f in guest_files %}
             {% set open_url = f.raw_url if f.previewable else f.download_url %}
+            {% set is_pending = (f.status == 'pending') %}
 
             <div class="mb-3 p-2 border rounded">
 
               <div class="d-flex align-items-center gap-2">
-                {% if f.previewable %}
+                {% if f.previewable and not is_pending %}
                 <img
                   src="{{ f.raw_url }}"
                   alt="{{ f.original }}"
@@ -338,6 +339,9 @@
                   <div class="fw-semibold">
                     {{ f.original }}
                   </div>
+                  {% if is_pending %}
+                    <span class="badge text-bg-warning">En attente de modération</span>
+                  {% endif %}
                 </div>
               </div>
 
@@ -359,17 +363,21 @@
               </div>
 
               <div class="d-flex flex-wrap gap-2 mt-2">
-                <a class="btn btn-success btn-sm"
-                   href="{{ open_url }}"
-                   target="_blank"
-                   rel="noopener">
-                  {{ _("open") }}
-                </a>
+                {% if not is_pending %}
+                  <a class="btn btn-success btn-sm"
+                     href="{{ open_url }}"
+                     target="_blank"
+                     rel="noopener">
+                    {{ _("open") }}
+                  </a>
 
-                <a class="btn btn-primary btn-sm"
-                   href="{{ f.download_url }}">
-                  {{ _("download") }}
-                </a>
+                  <a class="btn btn-primary btn-sm"
+                     href="{{ f.download_url }}">
+                    {{ _("download") }}
+                  </a>
+                {% else %}
+                  <span class="text-muted small align-self-center">Privée jusqu'à la décision du bot.</span>
+                {% endif %}
 
                 <form method="post"
                       action="{{ url_for('public.delete_own_file', file_id=f.id) }}"
@@ -388,6 +396,7 @@
                 </form>
               </div>
 
+              {% if not is_pending %}
               <div class="row g-2 mt-3">
                 <div class="col-12 col-lg-6">
                   <div class="text-muted small mb-1">
@@ -433,6 +442,7 @@
                   </div>
                 </div>
               </div>
+              {% endif %}
 
             </div>
           {% endfor %}

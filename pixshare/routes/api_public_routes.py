@@ -79,6 +79,14 @@ def is_allowed_file(filename: str) -> bool:
     return ext in allowed_extensions()
 
 
+API_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp", "bmp", "tif", "tiff", "heic", "heif"}
+
+
+def requires_image_moderation(filename: str) -> bool:
+    extension = Path(filename or "").suffix.lower().lstrip(".")
+    return bool(current_app.config.get("MODERATION_PENDING_IMAGES", True)) and extension in API_IMAGE_EXTENSIONS
+
+
 def ensure_upload_folder() -> Path:
     upload_folder = current_app.config.get("UPLOAD_FOLDER", "uploads")
     path = Path(upload_folder)
@@ -212,6 +220,11 @@ def serialize_file_record(file_record: dict[str, Any]) -> dict[str, Any]:
         "expiration": file_record.get("expires_at"),
         "is_permanent": file_record.get("is_permanent", False),
         "uploader_api_key_name": file_record.get("api_key_name", ""),
+        "status": file_record.get("status", "active"),
+        "moderation_status": (
+            "pending" if file_record.get("status") == "pending"
+            else file_record.get("moderation_decision", "approved")
+        ),
     }
 
 
@@ -457,7 +470,12 @@ def api_upload():
         "api_key_hash": hash_api_key(key_value),
         "source": "api",
         "views": 0,
-        "status": "active",
+        "status": "pending" if requires_image_moderation(stored_filename) else "active",
+        "moderation_requested_at": now.isoformat() + "Z" if requires_image_moderation(stored_filename) else "",
+        "moderated_at": "",
+        "moderation_decision": "pending" if requires_image_moderation(stored_filename) else "not_required",
+        "moderation_detector": "",
+        "moderation_score": None,
         "ip": get_real_ip(),
         "width": image_width,
         "height": image_height,
@@ -614,6 +632,9 @@ def api_raw_file(filename: str):
 
     if not file_record:
         return api_error(404, "file_not_found", "Fichier introuvable.")
+
+    if (file_record.get("status") or "active").lower() != "active":
+        return api_error(404, "file_not_available", "Fichier non disponible.")
 
     if is_file_expired(file_record):
         return api_error(410, "file_expired", "Ce fichier a expiré.")

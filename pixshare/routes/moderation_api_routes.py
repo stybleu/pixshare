@@ -2,14 +2,15 @@ from __future__ import annotations
 
 import hmac
 import os
+from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path
 from typing import Any, Callable, TypeVar
 
-from flask import Blueprint, current_app, jsonify, request, url_for
+from flask import Blueprint, current_app, jsonify, request, send_file, url_for
 
 from pixshare.services.file_service import cleanup_expired, delete_by_id
-from pixshare.services.json_services import load_db
+from pixshare.services.json_services import load_db, save_db
 from pixshare.services.moderation_service import create_moderation_notice
 
 moderation_api_bp = Blueprint(
@@ -20,16 +21,8 @@ moderation_api_bp = Blueprint(
 
 F = TypeVar("F", bound=Callable[..., Any])
 IMAGE_EXTENSIONS = {
-    ".png",
-    ".jpg",
-    ".jpeg",
-    ".gif",
-    ".webp",
-    ".bmp",
-    ".tif",
-    ".tiff",
-    ".heic",
-    ".heif",
+    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp",
+    ".tif", ".tiff", ".heic", ".heif",
 }
 
 
@@ -87,18 +80,34 @@ def _stored_filename(meta: dict[str, Any]) -> str:
     )
 
 
-def _is_active_image(meta: dict[str, Any]) -> bool:
-    if (meta.get("status") or "active").lower() != "active":
-        return False
-
+def _is_image(meta: dict[str, Any]) -> bool:
     filename = _stored_filename(meta)
     return bool(filename and Path(filename).suffix.lower() in IMAGE_EXTENSIONS)
+
+
+def _is_pending_image(meta: dict[str, Any]) -> bool:
+    return (meta.get("status") or "active").lower() == "pending" and _is_image(meta)
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def _load_pending_image(file_id: str):
+    cleanup_expired()
+    database = load_db()
+    meta = database.get(file_id)
+    if not isinstance(meta, dict):
+        return database, None
+    if not _is_pending_image(meta):
+        return database, None
+    return database, meta
 
 
 @moderation_api_bp.get("/images")
 @moderation_key_required
 def list_images_for_moderation():
-    """Liste les images actives que le bot externe peut analyser."""
+    """List only images that are private and waiting for the bot."""
     cleanup_expired()
     database = load_db()
 
@@ -114,7 +123,7 @@ def list_images_for_moderation():
     for file_id, meta in sorted(database.items(), key=lambda item: item[0]):
         if after and file_id <= after:
             continue
-        if not isinstance(meta, dict) or not _is_active_image(meta):
+        if not isinstance(meta, dict) or not _is_pending_image(meta):
             continue
 
         filename = _stored_filename(meta)
@@ -125,7 +134,16 @@ def list_images_for_moderation():
             "uploaded_at": meta.get("uploaded_at", ""),
             "size": meta.get("size", 0),
             "mime": meta.get("mime", ""),
-            "raw_url": url_for("api.api_raw_file", filename=filename, _external=True),
+            "content_url": url_for(
+                "moderation_api.get_pending_image_content",
+                file_id=file_id,
+                _external=True,
+            ),
+            "approve_url": url_for(
+                "moderation_api.approve_image_by_bot",
+                file_id=file_id,
+                _external=True,
+            ),
             "delete_url": url_for(
                 "moderation_api.delete_image_by_bot",
                 file_id=file_id,
@@ -148,18 +166,73 @@ def list_images_for_moderation():
     })
 
 
+@moderation_api_bp.get("/images/<file_id>/content")
+@moderation_key_required
+def get_pending_image_content(file_id: str):
+    """Send pending image bytes only to the authenticated moderation bot."""
+    _database, meta = _load_pending_image(file_id)
+    if meta is None:
+        return _json_error(404, "pending_image_not_found", "Image en attente introuvable.")
+
+    filename = _stored_filename(meta)
+    file_path = os.path.join(current_app.config["UPLOAD_FOLDER"], filename)
+    if not filename or not os.path.isfile(file_path):
+        return _json_error(404, "image_content_not_found", "Contenu de l'image introuvable.")
+
+    response = send_file(
+        file_path,
+        mimetype=meta.get("mime") or None,
+        as_attachment=False,
+        conditional=True,
+    )
+    response.headers["Cache-Control"] = "no-store, private"
+    response.headers["X-Robots-Tag"] = "noindex, noimageindex, noarchive"
+    return response
+
+
+@moderation_api_bp.post("/images/<file_id>/approve")
+@moderation_key_required
+def approve_image_by_bot(file_id: str):
+    """Make a pending image public after a safe bot decision."""
+    database, meta = _load_pending_image(file_id)
+    if meta is None:
+        return _json_error(409, "image_not_pending", "Cette image n'est plus en attente.")
+
+    payload = request.get_json(silent=True) or {}
+    detector = str(payload.get("detector") or "external_bot").strip()[:80]
+    score = payload.get("score")
+
+    meta["status"] = "active"
+    meta["moderated_at"] = _utc_now_iso()
+    meta["moderation_decision"] = "approved"
+    meta["moderation_detector"] = detector
+    meta["moderation_score"] = score
+    database[file_id] = meta
+    save_db(database)
+
+    current_app.logger.info(
+        "Image approuvée par le bot: file_id=%s detector=%s score=%r",
+        file_id, detector, score,
+    )
+
+    return jsonify({
+        "success": True,
+        "data": {
+            "id": file_id,
+            "approved": True,
+            "detector": detector,
+            "score": score,
+        },
+    })
+
+
 @moderation_api_bp.delete("/images/<file_id>")
 @moderation_key_required
 def delete_image_by_bot(file_id: str):
-    """Supprime une image après décision du bot de modération externe."""
-    database = load_db()
-    meta = database.get(file_id)
-
-    if not isinstance(meta, dict):
-        return _json_error(404, "file_not_found", "Image introuvable.")
-
-    if not _is_active_image(meta):
-        return _json_error(409, "file_not_active_image", "Ce fichier n'est pas une image active.")
+    """Delete a pending image after an unsafe bot decision."""
+    _database, meta = _load_pending_image(file_id)
+    if meta is None:
+        return _json_error(409, "image_not_pending", "Cette image n'est plus en attente.")
 
     payload = request.get_json(silent=True) or {}
     reason = str(payload.get("reason") or "contenu_illicite").strip()[:80]
@@ -174,11 +247,8 @@ def delete_image_by_bot(file_id: str):
     create_moderation_notice(meta, file_id, reason=notice_reason)
 
     current_app.logger.warning(
-        "Image supprimée par le bot de modération: file_id=%s detector=%s score=%r reason=%s",
-        file_id,
-        detector,
-        score,
-        reason,
+        "Image supprimée par le bot: file_id=%s detector=%s score=%r reason=%s",
+        file_id, detector, score, reason,
     )
 
     return jsonify({
