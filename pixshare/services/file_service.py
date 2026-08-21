@@ -28,17 +28,6 @@ IMAGE_EXTENSIONS = {
 VIDEO_EXTENSIONS = {".mp4", ".webm", ".avi"}
 
 
-def requires_image_moderation(extension_or_filename: str) -> bool:
-    """Return True when a newly uploaded file must wait for image moderation."""
-    value = (extension_or_filename or "").lower()
-    extension = value if value.startswith(".") else os.path.splitext(value)[1].lower()
-    return bool(current_app.config.get("MODERATION_PENDING_IMAGES", True)) and extension in IMAGE_EXTENSIONS
-
-
-def initial_upload_status(extension_or_filename: str) -> str:
-    return "pending" if requires_image_moderation(extension_or_filename) else "active"
-
-
 def human_size(n: int) -> str:
     units = ["o", "Ko", "Mo", "Go", "To"]
     i = 0
@@ -274,7 +263,7 @@ def cleanup_expired() -> int:
 
     for file_id, meta in list(db.items()):
         status = (meta.get("status") or "active").lower()
-        if status not in {"active", "pending"}:
+        if status != "active":
             continue
         if meta.get("permanent") or not meta.get("expires_at"):
             continue
@@ -337,8 +326,7 @@ def file_meta(file_id: str):
     if not public_exists and not thumb_exists:
         return None
 
-    is_public = status == "active"
-    previewable = is_public and public_exists and ext in IMAGE_EXTENSIONS.union(VIDEO_EXTENSIONS)
+    previewable = ext in IMAGE_EXTENSIONS.union(VIDEO_EXTENSIONS) if public_exists else False
     permanent = bool(meta.get("permanent")) or (not meta.get("expires_at"))
     remaining_h = ""
 
@@ -370,9 +358,9 @@ def file_meta(file_id: str):
         "ip": meta.get("ip", ""),
         "size_h": size_h,
         "mtime_h": mtime_h,
-        "download_url": url_for("public.download", file_id=file_id, _external=True) if is_public and public_exists else "",
-        "public_url": url_for("public.public_file", file_id=file_id, _external=True) if is_public and public_exists else "",
-        "raw_url": url_for("public.view_file", file_id=file_id, _external=True) if is_public and public_exists else "",
+        "download_url": url_for("public.download", file_id=file_id, _external=True) if public_exists else "",
+        "public_url": url_for("public.public_file", file_id=file_id, _external=True) if public_exists else "",
+        "raw_url": url_for("public.view_file", file_id=file_id, _external=True) if public_exists else "",
         "previewable": previewable,
         "views": int(meta.get("views", 0) or 0),
         "view_limit_enabled": bool(meta.get("view_limit_enabled", False)),
@@ -429,7 +417,7 @@ def list_guest_files():
             continue
 
         fm = file_meta(file_id)
-        if fm and fm.get("status") in {"active", "pending"}:
+        if fm and fm.get("status") == "active":
             items.append(fm)
 
     items.sort(key=lambda x: x.get("mtime_h", ""), reverse=True)
@@ -515,12 +503,7 @@ def _register_saved_public_file(
         "ip": client_ip,
         "guest_token": guest_token,
         "views": 0,
-        "status": initial_upload_status(server_name),
-        "moderation_requested_at": uploaded_at.isoformat(timespec="seconds") if requires_image_moderation(server_name) else "",
-        "moderated_at": "",
-        "moderation_decision": "pending" if requires_image_moderation(server_name) else "not_required",
-        "moderation_detector": "",
-        "moderation_score": None,
+        "status": "active",
         "deleted_at": "",
         "delete_reason": "",
         "thumb_path": thumb_path,
@@ -711,12 +694,7 @@ def save_api_uploaded_file(
         "api_key": api_key_value,
         "api_name": api_key_name,
         "views": 0,
-        "status": initial_upload_status(server_name),
-        "moderation_requested_at": uploaded_at.isoformat(timespec="seconds") if requires_image_moderation(server_name) else "",
-        "moderated_at": "",
-        "moderation_decision": "pending" if requires_image_moderation(server_name) else "not_required",
-        "moderation_detector": "",
-        "moderation_score": None,
+        "status": "active",
         "deleted_at": "",
         "delete_reason": "",
         "thumb_path": thumb_path,

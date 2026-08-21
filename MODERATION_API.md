@@ -1,50 +1,61 @@
-# API de modération privée
+# API de modération externe
 
-Les nouvelles images sont enregistrées avec le statut `pending`. Elles ne sont pas disponibles via les routes publiques tant que le bot ne les a pas approuvées. Les fichiers non-image restent publiés normalement.
+Cette API permet à un bot local de lister les images actives et d'en supprimer une après analyse.
 
-## Configuration
+## Configuration Render
 
-Dans Render, ajoute :
+Ajoute une variable d'environnement :
 
 ```text
 MODERATION_API_KEY=<clé aléatoire longue>
-MODERATION_PENDING_IMAGES=1
 ```
 
-La clé doit être identique dans le site et dans le bot. Ne la publie jamais sur GitHub.
+Génération conseillée :
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+Ne stocke jamais cette clé dans GitHub.
 
 ## Authentification
 
-Toutes les routes utilisent :
+Utilise un des deux en-têtes suivants :
 
 ```text
 X-Moderation-Key: <clé>
 ```
 
-## Routes du bot
+ou :
 
-- `GET /api/admin/moderation/images` : liste uniquement les images `pending`.
-- `GET /api/admin/moderation/images/<id>/content` : transmet les octets de l'image au bot, sans route publique.
-- `POST /api/admin/moderation/images/<id>/approve` : rend l'image publique.
-- `DELETE /api/admin/moderation/images/<id>` : supprime l'image.
-
-### Approbation
-
-```json
-{
-  "detector": "nudenet-3.4.2",
-  "score": 0.12
-}
+```text
+Authorization: Bearer <clé>
 ```
 
-### Suppression
+## Lister les images
 
-```json
+```http
+GET /api/admin/moderation/images?limit=100
+```
+
+La réponse contient notamment `id`, `raw_url` et `delete_url`.
+
+Pour la pagination, rappelle la route avec `after=<next_after>` lorsque `next_after` n'est pas vide.
+
+## Supprimer une image
+
+```http
+DELETE /api/admin/moderation/images/<file_id>
+Content-Type: application/json
+X-Moderation-Key: <clé>
+
 {
   "reason": "contenu_illicite",
-  "detector": "nudenet-3.4.2",
-  "score": 0.98
+  "detector": "nudenet-local",
+  "score": 0.99
 }
 ```
 
-Une détection de nudité n'est pas une qualification juridique. Les seuils automatiques doivent rester prudents et être adaptés à tes CGU.
+Valeurs de raison recommandées : `contenu_illicite`, `non_respect_cgu` ou `spam_abus`.
+
+La suppression passe par le service interne PixShare : le fichier est retiré, son statut est changé, les votes sont nettoyés et la miniature est programmée pour suppression.

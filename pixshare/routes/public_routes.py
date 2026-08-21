@@ -37,7 +37,6 @@ from pixshare.services.file_service import (
     get_or_create_visitor_token,
     list_guest_files,
     register_unique_view,
-    requires_image_moderation,
     save_saved_local_file,
     save_uploaded_file,
 )
@@ -441,9 +440,7 @@ def index():
                 max_views=max_views,
             )
 
-            if requires_image_moderation(safe_name):
-                flash("Image reçue. Elle reste privée jusqu'à la validation automatique.", "info")
-            elif permanent:
+            if permanent:
                 flash("Fichier upload ✅ (sans expiration)", "success")
             else:
                 flash(f"Fichier upload ✅ (expiration: {format_duration_minutes(lifetime)})", "success")
@@ -473,7 +470,10 @@ def index():
                 flash("Impossible d'importer cette image depuis l'URL fournie.", "danger")
                 return attach_guest_cookie(redirect(url_for("public.index")))
 
-            flash("Image reçue. Elle reste privée jusqu'à la validation automatique.", "info")
+            if permanent:
+                flash("Image importée depuis l'URL ✅ (sans expiration)", "success")
+            else:
+                flash(f"Image importée depuis l'URL ✅ (expiration: {format_duration_minutes(lifetime)})", "success")
 
             return attach_guest_cookie(redirect(url_for("public.index")))
 
