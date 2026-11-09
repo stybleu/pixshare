@@ -139,7 +139,7 @@ class Config:
     # Mettre STRIP_IMAGE_METADATA=0 pour désactiver.
     STRIP_IMAGE_METADATA = (os.environ.get("STRIP_IMAGE_METADATA", "1") != "0")
 
-    # Limite d'envois par IP sur le site public (voir services/rate_limit_service.py).
+    # Limite d'envois par IP sur le site public (voir services/upload_limit_service.py).
     # UPLOAD_RATE_LIMIT=0 désactive la limite.
     UPLOAD_RATE_LIMIT = _env_int_default("UPLOAD_RATE_LIMIT", 30)
     UPLOAD_RATE_WINDOW_SEC = _env_int_default("UPLOAD_RATE_WINDOW_SEC", 3600)

@@ -53,7 +53,7 @@ from pixshare.services.json_services import (
     save_json,
 )
 from pixshare.services.request_service import get_client_ip
-from pixshare.services.rate_limit_service import check_upload_rate, limit_message
+from pixshare.services.upload_limit_service import check_upload_rate, limit_message
 from pixshare.services.settings_service import (
     get_default_lifetime,
     get_max_upload_size_bytes,

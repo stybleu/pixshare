@@ -51,6 +51,7 @@ from pixshare.services.api_auth_service import (
 )
 from pixshare.services.settings_service import upload_service_enabled
 from pixshare.services.url_import_service import PIL_FORMAT_TO_EXT, UrlImportError, download_remote_image_to_temp
+from pixshare.services.image_metadata_service import strip_uploaded_image
 
 api_v1_bp = Blueprint("api_v1", __name__, url_prefix="/api")
 
@@ -236,6 +237,7 @@ def _from_url(url: str, folder: Path, max_bytes: int, custom_name: str):
 # ---------------------------------------------------------
 
 def _new_record(files_data, key_value, key_data, name, stored, width, height, folder, now, expires_at):
+    strip_uploaded_image(Path(folder) / stored)  # retire GPS, appareil, date…
     pending = requires_image_moderation(stored)
     stamp = now.isoformat() + "Z"
     try:
