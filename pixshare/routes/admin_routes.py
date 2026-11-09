@@ -1,6 +1,6 @@
 import os
 import secrets
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, send_file, session, url_for
 
@@ -231,6 +231,9 @@ def admin_login():
         )
         if ok:
             return redirect(url_for("admin.admin_panel"))
+        if status == 503:
+            flash("Connexion admin désactivée : définis les variables d'environnement ADMIN_USER et ADMIN_PASS.", "danger")
+            return render_template("admin_login.html", version=current_app.config["APP_VERSION"]), 503
         if status == 429:
             flash("Trop d’essais. Réessaie plus tard.", "danger")
             return render_template("admin_login.html", version=current_app.config["APP_VERSION"]), 429

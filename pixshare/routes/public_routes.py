@@ -1,7 +1,6 @@
 from flask import Blueprint, abort, current_app, flash, make_response, redirect, render_template, request, send_from_directory, url_for
 from werkzeug.utils import secure_filename
 
-import json
 import os
 import secrets
 from datetime import datetime, timedelta
@@ -9,7 +8,7 @@ from datetime import datetime, timedelta
 from pixshare.config import Config
 
 from pixshare.security.csrf import validate_csrf
-from pixshare.services.auth_service import is_admin
+from pixshare.services.auth_service import is_admin, is_locked, register_fail, reset_fail
 from pixshare.services.api_user_service import (
     attach_api_key_to_user,
     create_api_user,
@@ -26,6 +25,7 @@ from pixshare.services.api_user_service import (
 )
 from pixshare.services.contact_service import create_contact_message
 from pixshare.services.file_service import (
+    FileTooLargeError,
     allowed_file,
     can_keep_uploads,
     cleanup_expired,
@@ -35,6 +35,7 @@ from pixshare.services.file_service import (
     get_existing_guest_token,
     get_guest_token,
     get_or_create_visitor_token,
+    is_image_filename,
     list_guest_files,
     register_unique_view,
     requires_image_moderation,
@@ -45,11 +46,12 @@ from pixshare.services.json_services import (
     load_api_keys,
     load_blocked,
     load_db,
+    load_json,
     save_api_keys,
     save_db,
+    save_json,
 )
 from pixshare.services.request_service import get_client_ip
-from pixshare.services.vote_service import get_vote_summary, is_image_filename, register_vote
 from pixshare.services.settings_service import (
     get_default_lifetime,
     get_max_upload_size_bytes,
@@ -112,7 +114,7 @@ def flash_pending_moderation_notice():
     flash(notice.get("message") or "Un de vos fichiers a été retiré par la modération.", notice.get("level") or "warning")
 
 
-REQUEST_FILE = "pixshare/data/api_requests.json"
+REQUEST_FILENAME = "api_requests.json"
 DEMO_KEY_DAILY_LIMIT = 5
 DEMO_KEY_TOTAL_LIMIT = 20
 DEMO_ALLOWED_LIFETIMES = [2, 5]
@@ -127,38 +129,13 @@ DEMO_CREATION_LIMIT_PER_EMAIL = 2
 # =========================================================
 
 def save_request(data):
-    os.makedirs(os.path.dirname(REQUEST_FILE), exist_ok=True)
-
-    if not os.path.exists(REQUEST_FILE):
-        with open(REQUEST_FILE, "w", encoding="utf-8") as f:
-            json.dump([], f, ensure_ascii=False, indent=2)
-
-    try:
-        with open(REQUEST_FILE, "r", encoding="utf-8") as f:
-            requests_data = json.load(f)
-    except (json.JSONDecodeError, OSError):
-        requests_data = []
-
-    if not isinstance(requests_data, list):
-        requests_data = []
-
+    requests_data = _load_api_requests()
     requests_data.append(data)
-
-    with open(REQUEST_FILE, "w", encoding="utf-8") as f:
-        json.dump(requests_data, f, ensure_ascii=False, indent=2)
+    save_json(REQUEST_FILENAME, requests_data)
 
 
 def _load_api_requests():
-    os.makedirs(os.path.dirname(REQUEST_FILE), exist_ok=True)
-    if not os.path.exists(REQUEST_FILE):
-        return []
-
-    try:
-        with open(REQUEST_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-    except (json.JSONDecodeError, OSError):
-        return []
-
+    data = load_json(REQUEST_FILENAME, [])
     return data if isinstance(data, list) else []
 
 
@@ -431,15 +408,21 @@ def index():
                 flash(f"Fichier trop volumineux. Taille maximale : {max_mb} Mo.", "danger")
                 return attach_guest_cookie(redirect(url_for("public.index")))
 
-            _, lifetime, permanent = save_uploaded_file(
-                f,
-                original_name=original,
-                client_ip=ip,
-                guest_token=guest_token,
-                keep_requested=keep,
-                view_limit_enabled=view_limit_enabled,
-                max_views=max_views,
-            )
+            try:
+                _, lifetime, permanent = save_uploaded_file(
+                    f,
+                    original_name=original,
+                    client_ip=ip,
+                    guest_token=guest_token,
+                    keep_requested=keep,
+                    view_limit_enabled=view_limit_enabled,
+                    max_views=max_views,
+                    max_size_bytes=max_size_bytes,
+                )
+            except FileTooLargeError:
+                max_mb = get_max_upload_size_mb()
+                flash(f"Fichier trop volumineux. Taille maximale : {max_mb} Mo.", "danger")
+                return attach_guest_cookie(redirect(url_for("public.index")))
 
             if requires_image_moderation(safe_name):
                 flash("Image reçue. Elle reste privée jusqu'à la validation automatique.", "info")
@@ -486,11 +469,7 @@ def index():
         if not file_id:
             continue
     
-        summary = get_vote_summary(file_id, ip)
         item["views"] = int(item.get("views", 0) or 0)
-        item["votes_up"] = summary["up"]
-        item["votes_down"] = summary["down"]
-        item["score"] = summary["score"]
 
         if item.get("status") == "active":
             item["remaining_time"] = get_remaining_time_label(item.get("expires_at"))
@@ -573,7 +552,7 @@ def view_file(file_id):
     return response
 
 
-public_bp.route("/image/<file_id>", endpoint="image_page")
+@public_bp.route("/image/<file_id>", endpoint="image_page")
 def image_page(file_id):
     cleanup_expired()
 
@@ -590,8 +569,6 @@ def image_page(file_id):
 
     record_usage_event(file_id, "image_page", stored_filename=meta.get("server_name", ""))
 
-    client_ip = get_client_ip()
-    vote_summary = get_vote_summary(file_id, client_ip)
     file_url = url_for("public.view_file", file_id=file_id)
     download_url = url_for("public.download", file_id=file_id)
     report_url = url_for(
@@ -610,7 +587,6 @@ def image_page(file_id):
             report_url=report_url,
             original_name=original_name,
             meta=meta,
-            vote_summary=vote_summary,
             version=current_app.config["APP_VERSION"],
         )
     )
@@ -663,9 +639,6 @@ def public_file(file_id):
     meta = dict(stored_meta)
     meta["remaining_time"] = get_remaining_time_label(meta.get("expires_at"))
 
-    client_ip = get_client_ip()
-    vote_summary = get_vote_summary(file_id, client_ip)
-
     response = make_response(
         render_template(
             "file.html",
@@ -677,7 +650,6 @@ def public_file(file_id):
             meta=meta,
             views=int(meta.get("views", 0) or 0),
             views_remaining=(max(0, int(meta.get("max_views", 0) or 0) - int(meta.get("views", 0) or 0)) if meta.get("view_limit_enabled") else None),
-            vote_summary=vote_summary,
             is_image=is_image_filename(meta.get("original_name", "")),
         )
     )
@@ -694,34 +666,6 @@ def public_file(file_id):
         )
 
     return response
-
-
-@public_bp.route("/file/<file_id>/vote", methods=["POST"], endpoint="vote_file")
-def vote_file(file_id):
-    cleanup_expired()
-    validate_csrf()
-
-    _db, meta, _server_name = get_file_record(file_id)
-    if not meta:
-        abort(404)
-
-    original_name = meta.get("original_name", "")
-    if not is_image_filename(original_name):
-        flash("Le vote est réservé aux images.", "warning")
-        return redirect(url_for("public.public_file", file_id=file_id))
-
-    vote_value = (request.form.get("vote") or "").strip().lower()
-    if vote_value not in {"up", "down"}:
-        flash("Vote invalide.", "warning")
-        return redirect(url_for("public.public_file", file_id=file_id))
-
-    client_ip = get_client_ip()
-    if not client_ip:
-        flash("Impossible d'enregistrer le vote pour le moment.", "warning")
-        return redirect(url_for("public.public_file", file_id=file_id))
-
-    register_vote(file_id, client_ip, vote_value)
-    return redirect(url_for("public.public_file", file_id=file_id))
 
 
 @public_bp.route("/delete/<file_id>", methods=["POST"], endpoint="delete_own_file")
@@ -932,11 +876,19 @@ def api_login():
         flash("Pseudo et mot de passe requis.", "warning")
         return redirect(url_for("public.api_page") + "#api-account")
 
+    limiter_key = f"apilogin:{get_client_ip()}"
+    locked, _secs = is_locked(limiter_key)
+    if locked:
+        flash("Trop d’essais. Réessaie dans quelques minutes.", "danger")
+        return redirect(url_for("public.api_page") + "#api-account")
+
     user = find_user_by_pseudo(pseudo)
     if not user or not verify_password(user, password):
+        register_fail(limiter_key)
         flash("Identifiants invalides.", "danger")
         return redirect(url_for("public.api_page") + "#api-account")
 
+    reset_fail(limiter_key)
     login_api_user(user)
     flash("Connexion API réussie ✅", "success")
     return redirect(url_for("public.api_dashboard"))

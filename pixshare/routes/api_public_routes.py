@@ -20,6 +20,7 @@ from pixshare.services.api_auth_service import (
     remaining_uploads_info,
 )
 from pixshare.services.json_services import load_files, save_files
+from pixshare.services.request_service import get_client_ip
 from pixshare.services.settings_service import upload_service_enabled
 from pixshare.services.usage_tracking_service import record_usage_event
 
@@ -106,15 +107,7 @@ def save_all_files(data: dict[str, Any]) -> None:
 
 
 def get_real_ip() -> str:
-    x_forwarded_for = (request.headers.get("X-Forwarded-For") or "").strip()
-    if x_forwarded_for:
-        return x_forwarded_for.split(",")[0].strip()
-
-    cf_connecting_ip = (request.headers.get("CF-Connecting-IP") or "").strip()
-    if cf_connecting_ip:
-        return cf_connecting_ip
-
-    return (request.remote_addr or "").strip()
+    return get_client_ip()
 
 
 def hash_api_key(key_value: str) -> str:

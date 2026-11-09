@@ -1,3 +1,5 @@
+import logging
+
 from flask import Flask, request
 
 from .config import Config
@@ -11,16 +13,22 @@ from .routes.api_public_routes import api_public_bp
 from .routes.moderation_api_routes import moderation_api_bp
 from .services.translation_service import apply_requested_language, build_lang_url, get_current_language, translate
 from .services.api_auth_service import ensure_default_api_keys
+from .services.auth_service import check_admin_config
+
+_log = logging.getLogger(__name__)
 
 
-def create_app() -> Flask:
+def create_app(config_overrides: dict | None = None) -> Flask:
     app = Flask(__name__, template_folder="../templates", static_folder="../static")
     app.config.from_object(Config)
+    if config_overrides:
+        app.config.update(config_overrides)
     app.config["UPLOAD_FOLDER"] = project_path(app, app.config["UPLOAD_FOLDER"])
 
     init_storage(app)
     with app.app_context():
         ensure_default_api_keys()
+        check_admin_config()
 
     @app.context_processor
     def _inject_globals():
@@ -38,14 +46,18 @@ def create_app() -> Flask:
 
     @app.before_request
     def log_request():
-        ip = get_client_ip()
-        print("IP:", ip, "URL:", request.path)
+        # Les IP sont des données personnelles : on ne les écrit dans les logs
+        # qu'en mode debug, et via le logger plutôt que print().
+        if app.logger.isEnabledFor(logging.DEBUG):
+            app.logger.debug("IP: %s URL: %s", get_client_ip(), request.path)
 
     @app.after_request
     def add_security_headers(response):
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        if request.is_secure:
+            response.headers["Strict-Transport-Security"] = "max-age=31536000"
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
             "img-src 'self' data: https:; "

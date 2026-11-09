@@ -14,11 +14,15 @@ except Exception:
 
 from pixshare.storage import thumbnail_dir
 from .auth_service import is_admin
-from .json_services import load_db, save_db, load_views, save_views, load_votes, save_votes
+from .json_services import load_db, save_db, load_views, save_views
 from .time_service import parse_dt, utcnow
 from .image_quality_service import can_enhance_extension, enhance_image_bytes
 from .settings_service import get_thumbnail_retention_hours, permanent_files_enabled, thumbnails_enabled
 from .usage_tracking_service import build_usage_summary
+
+
+class FileTooLargeError(ValueError):
+    """Le fichier reçu dépasse la taille maximale autorisée."""
 
 
 IMAGE_EXTENSIONS = {
@@ -26,6 +30,15 @@ IMAGE_EXTENSIONS = {
     ".tif", ".tiff", ".heic", ".heif"
 }
 VIDEO_EXTENSIONS = {".mp4", ".webm", ".avi"}
+PREVIEW_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg", ".avif"}
+
+
+def is_image_filename(filename) -> bool:
+    """Vrai si le nom de fichier est une image affichable sur la page d'aperçu."""
+    if not filename:
+        return False
+    name = str(filename).lower()
+    return any(name.endswith(ext) for ext in PREVIEW_IMAGE_EXTENSIONS)
 
 
 def requires_image_moderation(extension_or_filename: str) -> bool:
@@ -248,14 +261,16 @@ def purge_expired_thumbnails(db: dict | None = None) -> tuple[dict, bool]:
                 db[file_id] = meta
                 changed = True
 
+        status = (meta.get("status") or "active").lower()
+        if status == "active":
+            # Évite un appel disque par fichier actif à chaque requête.
+            continue
+
         public_path = os.path.join(
             current_app.config["UPLOAD_FOLDER"],
             os.path.basename(meta.get("server_name", ""))
         )
-        public_exists = os.path.isfile(public_path)
-        status = (meta.get("status") or "active").lower()
-
-        if status != "active" and not public_exists and not meta.get("thumb_path"):
+        if not os.path.isfile(public_path) and not meta.get("thumb_path"):
             to_remove.append(file_id)
 
     for file_id in to_remove:
@@ -268,7 +283,6 @@ def purge_expired_thumbnails(db: dict | None = None) -> tuple[dict, bool]:
 def cleanup_expired() -> int:
     db = load_db()
     now = utcnow()
-    votes = load_votes()
     removed_public_files = 0
     changed = False
 
@@ -298,7 +312,6 @@ def cleanup_expired() -> int:
         meta["delete_reason"] = "expired"
         schedule_thumbnail_cleanup(meta, now)
         db[file_id] = meta
-        votes.pop(file_id, None)
         changed = True
 
     db, thumbs_changed = purge_expired_thumbnails(db)
@@ -306,18 +319,21 @@ def cleanup_expired() -> int:
 
     if changed:
         save_db(db)
-        save_votes(votes)
 
     return removed_public_files
 
 
-def file_meta(file_id: str):
-    cleanup_expired()
+def file_meta(file_id: str, db: dict | None = None):
+    """``db`` : base déjà chargée (et déjà nettoyée) par l'appelant. Sans cela,
+    chaque appel relisait tout le fichier JSON et relançait le nettoyage, ce qui
+    rendait les listes admin quadratiques."""
+    if db is None:
+        cleanup_expired()
+        db = load_db()
 
     if not file_id:
         return None
 
-    db = load_db()
     meta = db.get(file_id)
     if not meta:
         return None
@@ -395,7 +411,7 @@ def list_all_files(include_thumbnails: bool = True):
     items = []
 
     for file_id in db.keys():
-        fm = file_meta(file_id)
+        fm = file_meta(file_id, db=db)
         if not fm:
             continue
         if not include_thumbnails:
@@ -428,7 +444,7 @@ def list_guest_files():
         if meta.get("guest_token") != guest_token:
             continue
 
-        fm = file_meta(file_id)
+        fm = file_meta(file_id, db=db)
         if fm and fm.get("status") in {"active", "pending"}:
             items.append(fm)
 
@@ -594,6 +610,7 @@ def save_uploaded_file(
     keep_requested: bool = False,
     view_limit_enabled: bool = False,
     max_views: int | None = None,
+    max_size_bytes: int | None = None,
 ) -> tuple[str, int | None, bool]:
     file_id, server_name, dest, ext = _prepare_file_destination(original_name)
 
@@ -610,6 +627,15 @@ def save_uploaded_file(
             f.write(file_bytes)
     else:
         file_storage.save(dest)
+
+    # Content-Length peut être absent (transfert « chunked ») ou mensonger :
+    # on vérifie donc la taille réellement écrite sur le disque.
+    if max_size_bytes and os.path.getsize(dest) > int(max_size_bytes):
+        try:
+            os.remove(dest)
+        except OSError:
+            pass
+        raise FileTooLargeError("Fichier trop volumineux.")
 
     thumb_path = ""
     if is_image_extension(ext):
@@ -817,11 +843,7 @@ def delete_by_id(file_id: str, reason: str = "deleted") -> bool:
     schedule_thumbnail_cleanup(meta)
     db[file_id] = meta
 
-    votes = load_votes()
-    votes.pop(file_id, None)
-
     db, _ = purge_expired_thumbnails(db)
 
     save_db(db)
-    save_votes(votes)
     return True

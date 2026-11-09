@@ -46,6 +46,9 @@ uploads/*
 
 data/*.json
 pixshare/data/*.json
+pixshare/data/.secret_key
+pixshare/data/*.tmp
+pixshare/data/*.corrupt-*
 
 # =========================
 # Logs

@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import json
-from pathlib import Path
+from pixshare.services.json_services import json_exists, load_json, save_json
 
-DATA_DIR = Path(__file__).resolve().parents[1] / "data"
-SETTINGS_FILE = DATA_DIR / "settings.json"
+SETTINGS_FILENAME = "settings.json"
 
 DEFAULT_SETTINGS = {
     "upload_service_enabled": True,
@@ -19,19 +17,13 @@ ALLOWED_LIFETIMES = {5, 10, 20, 30, 60, 120, 360, 720, 1440, 2880, 4320, 10080}
 
 
 def ensure_settings_file() -> None:
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    if not SETTINGS_FILE.exists():
-        with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
-            json.dump(DEFAULT_SETTINGS, f, ensure_ascii=False, indent=2)
+    if not json_exists(SETTINGS_FILENAME):
+        save_json(SETTINGS_FILENAME, DEFAULT_SETTINGS)
 
 
 def load_settings() -> dict:
     ensure_settings_file()
-    try:
-        with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError, OSError):
-        return DEFAULT_SETTINGS.copy()
+    data = load_json(SETTINGS_FILENAME, {})
 
     if not isinstance(data, dict):
         return DEFAULT_SETTINGS.copy()
@@ -59,8 +51,7 @@ def save_settings(settings: dict) -> dict:
         "keep_thumbnails": bool(settings.get("keep_thumbnails", True)),
     }
 
-    with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
-        json.dump(clean_settings, f, ensure_ascii=False, indent=2)
+    save_json(SETTINGS_FILENAME, clean_settings)
 
     return clean_settings
 

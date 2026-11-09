@@ -1,8 +1,11 @@
 import json
+import logging
 import os
-from threading import Lock
+import threading
+import time
 
-_json_lock = Lock()
+_json_lock = threading.RLock()
+_log = logging.getLogger(__name__)
 
 
 def _get_base_dir():
@@ -10,7 +13,9 @@ def _get_base_dir():
 
 
 def _get_data_dir():
-    data_dir = os.path.join(_get_base_dir(), "data")
+    # PIXSHARE_DATA_DIR permet de pointer vers un disque persistant (ex. Render)
+    # ou vers un dossier temporaire pour les tests.
+    data_dir = os.environ.get("PIXSHARE_DATA_DIR") or os.path.join(_get_base_dir(), "data")
     os.makedirs(data_dir, exist_ok=True)
     return data_dir
 
@@ -22,10 +27,32 @@ def _ensure_parent_dir(path):
 
 
 def _write_json_file(path, data):
+    """Écriture atomique : on écrit dans un fichier temporaire unique puis on
+    remplace. Un lecteur concurrent voit donc toujours l'ancienne version
+    complète ou la nouvelle, jamais un fichier tronqué."""
     _ensure_parent_dir(path)
-    with _json_lock:
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+    tmp = f"{path}.{os.getpid()}.{threading.get_ident()}.tmp"
+    try:
+        with _json_lock:
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            os.replace(tmp, path)
+    finally:
+        if os.path.exists(tmp):
+            try:
+                os.remove(tmp)
+            except OSError:
+                pass
+
+
+def _backup_corrupt_file(path):
+    """Garde une copie d'un fichier illisible au lieu de l'écraser."""
+    backup = f"{path}.corrupt-{int(time.time())}"
+    try:
+        os.replace(path, backup)
+        _log.error("Fichier JSON illisible déplacé vers %s", backup)
+    except OSError:
+        pass
 
 
 def _read_json_file(path, default):
@@ -38,27 +65,37 @@ def _read_json_file(path, default):
     try:
         with open(path, "r", encoding="utf-8") as f:
             content = f.read().strip()
-
-        if not content:
-            _write_json_file(path, default)
-            return default
-
-        data = json.loads(content)
-
-        if isinstance(default, list) and not isinstance(data, list):
-            return default
-        if isinstance(default, dict) and not isinstance(data, dict):
-            return default
-
-        return data
-
-    except (json.JSONDecodeError, OSError, ValueError, TypeError):
-        _write_json_file(path, default)
+    except OSError:
+        # Lecture impossible : on ne touche pas au fichier.
         return default
+
+    if not content:
+        # Fichier vide (ancien crash) : rien à perdre, on repart sur le défaut.
+        return default
+
+    try:
+        data = json.loads(content)
+    except (json.JSONDecodeError, ValueError, TypeError):
+        # Avant : le fichier était écrasé par la valeur par défaut, ce qui
+        # effaçait toutes les données en cas de lecture concurrente d'une
+        # écriture. On conserve maintenant une copie pour pouvoir récupérer.
+        _backup_corrupt_file(path)
+        return default
+
+    if isinstance(default, list) and not isinstance(data, list):
+        return default
+    if isinstance(default, dict) and not isinstance(data, dict):
+        return default
+
+    return data
 
 
 def _json_path(filename):
     return os.path.join(_get_data_dir(), filename)
+
+
+def json_exists(filename):
+    return os.path.exists(_json_path(filename))
 
 
 def load_json(filename, default=None):
@@ -101,18 +138,6 @@ def load_views():
 
 def save_views(data):
     _write_json_file(_json_path("views.json"), data)
-
-
-# =========================================================
-# VOTES
-# =========================================================
-
-def load_votes():
-    return _read_json_file(_json_path("votes.json"), {})
-
-
-def save_votes(data):
-    _write_json_file(_json_path("votes.json"), data)
 
 
 # =========================================================

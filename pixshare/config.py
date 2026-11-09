@@ -1,5 +1,57 @@
+import logging
 import os
 import secrets
+
+_log = logging.getLogger(__name__)
+
+
+def _env_int(name: str):
+    """Retourne un entier lu dans l'environnement, ou None s'il est absent/invalide."""
+    raw = (os.environ.get(name) or "").strip()
+    if not raw:
+        return None
+    try:
+        return int(raw)
+    except ValueError:
+        _log.warning("%s=%r est invalide (entier attendu), valeur ignorée.", name, raw)
+        return None
+
+
+def _load_or_create_secret_key() -> str:
+    """Clé de signature des sessions.
+
+    Priorité à la variable d'environnement SECRET_KEY. Sinon on génère une clé
+    UNE fois et on la garde dans un fichier : avant, chaque processus (donc
+    chaque worker gunicorn et chaque redémarrage) tirait une clé différente, ce
+    qui invalidait les sessions admin/API et les jetons CSRF en cours.
+    """
+    env_key = os.environ.get("SECRET_KEY")
+    if env_key:
+        return env_key
+
+    data_dir = os.environ.get("PIXSHARE_DATA_DIR") or os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "data"
+    )
+    key_path = os.path.join(data_dir, ".secret_key")
+
+    try:
+        os.makedirs(data_dir, exist_ok=True)
+        try:
+            fd = os.open(key_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        except FileExistsError:
+            with open(key_path, "r", encoding="utf-8") as f:
+                existing = f.read().strip()
+            if existing:
+                return existing
+            # fichier vide laissé par un autre worker en cours d'écriture
+            return secrets.token_hex(32)
+        key = secrets.token_hex(32)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(key)
+        return key
+    except OSError:
+        _log.warning("Impossible de persister la clé secrète ; définis la variable SECRET_KEY.")
+        return secrets.token_hex(32)
 
 
 class Config:
@@ -14,7 +66,6 @@ class Config:
     FAILED_LOGINS_FILE = os.path.join(DATA_DIR, "failed_logins.json")
     VIEWS_FILE = os.path.join(DATA_DIR, "views.json")
     CONTACTS_FILE = os.path.join(DATA_DIR, "contacts.json")
-    VOTES_FILE = os.path.join(DATA_DIR, "votes.json")
     API_KEYS_FILE = os.path.join(DATA_DIR, "api_keys.json")
     THUMBNAIL_FOLDER = os.path.join(DATA_DIR, "mod_thumbs")
 
@@ -42,10 +93,22 @@ class Config:
     PERMANENT_UPLOADS_ENABLED = (os.environ.get("PERMANENT_UPLOADS", "0") == "0")
     PERMANENT_UPLOADS_ADMIN_ONLY = (os.environ.get("PERMANENT_UPLOADS_ADMIN_ONLY", "1") == "0")
 
-    SECRET_KEY = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
+    SECRET_KEY = _load_or_create_secret_key()
     SESSION_COOKIE_HTTPONLY = True
-    SESSION_COOKIE_SECURE = True
+    # Mettre SESSION_COOKIE_SECURE=0 uniquement pour tester en HTTP (hors localhost).
+    SESSION_COOKIE_SECURE = (os.environ.get("SESSION_COOKIE_SECURE", "1") != "0")
     SESSION_COOKIE_SAMESITE = "Lax"
+
+    # Nombre de proxys de confiance devant l'app (voir services/request_service.py).
+    # None = non défini (ancien comportement, avec avertissement).
+    TRUSTED_PROXY_COUNT = _env_int("TRUSTED_PROXY_COUNT")
+
+    # Autorise le couple admin par défaut 0/0 (développement local uniquement).
+    ALLOW_DEFAULT_ADMIN = (os.environ.get("ALLOW_DEFAULT_ADMIN", "0") == "1")
+
+    # Plafond global d'échecs de connexion admin, toutes IP confondues
+    # (protège contre un attaquant qui change d'IP à chaque essai).
+    GLOBAL_MAX_FAILED_LOGINS = 30
 
     API_DEFAULT_MAX_FILE_SIZE_MB = 10
     

@@ -67,29 +67,6 @@
   font-weight: 600;
   word-break: break-word;
 }
-
-.vote-panel {
-  background: #fff;
-  border: 1px solid #e9ecef;
-  border-radius: 16px;
-  padding: 16px;
-}
-
-.vote-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.vote-buttons form {
-  margin: 0;
-}
-
-.vote-note {
-  color: #6c757d;
-  font-size: 0.92rem;
-  margin-top: 10px;
-}
 </style>
 {% endblock %}
 
@@ -103,47 +80,6 @@
   <div class="text-center mb-4">
     <div class="image-preview-wrap">
       <img src="{{ file_url }}" alt="{{ original_name }}" loading="lazy">
-    </div>
-  </div>
-
-  <div class="vote-panel mb-4">
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
-      <div>
-        <h3 class="h5 mb-1">Appréciation</h3>
-        <div class="text-muted">Un vote par IP. Un nouveau vote remplace l'ancien.</div>
-      </div>
-      <div class="text-end">
-        <div><strong>👍 {{ vote_summary.up }}</strong> &nbsp; <strong>👎 {{ vote_summary.down }}</strong></div>
-        <div class="text-muted">Score : {{ vote_summary.score }}</div>
-      </div>
-    </div>
-
-    <div class="vote-buttons">
-      <form method="post" action="{{ url_for('public.vote_image', file_id=file_id) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <input type="hidden" name="vote" value="up">
-        <button type="submit" class="btn {% if vote_summary.current_vote == 'up' %}btn-success{% else %}btn-outline-success{% endif %}">
-          👍 J'aime
-        </button>
-      </form>
-
-      <form method="post" action="{{ url_for('public.vote_image', file_id=file_id) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <input type="hidden" name="vote" value="down">
-        <button type="submit" class="btn {% if vote_summary.current_vote == 'down' %}btn-danger{% else %}btn-outline-danger{% endif %}">
-          👎 Je n'aime pas
-        </button>
-      </form>
-    </div>
-
-    <div class="vote-note">
-      {% if vote_summary.current_vote == 'up' %}
-      Ton vote actuel : 👍
-      {% elif vote_summary.current_vote == 'down' %}
-      Ton vote actuel : 👎
-      {% else %}
-      Tu n'as pas encore voté pour cette image.
-      {% endif %}
     </div>
   </div>
 

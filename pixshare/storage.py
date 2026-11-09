@@ -64,10 +64,6 @@ def contacts_path(app: Flask) -> str:
     return project_path(app, app.config["CONTACTS_FILE"])
 
 
-def votes_path(app: Flask) -> str:
-    return project_path(app, app.config["VOTES_FILE"])
-
-
 def thumbnail_dir(app: Flask) -> str:
     return project_path(app, app.config["THUMBNAIL_FOLDER"])
 
@@ -77,18 +73,7 @@ def api_keys_path(app: Flask) -> str:
 
 
 def init_storage(app: Flask) -> None:
+    # Les fichiers JSON de données sont gérés (et créés à la demande) par
+    # services/json_services.py ; ici on ne prépare que les dossiers de fichiers.
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
     os.makedirs(thumbnail_dir(app), exist_ok=True)
-
-    for path, default in [
-        (db_path(app), {}),
-        (blocked_path(app), []),
-        (failed_logins_path(app), {}),
-        (views_path(app), {}),
-        (contacts_path(app), []),
-        (votes_path(app), {}),
-        (api_keys_path(app), {}),
-    ]:
-        ensure_parent_dir(path)
-        if not os.path.exists(path):
-            atomic_write_json(path, default)

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from flask import Blueprint, current_app, request
+from flask import Blueprint, request
 
 from pixshare.services.file_service import get_file_record
 from pixshare.services.json_services import load_db
