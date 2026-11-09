@@ -11,7 +11,15 @@ DEFAULT_SETTINGS = {
     "default_lifetime_minutes": 10,
     "thumbnail_retention_hours": 24,
     "keep_thumbnails": True,
+    # Modération NudeNet. None = valeur de l'environnement (NSFW_*), tant que l'admin n'a rien enregistré.
+    "nsfw_auto_moderation": None,
+    "nsfw_review_threshold": None,
+    "nsfw_block_threshold": None,
+    "nsfw_tiling": True,
 }
+
+NSFW_MIN_THRESHOLD = 0.05
+NSFW_MAX_THRESHOLD = 1.0
 
 ALLOWED_LIFETIMES = {5, 10, 20, 30, 60, 120, 360, 720, 1440, 2880, 4320, 10080}
 
@@ -36,6 +44,7 @@ def load_settings() -> dict:
     settings["default_lifetime_minutes"] = get_valid_lifetime(settings.get("default_lifetime_minutes"))
     settings["thumbnail_retention_hours"] = get_valid_thumbnail_retention_hours(settings.get("thumbnail_retention_hours"))
     settings["keep_thumbnails"] = bool(settings.get("keep_thumbnails", True))
+    settings.update(_clean_nsfw_settings(settings))
     return settings
 
 
@@ -51,9 +60,40 @@ def save_settings(settings: dict) -> dict:
         "keep_thumbnails": bool(settings.get("keep_thumbnails", True)),
     }
 
+    # Les réglages NudeNet absents de `settings` (autre formulaire) gardent leur valeur actuelle.
+    current = load_settings()
+    nsfw_source = {key: settings.get(key, current.get(key)) for key in NSFW_KEYS}
+    clean_settings.update(_clean_nsfw_settings(nsfw_source))
+
     save_json(SETTINGS_FILENAME, clean_settings)
 
     return clean_settings
+
+
+NSFW_KEYS = ("nsfw_auto_moderation", "nsfw_review_threshold", "nsfw_block_threshold", "nsfw_tiling")
+
+
+def get_valid_nsfw_threshold(value):
+    """Seuil NudeNet entre 0,05 et 1 (arrondi à 2 décimales) ; None si absent ou invalide."""
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        number = float(str(value).strip().replace(",", "."))
+    except (TypeError, ValueError):
+        return None
+    if number != number or number < NSFW_MIN_THRESHOLD or number > NSFW_MAX_THRESHOLD:
+        return None
+    return round(number, 2)
+
+
+def _clean_nsfw_settings(source: dict) -> dict:
+    enabled = source.get("nsfw_auto_moderation")
+    return {
+        "nsfw_auto_moderation": None if enabled is None else bool(enabled),
+        "nsfw_review_threshold": get_valid_nsfw_threshold(source.get("nsfw_review_threshold")),
+        "nsfw_block_threshold": get_valid_nsfw_threshold(source.get("nsfw_block_threshold")),
+        "nsfw_tiling": bool(source.get("nsfw_tiling", True)),
+    }
 
 
 def get_valid_max_upload_size_mb(value) -> int:

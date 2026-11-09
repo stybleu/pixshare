@@ -1,6 +1,8 @@
 # API de modération privée (v2)
 
-La modération reste extérieure à PixShare. Toute nouvelle image est enregistrée avec `status=pending` et reste privée tant qu'une décision n'a pas été reçue. Les fichiers non-image restent publiés normalement.
+Toute nouvelle image est enregistrée avec `status=pending` et reste privée tant qu'une décision n'a pas été prise. Les fichiers non-image restent publiés normalement.
+
+L'analyse NudeNet est désormais intégrée au site (voir `INSTALL_MODERATION.md`). Cette API privée reste disponible pour un outil externe facultatif : elle n'est utilisée par aucun composant du dépôt.
 
 ## Configuration du serveur
 
@@ -9,7 +11,7 @@ MODERATION_API_KEY=<clé aléatoire longue>
 MODERATION_PENDING_IMAGES=1
 ```
 
-La même clé doit être configurée sur le serveur PixShare et sur le bot. Ne jamais la publier dans GitHub.
+La même clé doit être configurée sur le serveur PixShare et sur l'outil externe. Ne jamais la publier dans GitHub.
 
 ## Authentification
 
@@ -25,7 +27,7 @@ X-Moderation-Key: <clé>
 
 - `GET /api/admin/moderation/health` : vérifie que l'API privée et la clé fonctionnent.
 - `GET /api/admin/moderation/images` : liste les images `pending` à analyser.
-- `GET /api/admin/moderation/images/<id>/content` : transmet les octets au bot sans exposition publique.
+- `GET /api/admin/moderation/images/<id>/content` : transmet les octets à l'outil externe sans exposition publique.
 - `POST /api/admin/moderation/images/<id>/decision` : nouvelle route recommandée.
 - `POST /api/admin/moderation/images/<id>/approve` : ancienne route conservée.
 - `DELETE /api/admin/moderation/images/<id>` : ancienne route conservée.
@@ -67,16 +69,14 @@ L'image reste privée (`status=pending`) mais est retirée de la file automatiqu
 }
 ```
 
-## Politique du bot v2
+## Politique de décision
 
-Deux seuils sont utilisés :
+Deux seuils sont utilisés (identiques pour NudeNet intégré et pour un outil externe) :
 
-- score < `REVIEW_THRESHOLD` : approbation automatique ;
-- `REVIEW_THRESHOLD` <= score < `BLOCK_THRESHOLD` : revue manuelle, fichier toujours privé ;
-- score >= `BLOCK_THRESHOLD` : refus automatique.
+- score < revue : approbation automatique ;
+- revue <= score < blocage : revue manuelle, fichier toujours privé ;
+- score >= blocage : refus automatique.
 
-Valeurs par défaut : `REVIEW_THRESHOLD=0.60`, `BLOCK_THRESHOLD=0.85`.
-
-Le bot v2 ajoute également des retries HTTP avec backoff, un contrôle du MIME et de la taille, un endpoint de santé, une empreinte SHA-256 courte dans les logs et l'analyse NudeNet via un fichier temporaire local.
+Valeurs par défaut : `NSFW_REVIEW_THRESHOLD=0.60`, `NSFW_BLOCK_THRESHOLD=0.85`.
 
 Une détection NudeNet n'est pas une qualification juridique. Les seuils doivent être adaptés aux CGU et aux faux positifs observés.

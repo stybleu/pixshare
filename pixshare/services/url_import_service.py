@@ -19,6 +19,8 @@ ALLOWED_IMPORT_MIME_TO_EXT: Final[dict[str, str]] = {
     "image/gif": ".gif",
     "image/webp": ".webp",
     "image/tiff": ".tiff",
+    "image/bmp": ".bmp",
+    "image/x-ms-bmp": ".bmp",
 }
 
 if HEIF_ENABLED:
@@ -33,6 +35,8 @@ PIL_FORMAT_TO_EXT: Final[dict[str, str]] = {
     "GIF": ".gif",
     "WEBP": ".webp",
     "TIFF": ".tiff",
+    "BMP": ".bmp",
+    "MPO": ".jpg",
     "HEIC": ".heic",
     "HEIF": ".heif",
 }

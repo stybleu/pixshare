@@ -17,6 +17,18 @@ def _env_int(name: str):
         return None
 
 
+def _env_float(name: str, default: float) -> float:
+    """Retourne un nombre lu dans l'environnement, ou `default` s'il est absent/invalide."""
+    raw = (os.environ.get(name) or "").strip()
+    if not raw:
+        return default
+    try:
+        return float(raw)
+    except ValueError:
+        _log.warning("%s=%r est invalide (nombre attendu), valeur par défaut utilisée.", name, raw)
+        return default
+
+
 def _load_or_create_secret_key() -> str:
     """Clé de signature des sessions.
 
@@ -59,6 +71,10 @@ class Config:
     ADMIN_PASS = os.environ.get("ADMIN_PASS") or "0"
     MODERATION_API_KEY = os.environ.get("MODERATION_API_KEY", "")
     MODERATION_PENDING_IMAGES = (os.environ.get("MODERATION_PENDING_IMAGES", "1") == "1")
+    # NudeNet intégré au site : analyse les images en attente juste après l'envoi.
+    NSFW_AUTO_MODERATION = (os.environ.get("NSFW_AUTO_MODERATION", "1") == "1")
+    NSFW_REVIEW_THRESHOLD = _env_float("NSFW_REVIEW_THRESHOLD", 0.60)
+    NSFW_BLOCK_THRESHOLD = _env_float("NSFW_BLOCK_THRESHOLD", 0.85)
 
     DATA_DIR = "data"
     DB_FILE = os.path.join(DATA_DIR, "files.json")
@@ -83,7 +99,7 @@ class Config:
 
     ALLOWED_EXTENSIONS = {
         "png", "jpg", "jpeg", "gif", "webp",
-        "tif", "tiff",
+        "tif", "tiff", "bmp", "jfif", "jpe", "apng",
         "mp4", "webm", "avi", "heic", "heif"
     }
 

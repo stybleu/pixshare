@@ -5,3 +5,4 @@ Pillow
 pillow-heif
 psutil
 requests
+nudenet==3.4.2

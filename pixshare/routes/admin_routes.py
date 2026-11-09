@@ -1,3 +1,4 @@
+import ipaddress
 import os
 import secrets
 from datetime import timedelta
@@ -26,9 +27,17 @@ from pixshare.services.json_services import (
     save_contacts,
     save_db,
 )
-from pixshare.services.moderation_service import create_moderation_notice
+from pixshare.services.moderation_service import approve_image, create_moderation_notice
+from pixshare.services.nsfw_service import (
+    effective_settings as nsfw_effective_settings,
+    is_manual_review,
+    nudenet_installed,
+    queue_status as nsfw_queue_status,
+    run_after_response as nsfw_run_after_response,
+)
 from pixshare.services.settings_service import (
     get_valid_lifetime,
+    get_valid_nsfw_threshold,
     get_valid_thumbnail_retention_hours,
     load_settings,
     save_settings,
@@ -190,6 +199,28 @@ def admin_blocked_ips():
     )
 
 
+@admin_bp.route("/admin/blocked-ips/add", methods=["POST"], endpoint="admin_add_blocked_ip")
+@admin_required
+def admin_add_blocked_ip():
+    """Blocage manuel d'une IP saisie à la main (formulaire de l'onglet « IP bloquées »)."""
+    validate_csrf()
+    raw = (request.form.get("ip") or "").strip()
+    try:
+        ip = str(ipaddress.ip_address(raw))
+    except ValueError:
+        flash("IP invalide. Exemples : 82.64.12.34 ou 2001:db8::1", "warning")
+        return redirect(url_for("admin.admin_blocked_ips"))
+
+    blocked = load_blocked()
+    if ip in blocked:
+        flash(f"IP déjà bloquée : {ip}", "info")
+    else:
+        blocked.append(ip)
+        save_blocked(blocked)
+        flash(f"IP bloquée ✅ : {ip}", "success")
+    return redirect(url_for("admin.admin_blocked_ips"))
+
+
 @admin_bp.route("/admin/blocked-ips/clear", methods=["POST"])
 @admin_required
 def admin_clear_blocked_ips():
@@ -269,6 +300,7 @@ def admin_panel():
     return render_template(
         "admin.html",
         files=files,
+        review_count=sum(1 for f in files if f.get("status") == "pending" and f.get("moderation_decision") == "manual_review"),
         expiration_options=ADMIN_EXPIRATION_OPTIONS,
         version=current_app.config["APP_VERSION"],
     )
@@ -451,8 +483,92 @@ def admin_settings():
     return render_template(
         "admin_settings.html",
         settings=settings,
+        nsfw=_nsfw_context(),
         version=current_app.config["APP_VERSION"],
     )
+
+
+def _nsfw_context() -> dict:
+    values = nsfw_effective_settings()
+    values.update(nsfw_queue_status())
+    values["installed"] = nudenet_installed()
+    return values
+
+
+@admin_bp.route("/admin/settings/nsfw", methods=["POST"], endpoint="admin_nsfw_settings")
+@admin_required
+def admin_nsfw_settings():
+    validate_csrf()
+
+    review = get_valid_nsfw_threshold(request.form.get("nsfw_review_threshold"))
+    block = get_valid_nsfw_threshold(request.form.get("nsfw_block_threshold"))
+    if review is None or block is None:
+        flash("Seuils invalides : entre 0,05 et 1 (exemple : 0,60 et 0,85).", "warning")
+        return redirect(url_for("admin.admin_settings"))
+    if review > block:
+        flash("Le seuil de revue ne peut pas dépasser le seuil de suppression.", "warning")
+        return redirect(url_for("admin.admin_settings"))
+
+    current = load_settings()
+    current.update({
+        "nsfw_auto_moderation": request.form.get("nsfw_auto_moderation") == "1",
+        "nsfw_review_threshold": review,
+        "nsfw_block_threshold": block,
+        "nsfw_tiling": request.form.get("nsfw_tiling") == "1",
+    })
+    save_settings(current)
+    flash("Réglages NudeNet enregistrés ✅", "success")
+    return redirect(url_for("admin.admin_settings"))
+
+
+@admin_bp.route("/admin/moderation/run", methods=["POST"], endpoint="admin_nsfw_run")
+@admin_required
+def admin_nsfw_run():
+    """Lance l'analyse des images en attente après l'envoi de la réponse (évite le délai d'expiration du navigateur)."""
+    validate_csrf()
+    status = nsfw_queue_status()
+    if not nsfw_effective_settings()["enabled"]:
+        flash("La modération automatique est désactivée.", "warning")
+    elif not status["waiting"]:
+        flash("Aucune image en attente d'analyse.", "info")
+    else:
+        flash(f"Analyse lancée pour {min(status['waiting'], 10)} image(s) : recharge la page dans quelques secondes.", "success")
+    response = redirect(url_for("admin.admin_settings"))
+    if status["waiting"] and nsfw_effective_settings()["enabled"]:
+        app = current_app._get_current_object()
+        response.call_on_close(lambda: nsfw_run_after_response(app))
+    return response
+
+
+@admin_bp.route("/admin/review/<file_id>", methods=["GET"], endpoint="admin_review_preview")
+@admin_required
+def admin_review_preview(file_id):
+    """Aperçu réservé à l'admin d'une image encore privée (en attente ou en revue manuelle)."""
+    meta = load_db().get(file_id)
+    if not isinstance(meta, dict) or (meta.get("status") or "").lower() != "pending":
+        abort(404)
+    path = os.path.join(current_app.config["UPLOAD_FOLDER"], os.path.basename(str(meta.get("server_name") or "")))
+    if not os.path.isfile(path):
+        abort(404)
+    response = send_file(path, conditional=True, max_age=0)
+    response.headers["Cache-Control"] = "private, no-store"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
+@admin_bp.route("/admin/review/approve", methods=["POST"], endpoint="admin_review_approve")
+@admin_required
+def admin_review_approve():
+    validate_csrf()
+    file_id = (request.form.get("file_id") or "").strip()
+    db = load_db()
+    meta = db.get(file_id)
+    if not is_manual_review(meta):
+        flash("Cette image n'est plus en revue manuelle.", "warning")
+        return redirect(url_for("admin.admin_panel"))
+    approve_image(db, file_id, meta, "admin", meta.get("moderation_score"))
+    flash("Image approuvée et publiée ✅", "success")
+    return redirect(url_for("admin.admin_panel"))
 
 
 @admin_bp.route("/admin/delete", methods=["POST"], endpoint="admin_delete")

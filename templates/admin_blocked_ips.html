@@ -36,6 +36,24 @@
 
   </div>
 
+  <div class="card shadow-sm mb-3">
+    <div class="card-body">
+      <h2 class="h6 mb-2">Bloquer une IP manuellement</h2>
+      <form method="post" action="{{ url_for('admin.admin_add_blocked_ip') }}" class="row g-2 align-items-end">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+        <div class="col-12 col-md-6">
+          <label class="form-label">IP</label>
+          <input class="form-control" name="ip" placeholder="ex: 82.64.12.34" inputmode="text" autocomplete="off" required>
+        </div>
+
+        <div class="col-12 col-md-3">
+          <button class="btn btn-warning w-100" type="submit">Bloquer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   {% if blocked_ips %}
 
   <div class="card shadow-sm">

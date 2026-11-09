@@ -80,7 +80,10 @@ def is_allowed_file(filename: str) -> bool:
     return ext in allowed_extensions()
 
 
-API_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp", "bmp", "tif", "tiff", "heic", "heif"}
+API_IMAGE_EXTENSIONS = {
+    "png", "jpg", "jpeg", "gif", "webp", "bmp", "tif", "tiff", "heic", "heif",
+    "jfif", "jpe", "apng",
+}
 
 
 def requires_image_moderation(filename: str) -> bool:
@@ -278,7 +281,10 @@ def get_output_format_from_filename(filename: str) -> str:
     mapping = {
         "jpg": "JPEG",
         "jpeg": "JPEG",
+        "jfif": "JPEG",
+        "jpe": "JPEG",
         "png": "PNG",
+        "apng": "PNG",
         "webp": "WEBP",
         "bmp": "BMP",
         "gif": "GIF",

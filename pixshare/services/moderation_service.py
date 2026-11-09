@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 import secrets
 
-from pixshare.services.json_services import load_moderation_notices, save_moderation_notices
+from pixshare.services.json_services import load_moderation_notices, save_db, save_moderation_notices
 from pixshare.services.time_service import parse_dt, utcnow
 
 
@@ -90,3 +90,30 @@ def pop_pending_notice(guest_token: str) -> dict | None:
         save_moderation_notices(notices)
 
     return selected
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def approve_image(database: dict, file_id: str, meta: dict, detector: str, score: float | None) -> None:
+    """Publie une image en attente (utilisé par l'API de modération et par NudeNet intégré)."""
+    meta["status"] = "active"
+    meta["moderated_at"] = _utc_now_iso()
+    meta["moderation_decision"] = "approved"
+    meta["moderation_detector"] = detector
+    meta["moderation_score"] = score
+    database[file_id] = meta
+    save_db(database)
+
+
+def mark_image_for_review(database: dict, file_id: str, meta: dict, detector: str, score: float | None, label: str) -> None:
+    """L'image reste privée (status=pending) mais sort de la file automatique : revue manuelle."""
+    meta["status"] = "pending"
+    meta["moderated_at"] = _utc_now_iso()
+    meta["moderation_decision"] = "manual_review"
+    meta["moderation_detector"] = detector
+    meta["moderation_score"] = score
+    meta["moderation_label"] = label[:80]
+    database[file_id] = meta
+    save_db(database)

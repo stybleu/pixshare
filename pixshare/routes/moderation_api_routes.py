@@ -3,7 +3,6 @@ from __future__ import annotations
 import hmac
 import math
 import os
-from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path
 from typing import Any, Callable, TypeVar
@@ -11,8 +10,12 @@ from typing import Any, Callable, TypeVar
 from flask import Blueprint, current_app, jsonify, request, send_file, url_for
 
 from pixshare.services.file_service import cleanup_expired, delete_by_id
-from pixshare.services.json_services import load_db, save_db
-from pixshare.services.moderation_service import create_moderation_notice
+from pixshare.services.json_services import load_db
+from pixshare.services.moderation_service import (
+    approve_image as _approve,
+    create_moderation_notice,
+    mark_image_for_review as _mark_review,
+)
 
 moderation_api_bp = Blueprint("moderation_api", __name__, url_prefix="/api/admin/moderation")
 
@@ -20,6 +23,7 @@ F = TypeVar("F", bound=Callable[..., Any])
 IMAGE_EXTENSIONS = {
     ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp",
     ".tif", ".tiff", ".heic", ".heif",
+    ".jfif", ".jpe", ".apng",
 }
 
 
@@ -80,10 +84,6 @@ def _is_pending_image(meta: dict[str, Any], include_review: bool = False) -> boo
     return include_review or decision != "manual_review"
 
 
-def _utc_now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
-
-
 def _load_pending_image(file_id: str, include_review: bool = True):
     cleanup_expired()
     database = load_db()
@@ -107,28 +107,6 @@ def _clean_score(value: Any) -> float | None:
     if not math.isfinite(score):
         return None
     return max(0.0, min(score, 1.0))
-
-
-def _approve(database: dict[str, Any], file_id: str, meta: dict[str, Any], detector: str, score: float | None):
-    meta["status"] = "active"
-    meta["moderated_at"] = _utc_now_iso()
-    meta["moderation_decision"] = "approved"
-    meta["moderation_detector"] = detector
-    meta["moderation_score"] = score
-    database[file_id] = meta
-    save_db(database)
-
-
-def _mark_review(database: dict[str, Any], file_id: str, meta: dict[str, Any], detector: str, score: float | None, label: str):
-    # Le fichier reste privé: status=pending. Il est seulement retiré de la file automatique.
-    meta["status"] = "pending"
-    meta["moderated_at"] = _utc_now_iso()
-    meta["moderation_decision"] = "manual_review"
-    meta["moderation_detector"] = detector
-    meta["moderation_score"] = score
-    meta["moderation_label"] = label[:80]
-    database[file_id] = meta
-    save_db(database)
 
 
 @moderation_api_bp.get("/health")

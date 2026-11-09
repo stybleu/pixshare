@@ -27,10 +27,14 @@ class FileTooLargeError(ValueError):
 
 IMAGE_EXTENSIONS = {
     ".png", ".jpg", ".jpeg", ".gif", ".webp",
-    ".tif", ".tiff", ".heic", ".heif"
+    ".tif", ".tiff", ".heic", ".heif",
+    ".bmp", ".jfif", ".jpe", ".apng",
 }
 VIDEO_EXTENSIONS = {".mp4", ".webm", ".avi"}
-PREVIEW_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg", ".avif"}
+PREVIEW_IMAGE_EXTENSIONS = {
+    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg", ".avif",
+    ".jfif", ".jpe", ".apng",
+}
 
 
 def is_image_filename(filename) -> bool:
@@ -395,6 +399,14 @@ def file_meta(file_id: str, db: dict | None = None):
         "max_views": int(meta.get("max_views", 0) or 0),
         "views_remaining": (max(0, int(meta.get("max_views", 0) or 0) - int(meta.get("views", 0) or 0)) if meta.get("view_limit_enabled") else None),
         "status": status,
+        "moderation_decision": str(meta.get("moderation_decision") or ""),
+        "moderation_score": meta.get("moderation_score"),
+        "moderation_label": str(meta.get("moderation_label") or ""),
+        "review_url": (
+            url_for("admin.admin_review_preview", file_id=file_id)
+            if status == "pending" and public_exists and ext in IMAGE_EXTENSIONS
+            else ""
+        ),
         "deleted_at": meta.get("deleted_at", ""),
         "delete_reason": meta.get("delete_reason", ""),
         "thumb_url": url_for("admin.admin_thumbnail", file_id=file_id, _external=False) if thumb_exists else "",

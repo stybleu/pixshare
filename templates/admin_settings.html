@@ -104,4 +104,67 @@
     </form>
   </div>
 </div>
+<div class="card shadow-sm mt-4" id="nudenet">
+  <div class="card-body">
+    <h2 class="h5">Modération automatique (NudeNet)</h2>
+    <div class="text-muted small mb-3">Chaque nouvelle image reste privée le temps d'être analysée. Au-delà du seuil de revue elle attend ta décision ; au-delà du seuil de suppression elle est supprimée.</div>
+
+    <div class="d-flex flex-wrap gap-2 mb-3">
+      {% if nsfw.installed %}
+        <span class="badge text-bg-success">NudeNet installé</span>
+      {% else %}
+        <span class="badge text-bg-danger">NudeNet non installé : les images restent en attente</span>
+      {% endif %}
+      {% if not nsfw.pending_images %}
+        <span class="badge text-bg-warning">Les images ne sont pas mises en attente (MODERATION_PENDING_IMAGES=0)</span>
+      {% endif %}
+      <span class="badge text-bg-secondary">{{ nsfw.waiting }} en attente d'analyse</span>
+      <a class="badge text-bg-warning text-decoration-none" href="{{ url_for('admin.admin_panel') }}">{{ nsfw.review }} à vérifier</a>
+    </div>
+
+    <form method="post" action="{{ url_for('admin.admin_nsfw_settings') }}" class="row g-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+      <div class="col-12 col-md-6">
+        <label class="form-label fw-semibold">Analyse automatique</label>
+        <select name="nsfw_auto_moderation" class="form-select">
+          <option value="1" {% if nsfw.enabled %}selected{% endif %}>Active</option>
+          <option value="0" {% if not nsfw.enabled %}selected{% endif %}>Désactivée</option>
+        </select>
+        <div class="form-text">Désactivée : les nouvelles images restent privées en attente, rien n'est publié sans analyse.</div>
+      </div>
+
+      <div class="col-12 col-md-6">
+        <label class="form-label fw-semibold">Découpage des grandes images</label>
+        <select name="nsfw_tiling" class="form-select">
+          <option value="1" {% if nsfw.tiling %}selected{% endif %}>Oui (plus précis, plus lent)</option>
+          <option value="0" {% if not nsfw.tiling %}selected{% endif %}>Non (vue d'ensemble seulement)</option>
+        </select>
+        <div class="form-text">Une image d'au moins 800 px est analysée en entier puis en 4 morceaux. Mets « Non » si le serveur manque de mémoire ou de puissance.</div>
+      </div>
+
+      <div class="col-12 col-md-6">
+        <label class="form-label fw-semibold">Seuil de revue manuelle</label>
+        <input type="number" name="nsfw_review_threshold" class="form-control" min="0.05" max="1" step="0.01" value="{{ '%.2f'|format(nsfw.review_threshold) }}" required>
+        <div class="form-text">À partir de ce score, l'image reste privée et attend ta décision. Plus bas = plus d'images à vérifier.</div>
+      </div>
+
+      <div class="col-12 col-md-6">
+        <label class="form-label fw-semibold">Seuil de suppression automatique</label>
+        <input type="number" name="nsfw_block_threshold" class="form-control" min="0.05" max="1" step="0.01" value="{{ '%.2f'|format(nsfw.block_threshold) }}" required>
+        <div class="form-text">À partir de ce score, l'image est supprimée et l'auteur averti. Doit être supérieur ou égal au seuil de revue.</div>
+      </div>
+
+      <div class="col-12 d-flex flex-wrap gap-2">
+        <button class="btn btn-primary" type="submit">Enregistrer la modération</button>
+      </div>
+    </form>
+
+    <form method="post" action="{{ url_for('admin.admin_nsfw_run') }}" class="mt-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button class="btn btn-outline-secondary btn-sm" type="submit" {% if not nsfw.waiting %}disabled{% endif %}>Analyser maintenant les images en attente</button>
+      <span class="form-text ms-2">10 images maximum à la fois.</span>
+    </form>
+  </div>
+</div>
 {% endblock %}

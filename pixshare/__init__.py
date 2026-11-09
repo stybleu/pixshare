@@ -1,4 +1,5 @@
 import logging
+import mimetypes
 
 from flask import Flask, request
 
@@ -14,8 +15,14 @@ from .routes.moderation_api_routes import moderation_api_bp
 from .services.translation_service import apply_requested_language, build_lang_url, get_current_language, translate
 from .services.api_auth_service import ensure_default_api_keys
 from .services.auth_service import check_admin_config
+from .services.nsfw_service import run_after_response
 
 _log = logging.getLogger(__name__)
+
+for _ext, _mime in {
+    ".bmp": "image/bmp", ".jfif": "image/jpeg", ".jpe": "image/jpeg", ".apng": "image/apng",
+}.items():
+    mimetypes.add_type(_mime, _ext)
 
 
 def create_app(config_overrides: dict | None = None) -> Flask:
@@ -68,6 +75,18 @@ def create_app(config_overrides: dict | None = None) -> Flask:
             "base-uri 'self'; "
             "frame-ancestors 'none';"
         )
+        return response
+
+    @app.after_request
+    def auto_moderate_after_upload(response):
+        # Après l'envoi de la réponse (l'utilisateur n'attend pas l'analyse), NudeNet traite
+        # les images en attente. Seuls les envois de fichiers déclenchent l'analyse.
+        if (
+            request.method == "POST"
+            and request.endpoint in {"public.index", "api.api_upload"}
+            and response.status_code < 400
+        ):
+            response.call_on_close(lambda: run_after_response(app))
         return response
 
     @app.after_request
