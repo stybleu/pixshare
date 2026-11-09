@@ -271,7 +271,7 @@
                 </div>
                 {% if f.moderation_decision == "manual_review" %}
                   <div class="small text-muted mb-2">
-                    {% if f.moderation_label %}Détection : <code>{{ f.moderation_label }}</code>{% endif %}
+                    {% if f.moderation_label %}Détection : <strong>{{ f.moderation_label_fr or f.moderation_label }}</strong>{% endif %}
                     {% if f.moderation_score is not none %} — score {{ "%.2f"|format(f.moderation_score) }}{% endif %}
                   </div>
                 {% endif %}

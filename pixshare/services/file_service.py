@@ -18,6 +18,7 @@ from .json_services import load_db, save_db, load_views, save_views
 from .time_service import parse_dt, utcnow
 from .image_quality_service import can_enhance_extension, enhance_image_bytes
 from .image_metadata_service import strip_uploaded_image
+from .settings_service import nsfw_class_label
 from .settings_service import get_thumbnail_retention_hours, permanent_files_enabled, thumbnails_enabled
 from .usage_tracking_service import build_usage_summary
 
@@ -410,6 +411,7 @@ def file_meta(file_id: str, db: dict | None = None):
         "moderation_decision": str(meta.get("moderation_decision") or ""),
         "moderation_score": meta.get("moderation_score"),
         "moderation_label": str(meta.get("moderation_label") or ""),
+        "moderation_label_fr": nsfw_class_label(meta.get("moderation_label")),
         "review_url": (
             url_for("admin.admin_review_preview", file_id=file_id)
             if status == "pending" and public_exists and ext in IMAGE_EXTENSIONS

@@ -37,6 +37,8 @@ from pixshare.services.nsfw_service import (
 )
 from pixshare.services.settings_service import (
     get_valid_lifetime,
+    NSFW_CLASS_GROUPS,
+    get_valid_nsfw_classes,
     get_valid_nsfw_threshold,
     get_valid_thumbnail_retention_hours,
     load_settings,
@@ -492,6 +494,7 @@ def _nsfw_context() -> dict:
     values = nsfw_effective_settings()
     values.update(nsfw_queue_status())
     values["installed"] = nudenet_installed()
+    values["class_groups"] = NSFW_CLASS_GROUPS
     return values
 
 
@@ -510,12 +513,21 @@ def admin_nsfw_settings():
         return redirect(url_for("admin.admin_settings"))
 
     current = load_settings()
+    classes = None
+    if request.form.get("nsfw_classes_present") == "1":
+        classes = get_valid_nsfw_classes(request.form.getlist("nsfw_classes"))
+        if classes is None:
+            flash("Coche au moins une partie du corps à surveiller.", "warning")
+            return redirect(url_for("admin.admin_settings"))
+
     current.update({
         "nsfw_auto_moderation": request.form.get("nsfw_auto_moderation") == "1",
         "nsfw_review_threshold": review,
         "nsfw_block_threshold": block,
         "nsfw_tiling": request.form.get("nsfw_tiling") == "1",
     })
+    if classes is not None:
+        current["nsfw_classes"] = classes
     save_settings(current)
     flash("Réglages NudeNet enregistrés ✅", "success")
     return redirect(url_for("admin.admin_settings"))

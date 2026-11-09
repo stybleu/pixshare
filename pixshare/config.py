@@ -84,6 +84,8 @@ class Config:
     NSFW_AUTO_MODERATION = (os.environ.get("NSFW_AUTO_MODERATION", "1") == "1")
     NSFW_REVIEW_THRESHOLD = _env_float("NSFW_REVIEW_THRESHOLD", 0.60)
     NSFW_BLOCK_THRESHOLD = _env_float("NSFW_BLOCK_THRESHOLD", 0.85)
+    # Parties du corps surveillées, noms NudeNet séparés par des virgules (vide = les 5 zones intimes exposées).
+    NSFW_CLASSES = os.environ.get("NSFW_CLASSES", "")
 
     DATA_DIR = "data"
     DB_FILE = os.path.join(DATA_DIR, "files.json")

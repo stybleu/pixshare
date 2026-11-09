@@ -33,7 +33,7 @@ from pixshare.services.moderation_service import (
     create_moderation_notice,
     mark_image_for_review,
 )
-from pixshare.services.settings_service import load_settings
+from pixshare.services.settings_service import get_valid_nsfw_classes, load_settings
 
 try:  # Pillow décode GIF, TIFF, APNG, MPO... que OpenCV (donc NudeNet) lit mal.
     from PIL import Image
@@ -115,11 +115,19 @@ def effective_settings() -> dict:
         review = float(cfg.get("NSFW_REVIEW_THRESHOLD", 0.60))
     review = max(0.0, min(float(review), block))
 
+    # Parties surveillées : choix de l'admin, sinon variable NSFW_CLASSES, sinon les 5 zones intimes exposées.
+    classes = get_valid_nsfw_classes(stored.get("nsfw_classes"))
+    if classes is None:
+        classes = get_valid_nsfw_classes(cfg.get("NSFW_CLASSES"))
+    if classes is None:
+        classes = sorted(EXPLICIT_CLASSES)
+
     return {
         "enabled": bool(enabled),
         "review_threshold": review,
         "block_threshold": block,
         "tiling": bool(stored.get("nsfw_tiling", True)),
+        "classes": classes,
         "pending_images": bool(cfg.get("MODERATION_PENDING_IMAGES", True)),
     }
 
@@ -216,12 +224,13 @@ def extract_views(data: bytes, tiling: bool = True) -> list[bytes]:
         return views
 
 
-def analyze_bytes(data: bytes, tiling: bool = True) -> tuple[str | None, float]:
+def analyze_bytes(data: bytes, tiling: bool = True, classes=None) -> tuple[str | None, float]:
     """Renvoie (classe explicite la plus forte, son score). Lève une exception si l'analyse est impossible."""
     detector = _get_detector()
     if detector is None:
         raise RuntimeError("NudeNet indisponible")
 
+    wanted = EXPLICIT_CLASSES if classes is None else set(classes)
     best_label: str | None = None
     best_score = 0.0
     for frame in extract_views(data, tiling):
@@ -238,7 +247,7 @@ def analyze_bytes(data: bytes, tiling: bool = True) -> tuple[str | None, float]:
         for detection in detections:
             label = str(detection.get("class") or "")
             score = float(detection.get("score") or 0.0)
-            if label in EXPLICIT_CLASSES and score > best_score:
+            if label in wanted and score > best_score:
                 best_label, best_score = label, score
     return best_label, best_score
 
@@ -316,7 +325,7 @@ def _record_failure(file_id: str, error: str) -> str:
     return "retry"
 
 
-def _process_one(file_id: str, review_threshold: float, block_threshold: float, stats: dict, tiling: bool = True) -> None:
+def _process_one(file_id: str, review_threshold: float, block_threshold: float, stats: dict, tiling: bool = True, classes=None) -> None:
     db = load_db()
     meta = db.get(file_id)
     if not _is_waiting_image(meta):
@@ -325,7 +334,7 @@ def _process_one(file_id: str, review_threshold: float, block_threshold: float, 
     try:
         with open(path, "rb") as handle:
             data = handle.read()
-        label, score = analyze_bytes(data, tiling)
+        label, score = analyze_bytes(data, tiling, classes)
     except Exception as exc:
         outcome = _record_failure(file_id, f"{type(exc).__name__}: {exc}")
         stats["errors"] += 1
@@ -372,7 +381,7 @@ def run_auto_moderation(limit: int = 10) -> dict[str, int]:
             if not got:
                 return stats
             for file_id in waiting_image_ids(load_db(), limit):
-                _process_one(file_id, values["review_threshold"], values["block_threshold"], stats, values["tiling"])
+                _process_one(file_id, values["review_threshold"], values["block_threshold"], stats, values["tiling"], values["classes"])
         return stats
     except Exception:
         _log.exception("Erreur inattendue pendant la modération automatique")

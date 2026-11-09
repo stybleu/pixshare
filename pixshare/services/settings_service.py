@@ -16,10 +16,43 @@ DEFAULT_SETTINGS = {
     "nsfw_review_threshold": None,
     "nsfw_block_threshold": None,
     "nsfw_tiling": True,
+    "nsfw_classes": None,
 }
 
 NSFW_MIN_THRESHOLD = 0.05
 NSFW_MAX_THRESHOLD = 1.0
+
+# Parties du corps que NudeNet sait reconnaître et que l'admin peut surveiller : (nom NudeNet, libellé).
+# NudeNet ne reconnaît pas les cuisses.
+NSFW_CLASS_GROUPS = (
+    ("Zones intimes exposées", (
+        ("FEMALE_BREAST_EXPOSED", "Poitrine de femme"),
+        ("FEMALE_GENITALIA_EXPOSED", "Parties génitales de femme"),
+        ("MALE_GENITALIA_EXPOSED", "Parties génitales d'homme"),
+        ("BUTTOCKS_EXPOSED", "Fesses"),
+        ("ANUS_EXPOSED", "Anus"),
+    )),
+    ("Zones intimes couvertes (sous-vêtements, tissu)", (
+        ("FEMALE_BREAST_COVERED", "Poitrine de femme couverte"),
+        ("FEMALE_GENITALIA_COVERED", "Parties génitales de femme couvertes"),
+        ("BUTTOCKS_COVERED", "Fesses couvertes"),
+        ("ANUS_COVERED", "Anus couvert"),
+    )),
+    ("Autres zones", (
+        ("MALE_BREAST_EXPOSED", "Torse d'homme nu"),
+        ("BELLY_EXPOSED", "Ventre"),
+        ("ARMPITS_EXPOSED", "Aisselles"),
+        ("FEET_EXPOSED", "Pieds"),
+    )),
+)
+NSFW_CLASS_NAMES = tuple(name for _group, items in NSFW_CLASS_GROUPS for name, _label in items)
+NSFW_CLASS_LABELS = {name: label for _group, items in NSFW_CLASS_GROUPS for name, label in items}
+
+
+def nsfw_class_label(name) -> str:
+    """Nom français d'une partie détectée par NudeNet (le nom d'origine si elle est inconnue)."""
+    name = str(name or "")
+    return NSFW_CLASS_LABELS.get(name, name)
 
 ALLOWED_LIFETIMES = {5, 10, 20, 30, 60, 120, 360, 720, 1440, 2880, 4320, 10080}
 
@@ -70,7 +103,7 @@ def save_settings(settings: dict) -> dict:
     return clean_settings
 
 
-NSFW_KEYS = ("nsfw_auto_moderation", "nsfw_review_threshold", "nsfw_block_threshold", "nsfw_tiling")
+NSFW_KEYS = ("nsfw_auto_moderation", "nsfw_review_threshold", "nsfw_block_threshold", "nsfw_tiling", "nsfw_classes")
 
 
 def get_valid_nsfw_threshold(value):
@@ -86,6 +119,20 @@ def get_valid_nsfw_threshold(value):
     return round(number, 2)
 
 
+def get_valid_nsfw_classes(value):
+    """Liste triée de parties NudeNet valides (liste ou texte « A,B »). None si vide ou invalide."""
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, str):
+        value = value.replace(";", ",").replace(" ", ",").split(",")
+    try:
+        names = {str(item).strip().upper() for item in value}
+    except TypeError:
+        return None
+    valid = sorted(names & set(NSFW_CLASS_NAMES))
+    return valid or None
+
+
 def _clean_nsfw_settings(source: dict) -> dict:
     enabled = source.get("nsfw_auto_moderation")
     return {
@@ -93,6 +140,7 @@ def _clean_nsfw_settings(source: dict) -> dict:
         "nsfw_review_threshold": get_valid_nsfw_threshold(source.get("nsfw_review_threshold")),
         "nsfw_block_threshold": get_valid_nsfw_threshold(source.get("nsfw_block_threshold")),
         "nsfw_tiling": bool(source.get("nsfw_tiling", True)),
+        "nsfw_classes": get_valid_nsfw_classes(source.get("nsfw_classes")),
     }
 
 
