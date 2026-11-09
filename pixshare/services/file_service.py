@@ -17,6 +17,7 @@ from .auth_service import is_admin
 from .json_services import load_db, save_db, load_views, save_views
 from .time_service import parse_dt, utcnow
 from .image_quality_service import can_enhance_extension, enhance_image_bytes
+from .image_metadata_service import strip_uploaded_image
 from .settings_service import get_thumbnail_retention_hours, permanent_files_enabled, thumbnails_enabled
 from .usage_tracking_service import build_usage_summary
 
@@ -587,6 +588,7 @@ def save_saved_local_file(
 
     try:
         os.replace(local_path, dest)
+        strip_uploaded_image(dest)
 
         thumb_path = ""
         if is_image_extension(ext):
@@ -656,6 +658,9 @@ def save_uploaded_file(
             pass
         raise FileTooLargeError("Fichier trop volumineux.")
 
+    # Retire GPS, appareil, date… des photos (sans toucher aux pixels).
+    strip_uploaded_image(dest)
+
     thumb_path = ""
     if is_image_extension(ext):
         try:
@@ -702,6 +707,7 @@ def save_api_uploaded_file(
         dest = os.path.join(current_app.config["UPLOAD_FOLDER"], server_name)
 
     file_storage.save(dest)
+    strip_uploaded_image(dest)
 
     thumb_path = ""
     if is_image_extension(ext):

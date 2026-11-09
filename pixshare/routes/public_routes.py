@@ -53,6 +53,7 @@ from pixshare.services.json_services import (
     save_json,
 )
 from pixshare.services.request_service import get_client_ip
+from pixshare.services.rate_limit_service import check_upload_rate, limit_message
 from pixshare.services.settings_service import (
     get_default_lifetime,
     get_max_upload_size_bytes,
@@ -377,6 +378,7 @@ def index():
     guest_token = get_guest_token()
 
     uploads_enabled = upload_service_enabled()
+    rate_limit_retry = 0
 
     if request.method == "POST":
         validate_csrf()
@@ -391,7 +393,17 @@ def index():
         keep = (request.form.get("keep", "") in {"1", "on", "true", "yes"})
         view_limit_enabled, max_views = _parse_view_limit_form()
 
-        if f and f.filename:
+        # Limite d'envois par IP (l'admin n'est pas limité). Quand elle est atteinte,
+        # on réaffiche la page avec un message et le code 429 (voir la fin de la fonction).
+        rate_limited = False
+        if (f and f.filename) or image_url:
+            rate = check_upload_rate(ip, exempt=is_admin())
+            if not rate.allowed:
+                rate_limited = True
+                rate_limit_retry = rate.retry_after
+                flash(limit_message(rate), "warning")
+
+        if not rate_limited and f and f.filename:
             original = f.filename
             safe_name = secure_filename(original)
             if not safe_name:
@@ -434,7 +446,7 @@ def index():
                 
             return attach_guest_cookie(redirect(url_for("public.index")))
 
-        if image_url:
+        if not rate_limited and image_url:
             try:
                 temp_path, original_name, _, _ = download_remote_image_to_temp(
                     image_url,
@@ -461,8 +473,9 @@ def index():
 
             return attach_guest_cookie(redirect(url_for("public.index")))
 
-        flash("Choisis un fichier ou colle une URL d'image directe.", "warning")
-        return attach_guest_cookie(redirect(url_for("public.index")))
+        if not rate_limited:
+            flash("Choisis un fichier ou colle une URL d'image directe.", "warning")
+            return attach_guest_cookie(redirect(url_for("public.index")))
 
     guest_files = list_guest_files()
     for item in guest_files:
@@ -488,6 +501,9 @@ def index():
         default_lifetime=get_default_lifetime(),
         uploads_enabled=uploads_enabled,
     ))
+    if rate_limit_retry:
+        response.status_code = 429
+        response.headers["Retry-After"] = str(rate_limit_retry)
     return attach_guest_cookie(response)
 
 

@@ -20,6 +20,7 @@ from pixshare.services.api_auth_service import (
     remaining_uploads_info,
 )
 from pixshare.services.json_services import load_files, save_files
+from pixshare.services.image_metadata_service import strip_uploaded_image
 from pixshare.services.request_service import get_client_ip
 from pixshare.services.settings_service import upload_service_enabled
 from pixshare.services.usage_tracking_service import record_usage_event
@@ -409,6 +410,8 @@ def api_upload():
         uploaded_file.save(destination)
     except OSError:
         return api_error(500, "upload_save_failed", "Impossible d'enregistrer le fichier.")
+
+    strip_uploaded_image(destination)
 
     real_size = get_file_size(destination)
     ext = Path(original_filename).suffix.lower().lstrip(".")

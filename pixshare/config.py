@@ -17,6 +17,15 @@ def _env_int(name: str):
         return None
 
 
+def _env_int_default(name: str, default: int) -> int:
+    """Entier lu dans l'environnement, ou `default` s'il est absent ou invalide."""
+    raw = (os.environ.get(name) or "").strip()
+    try:
+        return int(raw) if raw else default
+    except ValueError:
+        return default
+
+
 def _env_float(name: str, default: float) -> float:
     """Retourne un nombre lu dans l'environnement, ou `default` s'il est absent/invalide."""
     raw = (os.environ.get(name) or "").strip()
@@ -125,6 +134,15 @@ class Config:
     # Plafond global d'échecs de connexion admin, toutes IP confondues
     # (protège contre un attaquant qui change d'IP à chaque essai).
     GLOBAL_MAX_FAILED_LOGINS = 30
+
+    # Retire les métadonnées (GPS, appareil, date…) des photos JPEG/PNG/WebP envoyées.
+    # Mettre STRIP_IMAGE_METADATA=0 pour désactiver.
+    STRIP_IMAGE_METADATA = (os.environ.get("STRIP_IMAGE_METADATA", "1") != "0")
+
+    # Limite d'envois par IP sur le site public (voir services/rate_limit_service.py).
+    # UPLOAD_RATE_LIMIT=0 désactive la limite.
+    UPLOAD_RATE_LIMIT = _env_int_default("UPLOAD_RATE_LIMIT", 30)
+    UPLOAD_RATE_WINDOW_SEC = _env_int_default("UPLOAD_RATE_WINDOW_SEC", 3600)
 
     API_DEFAULT_MAX_FILE_SIZE_MB = 10
     # Requêtes API par minute et par clé (0 = illimité ; absent = 60).
