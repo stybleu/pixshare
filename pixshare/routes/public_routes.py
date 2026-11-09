@@ -36,6 +36,7 @@ from pixshare.services.file_service import (
     get_guest_token,
     get_or_create_visitor_token,
     is_image_filename,
+    is_video_filename,
     list_guest_files,
     register_unique_view,
     requires_image_moderation,
@@ -651,6 +652,7 @@ def public_file(file_id):
             views=int(meta.get("views", 0) or 0),
             views_remaining=(max(0, int(meta.get("max_views", 0) or 0) - int(meta.get("views", 0) or 0)) if meta.get("view_limit_enabled") else None),
             is_image=is_image_filename(meta.get("original_name", "")),
+            is_video=is_video_filename(meta.get("original_name", "")),
         )
     )
     response.headers["X-Robots-Tag"] = "noindex, noimageindex"

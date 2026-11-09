@@ -114,7 +114,7 @@
   <div class="row g-3">
     {% for f in files %}
       {% set server_lower = (f.server or '')|lower %}
-      {% set is_video = server_lower.endswith('.mp4') or server_lower.endswith('.webm') or server_lower.endswith('.avi') %}
+      {% set is_video = server_lower.endswith('.mp4') or server_lower.endswith('.webm') or server_lower.endswith('.avi') or server_lower.endswith('.mov') %}
 
       <div class="col-12 col-md-6 col-xl-4">
         <div class="file-card shadow-sm">

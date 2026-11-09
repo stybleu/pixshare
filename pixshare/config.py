@@ -100,7 +100,7 @@ class Config:
     ALLOWED_EXTENSIONS = {
         "png", "jpg", "jpeg", "gif", "webp",
         "tif", "tiff", "bmp", "jfif", "jpe", "apng",
-        "mp4", "webm", "avi", "heic", "heif"
+        "mp4", "webm", "avi", "mov", "heic", "heif"
     }
 
     MAX_LIFETIME_MIN = 10080

@@ -30,7 +30,7 @@ IMAGE_EXTENSIONS = {
     ".tif", ".tiff", ".heic", ".heif",
     ".bmp", ".jfif", ".jpe", ".apng",
 }
-VIDEO_EXTENSIONS = {".mp4", ".webm", ".avi"}
+VIDEO_EXTENSIONS = {".mp4", ".webm", ".avi", ".mov"}
 PREVIEW_IMAGE_EXTENSIONS = {
     ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg", ".avif",
     ".jfif", ".jpe", ".apng",
@@ -43,6 +43,13 @@ def is_image_filename(filename) -> bool:
         return False
     name = str(filename).lower()
     return any(name.endswith(ext) for ext in PREVIEW_IMAGE_EXTENSIONS)
+
+
+def is_video_filename(filename) -> bool:
+    """Vrai si le nom de fichier est une vidéo lisible sur la page publique."""
+    if not filename:
+        return False
+    return os.path.splitext(str(filename).lower())[1] in VIDEO_EXTENSIONS
 
 
 def requires_image_moderation(extension_or_filename: str) -> bool:
