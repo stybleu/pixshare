@@ -16,7 +16,12 @@ from pixshare.storage import thumbnail_dir
 from .auth_service import is_admin
 from .json_services import load_db, save_db, load_views, save_views
 from .time_service import parse_dt, utcnow
-from .image_quality_service import can_enhance_extension, enhance_image_bytes
+from .image_quality_service import (
+    can_enhance_extension,
+    enhance_image_bytes,
+    get_output_extension,
+    parse_strength,
+)
 from .image_metadata_service import strip_uploaded_image
 from .settings_service import nsfw_class_label
 from .settings_service import get_thumbnail_retention_hours, permanent_files_enabled, thumbnails_enabled
@@ -638,13 +643,25 @@ def save_uploaded_file(
     file_id, server_name, dest, ext = _prepare_file_destination(original_name)
 
     enhance_requested = request.form.get("enhance_quality") in {"1", "on", "true", "yes"}
+    enhance_strength = parse_strength(request.form.get("enhance_strength"))
 
-    if enhance_requested and can_enhance_extension(ext):
-        file_bytes = file_storage.read()
+    if enhance_requested and enhance_strength > 0 and can_enhance_extension(ext):
+        original_bytes = file_storage.read()
         try:
-            file_bytes = enhance_image_bytes(file_bytes, ext)
+            file_bytes = enhance_image_bytes(original_bytes, ext, enhance_strength)
         except Exception:
-            pass
+            file_bytes = original_bytes
+
+        # Photo HEIC améliorée = JPEG : on change l'extension pour que tout l'ouvre.
+        new_ext = get_output_extension(ext)
+        if file_bytes is not original_bytes and new_ext != ext:
+            new_server_name = f"{file_id}{new_ext}"
+            new_dest = os.path.join(current_app.config["UPLOAD_FOLDER"], new_server_name)
+            if os.path.exists(new_dest):
+                file_bytes = original_bytes
+            else:
+                server_name, dest, ext = new_server_name, new_dest, new_ext
+                original_name = os.path.splitext(original_name)[0] + new_ext
 
         with open(dest, "wb") as f:
             f.write(file_bytes)

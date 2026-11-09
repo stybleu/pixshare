@@ -193,9 +193,9 @@
                   </label>
                 </div>
               
-                <div class="mt-2">
+                <div class="mt-2" id="enhanceStrengthBox">
                   <label class="form-label mb-1" for="enhanceStrength">
-                    {{ _("enhance_strength_label") }}
+                    {{ _("enhance_strength_label") }} : <strong id="enhanceStrengthValue">10</strong>
                   </label>
                   <input
                     id="enhanceStrength"
@@ -210,6 +210,30 @@
                     {{ _("enhance_strength_help") }}
                   </div>
                 </div>
+                <script>
+                (() => {
+                  const chk = document.getElementById("enhanceQuality");
+                  const range = document.getElementById("enhanceStrength");
+                  const out = document.getElementById("enhanceStrengthValue");
+                  if (!chk || !range || !out) return;
+                  try {
+                    const v = localStorage.getItem("pixshare:enhanceStrength");
+                    if (v !== null && v !== "") range.value = v;
+                    chk.checked = localStorage.getItem("pixshare:enhance") === "1";
+                  } catch (e) {}
+                  const sync = () => {
+                    out.textContent = range.value;
+                    range.disabled = !chk.checked;
+                    try {
+                      localStorage.setItem("pixshare:enhance", chk.checked ? "1" : "0");
+                      localStorage.setItem("pixshare:enhanceStrength", range.value);
+                    } catch (e) {}
+                  };
+                  chk.addEventListener("change", sync);
+                  range.addEventListener("input", sync);
+                  sync();
+                })();
+                </script>
               
                 <div class="form-text">
                   {{ _("option_image") }}
