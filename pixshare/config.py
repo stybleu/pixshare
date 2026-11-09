@@ -127,6 +127,10 @@ class Config:
     GLOBAL_MAX_FAILED_LOGINS = 30
 
     API_DEFAULT_MAX_FILE_SIZE_MB = 10
+    # Requêtes API par minute et par clé (0 = illimité ; absent = 60).
+    API_RATE_LIMIT_PER_MINUTE = _env_int("API_RATE_LIMIT_PER_MINUTE")
+    # Un envoi en base64 arrive dans un champ de formulaire, limité à 500 Ko par défaut.
+    MAX_FORM_MEMORY_SIZE = 16 * 1024 * 1024
     
     API_MAX_DIMENSION = 6000
     

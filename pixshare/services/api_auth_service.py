@@ -4,9 +4,11 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
-from flask import current_app, request
+from flask import current_app, g, request
 
+from pixshare.services import rate_limit_service
 from pixshare.services.json_services import load_api_keys, save_api_keys
+from pixshare.services.request_service import get_client_ip
 
 
 @dataclass
@@ -19,11 +21,19 @@ class ApiAuthResult:
     key_data: dict[str, Any] | None = None
 
 
-def get_api_key_from_request() -> str:
+def get_api_key_from_request(allow_param: bool = False) -> str:
     auth = (request.headers.get("Authorization") or "").strip()
     if auth.lower().startswith("bearer "):
         return auth[7:].strip()
-    return (request.headers.get("X-API-Key") or "").strip()
+    header_key = (request.headers.get("X-API-Key") or "").strip()
+    if header_key or not allow_param:
+        return header_key
+    # Façon imgbb (envoi simplifié uniquement) : ?key=..., champ de formulaire ou JSON.
+    value = request.args.get("key") or request.form.get("key")
+    if not value:
+        payload = request.get_json(silent=True)
+        value = payload.get("key") if isinstance(payload, dict) else ""
+    return str(value or "").strip()
 
 
 def ensure_default_api_keys() -> None:
@@ -162,9 +172,10 @@ def get_api_key_record(
     return data.get(key_value), data
 
 
-def authenticate_api_key() -> ApiAuthResult:
+def authenticate_api_key(allow_param: bool = False) -> ApiAuthResult:
     ensure_default_api_keys()
-    key_value = get_api_key_from_request()
+    key_value = get_api_key_from_request(allow_param)
+    g.rate_limit = None
 
     if not key_value:
         return ApiAuthResult(False, 401, "missing_api_key", "Clé API manquante.")
@@ -172,10 +183,27 @@ def authenticate_api_key() -> ApiAuthResult:
     key_data, _ = get_api_key_record(key_value)
 
     if not key_data:
+        # Freine les essais de clés au hasard : limite par IP, sans gêner les clés valides.
+        info = rate_limit_service.hit(
+            "fail:" + get_client_ip(), rate_limit_service.FAILED_AUTH_LIMIT_PER_MINUTE
+        )
+        if not info.allowed:
+            g.rate_limit = info
+            return ApiAuthResult(False, 429, "too_many_invalid_keys", "Trop d'essais avec une clé invalide. Réessaie plus tard.")
         return ApiAuthResult(False, 401, "invalid_api_key", "Clé API invalide.")
 
     if not bool(key_data.get("is_active", True)):
         return ApiAuthResult(False, 403, "api_key_disabled", "Cette clé API est désactivée.")
+
+    info = rate_limit_service.hit(
+        rate_limit_service.key_bucket(key_value), rate_limit_service.limit_for_key(key_data)
+    )
+    g.rate_limit = info
+    if not info.allowed:
+        return ApiAuthResult(
+            False, 429, "rate_limit_exceeded",
+            f"Trop de requêtes. Réessaie dans {info.retry_after} s.",
+        )
 
     if int(key_data.get("uploads_used", 0)) >= int(key_data.get("max_uploads_total", 0)):
         return ApiAuthResult(False, 403, "upload_limit_reached", "La limite totale d'uploads a été atteinte.")
