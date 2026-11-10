@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-md-7 col-lg-5">
+      <div class="card shadow-sm">
+        <div class="card-body p-4 text-center">
+          <div class="display-6 mb-2" aria-hidden="true">🔒</div>
+          <h1 class="h5 mb-2">Fichier protégé</h1>
+          <p class="text-muted small mb-4">
+            La personne qui a partagé ce fichier l'a protégé par un mot de passe.
+            Demande-le-lui si tu ne l'as pas.
+          </p>
+
+          <form method="post" action="{{ url_for('public.unlock_file', file_id=file_id) }}" class="text-start">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <label class="form-label" for="filePasswordUnlock">Mot de passe</label>
+            <input id="filePasswordUnlock" class="form-control form-control-lg mb-3" type="password"
+                   name="password" required maxlength="128" autocomplete="current-password" autofocus>
+            <button class="btn btn-primary btn-lg w-100" type="submit">Déverrouiller</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

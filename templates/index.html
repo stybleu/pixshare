@@ -267,6 +267,33 @@
                     </div>
                   </div>
                 </div>
+
+                <div class="col-12">
+                  <div class="border rounded p-3 bg-light">
+                    <label class="form-label fw-semibold mb-1" for="filePassword">🔒 Mot de passe (facultatif)</label>
+                    <div class="input-group">
+                      <input id="filePassword" class="form-control" type="password" name="file_password"
+                             minlength="4" maxlength="128" autocomplete="new-password"
+                             placeholder="Laisse vide pour un lien sans mot de passe">
+                      <button class="btn btn-outline-secondary" type="button" id="filePasswordToggle" aria-label="Afficher le mot de passe">👁</button>
+                    </div>
+                    <div class="form-text">
+                      Il faudra ce mot de passe pour voir ou télécharger le fichier. Toi, tu le vois sans mot de passe depuis ton historique.
+                      Il ne peut pas être récupéré : note-le.
+                    </div>
+                  </div>
+                  <script>
+                  (() => {
+                    const input = document.getElementById("filePassword");
+                    const toggle = document.getElementById("filePasswordToggle");
+                    if (!input || !toggle) return;
+                    toggle.addEventListener("click", () => {
+                      input.type = input.type === "password" ? "text" : "password";
+                      toggle.textContent = input.type === "password" ? "👁" : "🙈";
+                    });
+                  })();
+                  </script>
+                </div>
               </div>
 
               <div class="form-text mt-2">
@@ -361,6 +388,10 @@
 
                 {% if f.view_limit_enabled %}
                 · <span class="badge text-bg-info">{{ f.views_remaining }} vue(s) restante(s)</span>
+                {% endif %}
+
+                {% if f.protected %}
+                · <span class="badge text-bg-dark">🔒 Protégé</span>
                 {% endif %}
 
                 ·

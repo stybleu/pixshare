@@ -1,4 +1,4 @@
-from flask import Blueprint, abort, current_app, flash, make_response, redirect, render_template, request, send_from_directory, url_for
+from flask import Blueprint, abort, current_app, flash, make_response, redirect, render_template, request, send_from_directory, session, url_for
 from werkzeug.utils import secure_filename
 
 import os
@@ -17,6 +17,7 @@ from pixshare.services.file_service import (
     can_keep_uploads,
     cleanup_expired,
     delete_by_id,
+    file_password_ok,
     get_file_record,
     attach_guest_cookie,
     get_existing_guest_token,
@@ -108,6 +109,41 @@ def _limited_access_allowed(file_id: str, meta: dict) -> bool:
     return isinstance(seen, list) and token in seen
 
 
+# --------------------------------------------------------------- mot de passe
+FILE_PASSWORD_MIN = 4
+FILE_PASSWORD_MAX = 128
+UNLOCKED_SESSION_KEY = "unlocked_files"
+
+
+def _is_unlocked(file_id: str, meta: dict) -> bool:
+    """Fichier protégé : visible seulement par l'envoyeur, l'admin, ou un visiteur
+    qui a donné le bon mot de passe (retenu dans sa session)."""
+    if not meta.get("password_hash"):
+        return True
+    if is_admin():
+        return True
+    owner = meta.get("guest_token") or ""
+    if owner and owner == (get_existing_guest_token() or ""):
+        return True
+    return file_id in (session.get(UNLOCKED_SESSION_KEY) or [])
+
+
+def _remember_unlocked(file_id: str) -> None:
+    unlocked = [f for f in (session.get(UNLOCKED_SESSION_KEY) or []) if f != file_id]
+    unlocked.append(file_id)
+    session[UNLOCKED_SESSION_KEY] = unlocked[-30:]
+
+
+def _read_file_password():
+    """Mot de passe facultatif du formulaire d'envoi : (mot de passe, message d'erreur)."""
+    password = request.form.get("file_password") or ""
+    if not password:
+        return "", ""
+    if len(password) < FILE_PASSWORD_MIN or len(password) > FILE_PASSWORD_MAX:
+        return "", f"Le mot de passe doit faire entre {FILE_PASSWORD_MIN} et {FILE_PASSWORD_MAX} caractères."
+    return password, ""
+
+
 @public_bp.before_request
 def flash_pending_moderation_notice():
     guest_token = get_existing_guest_token()
@@ -151,6 +187,10 @@ def index():
         max_size_bytes = get_max_upload_size_bytes()
         keep = (request.form.get("keep", "") in {"1", "on", "true", "yes"})
         view_limit_enabled, max_views = _parse_view_limit_form()
+        file_password, password_error = _read_file_password()
+        if password_error and ((f and f.filename) or image_url):
+            flash(password_error, "warning")
+            return attach_guest_cookie(redirect(url_for("public.index")))
 
         # Limite d'envois par IP (l'admin n'est pas limité). Quand elle est atteinte,
         # on réaffiche la page avec un message et le code 429 (voir la fin de la fonction).
@@ -190,6 +230,7 @@ def index():
                     view_limit_enabled=view_limit_enabled,
                     max_views=max_views,
                     max_size_bytes=max_size_bytes,
+                    password=file_password,
                 )
             except FileTooLargeError:
                 max_mb = get_max_upload_size_mb()
@@ -220,6 +261,7 @@ def index():
                     keep_requested=keep,
                     view_limit_enabled=view_limit_enabled,
                     max_views=max_views,
+                    password=file_password,
                 )
             except UrlImportError as exc:
                 flash(str(exc), "danger")
@@ -228,7 +270,12 @@ def index():
                 flash("Impossible d'importer cette image depuis l'URL fournie.", "danger")
                 return attach_guest_cookie(redirect(url_for("public.index")))
 
-            flash("Image reçue. Elle reste privée jusqu'à la validation automatique.", "info")
+            if requires_image_moderation(original_name):
+                flash("Image reçue. Elle reste privée jusqu'à la validation automatique.", "info")
+            elif permanent:
+                flash("Image importée ✅ (sans expiration)", "success")
+            else:
+                flash(f"Image importée ✅ (expiration: {format_duration_minutes(lifetime)})", "success")
 
             return attach_guest_cookie(redirect(url_for("public.index")))
 
@@ -338,6 +385,9 @@ def view_file(file_id):
     if not meta:
         abort(404)
 
+    if not _is_unlocked(file_id, meta):
+        abort(404)
+
     if bool(meta.get("view_limit_enabled", False)):
         if not _limited_access_allowed(file_id, meta):
             abort(404)
@@ -377,8 +427,9 @@ def image_page(file_id):
     if not meta:
         abort(404)
 
-    # Vues limitées : on passe par /file/, la seule page qui compte les vues.
-    if bool(meta.get("view_limit_enabled", False)):
+    # Vues limitées ou mot de passe : on passe par /file/, la seule page qui
+    # compte les vues et demande le mot de passe.
+    if bool(meta.get("view_limit_enabled", False)) or not _is_unlocked(file_id, meta):
         return redirect(url_for("public.public_file", file_id=file_id))
 
     meta = dict(meta)
@@ -425,7 +476,7 @@ def download(file_id):
     if not meta:
         abort(404)
 
-    if not _limited_access_allowed(file_id, meta):
+    if not _is_unlocked(file_id, meta) or not _limited_access_allowed(file_id, meta):
         abort(404)
 
     record_usage_event(file_id, "download", stored_filename=server_name)
@@ -451,6 +502,16 @@ def public_file(file_id):
     if _view_limit_reached(stored_meta):
         delete_by_id(file_id, reason="view_limit")
         abort(404)
+
+    # Fichier protégé : on demande le mot de passe (aucune vue n'est comptée avant).
+    if not _is_unlocked(file_id, stored_meta):
+        response = make_response(render_template(
+            "file_locked.html",
+            file_id=file_id,
+            version=current_app.config["APP_VERSION"],
+        ))
+        response.headers["X-Robots-Tag"] = "noindex, noimageindex"
+        return response
 
     record_usage_event(file_id, "viewer", stored_filename=stored_meta.get("server_name", ""))
 
@@ -491,6 +552,35 @@ def public_file(file_id):
         )
 
     return response
+
+
+@public_bp.route("/file/<file_id>/unlock", methods=["POST"], endpoint="unlock_file")
+def unlock_file(file_id):
+    cleanup_expired()
+    validate_csrf()
+    _db, meta, _server_name = get_file_record(file_id)
+    if not meta:
+        abort(404)
+
+    target = redirect(url_for("public.public_file", file_id=file_id))
+    if _is_unlocked(file_id, meta):
+        return target
+
+    # Contre les essais en série : 8 erreurs = 15 minutes d'attente (par IP).
+    key = "filepw:" + (get_client_ip() or "?")
+    locked, seconds = is_locked(key)
+    if locked:
+        flash(f"Trop d'essais. Réessaie dans {max(1, seconds // 60)} min.", "warning")
+        return target
+
+    if file_password_ok(meta, request.form.get("password") or ""):
+        reset_fail(key)
+        _remember_unlocked(file_id)
+        return target
+
+    register_fail(key, max_failures=8)
+    flash("Mot de passe incorrect.", "danger")
+    return target
 
 
 @public_bp.route("/delete/<file_id>", methods=["POST"], endpoint="delete_own_file")

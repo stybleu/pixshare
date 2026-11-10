@@ -43,7 +43,7 @@ def sitemap():
         ext = ("." + original_name.rsplit(".", 1)[-1].lower()) if "." in original_name else ""
         if ext not in IMAGE_EXTENSIONS:
             continue
-        if not bool(meta.get("permanent")):
+        if not bool(meta.get("permanent")) or meta.get("password_hash"):
             continue
         _db, valid_meta, _server_name = get_file_record(file_id)
         if not valid_meta:

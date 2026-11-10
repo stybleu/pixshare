@@ -3,6 +3,7 @@ import secrets
 from datetime import datetime, timedelta
 
 from flask import current_app, g, request, session, url_for
+from werkzeug.security import check_password_hash, generate_password_hash
 from PIL import Image
 
 try:
@@ -423,6 +424,7 @@ def file_meta(file_id: str, db: dict | None = None):
         "moderation_score": meta.get("moderation_score"),
         "moderation_label": str(meta.get("moderation_label") or ""),
         "moderation_label_fr": nsfw_class_label(meta.get("moderation_label")),
+        "protected": bool(meta.get("password_hash")),
         "review_url": (
             url_for("admin.admin_review_preview", file_id=file_id)
             if status == "pending" and public_exists and ext in IMAGE_EXTENSIONS
@@ -550,6 +552,7 @@ def _register_saved_public_file(
     thumb_path: str = "",
     view_limit_enabled: bool = False,
     max_views: int | None = None,
+    password: str = "",
 ) -> tuple[str, int | None, bool]:
     uploaded_at = utcnow()
     expires_at = None if permanent else uploaded_at + timedelta(minutes=int(lifetime))
@@ -579,6 +582,9 @@ def _register_saved_public_file(
     if enabled:
         db[file_id]["view_limit_enabled"] = True
         db[file_id]["max_views"] = clean_max_views
+    if password:
+        # Seule une empreinte du mot de passe est gardée : il ne peut pas être relu.
+        db[file_id]["password_hash"] = generate_password_hash(password)
 
     if thumb_path:
         db[file_id]["thumb_delete_at"] = get_expected_thumb_delete_at(db[file_id])
@@ -595,6 +601,7 @@ def save_saved_local_file(
     keep_requested: bool = False,
     view_limit_enabled: bool = False,
     max_views: int | None = None,
+    password: str = "",
 ) -> tuple[str, int | None, bool]:
     file_id, server_name, dest, ext = _prepare_file_destination(original_name)
     lifetime, permanent = _resolve_web_lifetime(keep_requested)
@@ -621,6 +628,7 @@ def save_saved_local_file(
             thumb_path=thumb_path,
             view_limit_enabled=view_limit_enabled,
             max_views=max_views,
+            password=password,
         )
     except Exception:
         if os.path.exists(local_path):
@@ -645,6 +653,7 @@ def save_uploaded_file(
     view_limit_enabled: bool = False,
     max_views: int | None = None,
     max_size_bytes: int | None = None,
+    password: str = "",
 ) -> tuple[str, int | None, bool]:
     file_id, server_name, dest, ext = _prepare_file_destination(original_name)
 
@@ -706,6 +715,7 @@ def save_uploaded_file(
         thumb_path=thumb_path,
         view_limit_enabled=view_limit_enabled,
         max_views=max_views,
+        password=password,
     )
 
 
@@ -801,3 +811,14 @@ def delete_by_id(file_id: str, reason: str = "deleted") -> bool:
 
     save_db(db)
     return True
+
+
+def file_password_ok(meta: dict, password: str) -> bool:
+    """Le mot de passe donné correspond-il à celui du fichier ?"""
+    stored = (meta or {}).get("password_hash") or ""
+    if not stored or not password:
+        return False
+    try:
+        return check_password_hash(stored, password)
+    except Exception:
+        return False
