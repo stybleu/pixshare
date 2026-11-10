@@ -521,7 +521,8 @@ def _resolve_web_lifetime(keep_requested: bool) -> tuple[int | None, bool]:
     except ValueError:
         lifetime = current_app.config["DEFAULT_LIFETIME_MIN"]
 
-    lifetime = max(1, min(lifetime, current_app.config["MAX_LIFETIME_MIN"]))
+    from .settings_service import get_max_lifetime
+    lifetime = max(1, min(lifetime, get_max_lifetime()))
     return lifetime, False
 
 

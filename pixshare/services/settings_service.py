@@ -10,6 +10,8 @@ DEFAULT_SETTINGS = {
     "max_upload_size_mb": 100,
     "allow_permanent_files": True,
     "default_lifetime_minutes": 10,
+    # Durée maximale proposée aux visiteurs. None = variable MAX_LIFETIME_MIN (7 jours par défaut).
+    "max_lifetime_minutes": None,
     "thumbnail_retention_hours": 24,
     "keep_thumbnails": True,
     # Modération NudeNet. None = valeur de l'environnement (NSFW_*), tant que l'admin n'a rien enregistré.
@@ -59,7 +61,16 @@ def nsfw_class_label(name) -> str:
     name = str(name or "")
     return NSFW_CLASS_LABELS.get(name, name)
 
-ALLOWED_LIFETIMES = {5, 10, 20, 30, 60, 120, 360, 720, 1440, 2880, 4320, 10080}
+# Durées proposées (minutes, clé de traduction du libellé).
+LIFETIME_CHOICES = (
+    (5, "minutes_5"), (10, "minutes_10"), (20, "minutes_20"), (30, "minutes_30"),
+    (60, "hour_1"), (120, "hours_2"), (360, "hours_6"), (720, "hours_12"),
+    (1440, "day_1"), (2880, "days_2"), (4320, "days_3"), (10080, "days_7"),
+    (20160, "days_14"), (43200, "days_30"), (129600, "days_90"), (525600, "year_1"),
+)
+ALLOWED_LIFETIMES = {minutes for minutes, _key in LIFETIME_CHOICES}
+# Durées possibles pour le maximum (à partir d'1 heure).
+MAX_LIFETIME_CHOICES = tuple(minutes for minutes, _key in LIFETIME_CHOICES if minutes >= 60)
 
 
 def ensure_settings_file() -> None:
@@ -80,6 +91,7 @@ def load_settings() -> dict:
     settings["max_upload_size_mb"] = get_valid_max_upload_size_mb(settings.get("max_upload_size_mb"))
     settings["allow_permanent_files"] = bool(settings.get("allow_permanent_files", True))
     settings["default_lifetime_minutes"] = get_valid_lifetime(settings.get("default_lifetime_minutes"))
+    settings["max_lifetime_minutes"] = get_valid_max_lifetime(settings.get("max_lifetime_minutes"))
     settings["thumbnail_retention_hours"] = get_valid_thumbnail_retention_hours(settings.get("thumbnail_retention_hours"))
     settings["keep_thumbnails"] = bool(settings.get("keep_thumbnails", True))
     settings.update(_clean_nsfw_settings(settings))
@@ -102,6 +114,8 @@ def save_settings(settings: dict) -> dict:
     current = load_settings()
     nsfw_source = {key: settings.get(key, current.get(key)) for key in NSFW_KEYS}
     clean_settings.update(_clean_nsfw_settings(nsfw_source))
+    max_life = settings.get("max_lifetime_minutes", current.get("max_lifetime_minutes"))
+    clean_settings["max_lifetime_minutes"] = get_valid_max_lifetime(max_life)
     clean_settings["season_theme"] = clean_choice(settings.get("season_theme", current.get("season_theme", "")))
     sky = settings.get("sky_enabled", current.get("sky_enabled"))
     clean_settings["sky_enabled"] = sky if isinstance(sky, bool) else None
@@ -183,8 +197,44 @@ def upload_service_enabled() -> bool:
     return bool(load_settings().get("upload_service_enabled", True))
 
 
+def get_valid_max_lifetime(value):
+    """Maximum choisi dans l'admin ; None s'il n'y en a pas (ou s'il est invalide)."""
+    try:
+        value = int(value)
+    except (TypeError, ValueError):
+        return None
+    return value if value in MAX_LIFETIME_CHOICES else None
+
+
+def get_max_lifetime() -> int:
+    """Durée maximale d'hébergement en minutes : réglage de l'admin, sinon
+    variable MAX_LIFETIME_MIN de Render, sinon 7 jours."""
+    chosen = load_settings().get("max_lifetime_minutes")
+    if chosen:
+        return int(chosen)
+    from flask import current_app
+    try:
+        env_value = int(current_app.config.get("MAX_LIFETIME_MIN", 10080))
+    except (TypeError, ValueError):
+        env_value = 10080
+    # On se cale sur la plus grande durée proposée qui ne dépasse pas la variable.
+    fitting = [m for m in MAX_LIFETIME_CHOICES if m <= env_value]
+    return fitting[-1] if fitting else MAX_LIFETIME_CHOICES[0]
+
+
+def get_lifetime_choices() -> list[tuple[int, str]]:
+    """Durées affichées aux visiteurs : toutes celles qui ne dépassent pas le maximum."""
+    limit = get_max_lifetime()
+    return [(minutes, key) for minutes, key in LIFETIME_CHOICES if minutes <= limit]
+
+
 def get_default_lifetime() -> int:
-    return int(load_settings().get("default_lifetime_minutes", DEFAULT_SETTINGS["default_lifetime_minutes"]))
+    """Durée présélectionnée, jamais au-dessus du maximum."""
+    value = int(load_settings().get("default_lifetime_minutes", DEFAULT_SETTINGS["default_lifetime_minutes"]))
+    limit = get_max_lifetime()
+    if value <= limit:
+        return value
+    return [m for m, _k in LIFETIME_CHOICES if m <= limit][-1]
 
 
 def get_max_upload_size_mb() -> int:

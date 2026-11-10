@@ -230,18 +230,9 @@
                   <label class="form-label">{{ _("file_lifetime_default_10") }}</label>
 
                   <select id="lifetimeSelect" name="lifetime" class="form-select">
-                    <option value="5" {% if default_lifetime == 5 %}selected{% endif %}>{{ _("minutes_5") }}</option>
-                    <option value="10" {% if default_lifetime == 10 %}selected{% endif %}>{{ _("minutes_10") }}</option>
-                    <option value="20" {% if default_lifetime == 20 %}selected{% endif %}>{{ _("minutes_20") }}</option>
-                    <option value="30" {% if default_lifetime == 30 %}selected{% endif %}>{{ _("minutes_30") }}</option>
-                    <option value="60" {% if default_lifetime == 60 %}selected{% endif %}>{{ _("hour_1") }}</option>
-                    <option value="120" {% if default_lifetime == 120 %}selected{% endif %}>{{ _("hours_2") }}</option>
-                    <option value="360" {% if default_lifetime == 360 %}selected{% endif %}>{{ _("hours_6") }}</option>
-                    <option value="720" {% if default_lifetime == 720 %}selected{% endif %}>{{ _("hours_12") }}</option>
-                    <option value="1440" {% if default_lifetime == 1440 %}selected{% endif %}>{{ _("day_1") }}</option>
-                    <option value="2880" {% if default_lifetime == 2880 %}selected{% endif %}>{{ _("days_2") }}</option>
-                    <option value="4320" {% if default_lifetime == 4320 %}selected{% endif %}>{{ _("days_3") }}</option>
-                    <option value="10080" {% if default_lifetime == 10080 %}selected{% endif %}>{{ _("days_7") }}</option>
+                    {% for minutes, label_key in lifetime_choices %}
+                    <option value="{{ minutes }}" {% if default_lifetime == minutes %}selected{% endif %}>{{ _(label_key) }}</option>
+                    {% endfor %}
                   </select>
 
                   <div class="form-text">

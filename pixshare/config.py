@@ -112,7 +112,8 @@ class Config:
         "mp4", "webm", "avi", "mov", "heic", "heif"
     }
 
-    MAX_LIFETIME_MIN = 10080
+    # Durée maximale d'hébergement (minutes) si l'admin ne l'a pas réglée : 7 jours.
+    MAX_LIFETIME_MIN = _env_int_default("MAX_LIFETIME_MIN", 10080)
     DEFAULT_LIFETIME_MIN = 5
 
     # Fichiers sans expiration : autorisés (PERMANENT_UPLOADS=0 pour les couper),

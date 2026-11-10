@@ -33,7 +33,11 @@ from pixshare.services.nsfw_service import (
     run_after_response as nsfw_run_after_response,
 )
 from pixshare.services.settings_service import (
+    LIFETIME_CHOICES,
+    MAX_LIFETIME_CHOICES,
+    get_max_lifetime,
     get_valid_lifetime,
+    get_valid_max_lifetime,
     NSFW_CLASS_GROUPS,
     get_valid_nsfw_classes,
     get_valid_nsfw_threshold,
@@ -61,6 +65,10 @@ ADMIN_EXPIRATION_OPTIONS = [
     (2880, "2 jours"),
     (4320, "3 jours"),
     (10080, "7 jours"),
+    (20160, "14 jours"),
+    (43200, "30 jours"),
+    (129600, "90 jours"),
+    (525600, "1 an"),
 ]
 
 
@@ -274,7 +282,7 @@ def admin_set_expiration():
         flash("Valeur d’expiration invalide.", "warning")
         return redirect(url_for("admin.admin_panel"))
 
-    if minutes < 1 or minutes > int(current_app.config.get("MAX_LIFETIME_MIN", 10080)):
+    if minutes < 1 or minutes > 525600:
         flash("Valeur d’expiration hors limite.", "warning")
         return redirect(url_for("admin.admin_panel"))
 
@@ -380,6 +388,14 @@ def admin_settings():
 
         keep_thumbnails = request.form.get("keep_thumbnails") == "1"
 
+        max_lifetime_minutes = get_valid_max_lifetime(request.form.get("max_lifetime_minutes"))
+        if request.form.get("max_lifetime_minutes") and max_lifetime_minutes is None:
+            flash("Durée maximale invalide.", "warning")
+            return redirect(url_for("admin.admin_settings"))
+        if max_lifetime_minutes and default_lifetime_minutes > max_lifetime_minutes:
+            flash("Le temps d'expiration par défaut ne peut pas dépasser la durée maximale.", "warning")
+            return redirect(url_for("admin.admin_settings"))
+
         try:
             thumbnail_retention_hours = int(request.form.get("thumbnail_retention_hours", settings.get("thumbnail_retention_hours", 24)))
         except (TypeError, ValueError):
@@ -401,6 +417,7 @@ def admin_settings():
             "max_upload_size_mb": max_upload_size_mb,
             "allow_permanent_files": allow_permanent_files,
             "default_lifetime_minutes": default_lifetime_minutes,
+            "max_lifetime_minutes": max_lifetime_minutes,
             "thumbnail_retention_hours": thumbnail_retention_hours,
             "keep_thumbnails": keep_thumbnails,
         })
@@ -415,6 +432,9 @@ def admin_settings():
     return render_template(
         "admin_settings.html",
         settings=settings,
+        lifetime_choices=LIFETIME_CHOICES,
+        max_lifetime_choices=[c for c in LIFETIME_CHOICES if c[0] in MAX_LIFETIME_CHOICES],
+        max_lifetime_now=get_max_lifetime(),
         nsfw=_nsfw_context(),
         theme_choices=THEME_CHOICES,
         theme_saved=settings.get("season_theme") or "",

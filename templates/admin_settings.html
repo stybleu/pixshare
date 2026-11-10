@@ -51,20 +51,26 @@
       <div class="col-12 col-md-6">
         <label class="form-label fw-semibold">Temps d'expiration par défaut</label>
         <select name="default_lifetime_minutes" class="form-select">
-          <option value="5" {% if settings.default_lifetime_minutes == 5 %}selected{% endif %}>5 minutes</option>
-          <option value="10" {% if settings.default_lifetime_minutes == 10 %}selected{% endif %}>10 minutes</option>
-          <option value="20" {% if settings.default_lifetime_minutes == 20 %}selected{% endif %}>20 minutes</option>
-          <option value="30" {% if settings.default_lifetime_minutes == 30 %}selected{% endif %}>30 minutes</option>
-          <option value="60" {% if settings.default_lifetime_minutes == 60 %}selected{% endif %}>1 heure</option>
-          <option value="120" {% if settings.default_lifetime_minutes == 120 %}selected{% endif %}>2 heures</option>
-          <option value="360" {% if settings.default_lifetime_minutes == 360 %}selected{% endif %}>6 heures</option>
-          <option value="720" {% if settings.default_lifetime_minutes == 720 %}selected{% endif %}>12 heures</option>
-          <option value="1440" {% if settings.default_lifetime_minutes == 1440 %}selected{% endif %}>1 jour</option>
-          <option value="2880" {% if settings.default_lifetime_minutes == 2880 %}selected{% endif %}>2 jours</option>
-          <option value="4320" {% if settings.default_lifetime_minutes == 4320 %}selected{% endif %}>3 jours</option>
-          <option value="10080" {% if settings.default_lifetime_minutes == 10080 %}selected{% endif %}>7 jours</option>
+          {% for minutes, label_key in lifetime_choices %}
+          <option value="{{ minutes }}" {% if settings.default_lifetime_minutes == minutes %}selected{% endif %}>{{ _(label_key) }}</option>
+          {% endfor %}
         </select>
         <div class="form-text">Valeur présélectionnée sur la page d'upload.</div>
+      </div>
+
+      <div class="col-12 col-md-6">
+        <label class="form-label fw-semibold" for="max_lifetime_minutes">Durée maximale d'hébergement</label>
+        <select name="max_lifetime_minutes" id="max_lifetime_minutes" class="form-select">
+          <option value="" {% if not settings.max_lifetime_minutes %}selected{% endif %}>Par défaut (variable Render, sinon 7 jours)</option>
+          {% for minutes, label_key in max_lifetime_choices %}
+          <option value="{{ minutes }}" {% if settings.max_lifetime_minutes == minutes %}selected{% endif %}>{{ _(label_key) }}</option>
+          {% endfor %}
+        </select>
+        <div class="form-text">
+          En ce moment : <strong>{{ _(dict(lifetime_choices)[max_lifetime_now]) }}</strong>. Les visiteurs ne peuvent pas choisir plus long. Sans disque sur Render, ce choix est perdu à chaque
+          déploiement : pour le garder, mets la variable <code>MAX_LIFETIME_MIN</code> sur Render (en minutes :
+          <code>10080</code> = 7 jours, <code>43200</code> = 30 jours, <code>525600</code> = 1 an).
+        </div>
       </div>
 
       <div class="col-12 col-md-6">
