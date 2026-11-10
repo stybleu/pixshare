@@ -12,6 +12,8 @@ DEFAULT_SETTINGS = {
     "default_lifetime_minutes": 10,
     # Durée maximale proposée aux visiteurs. None = variable MAX_LIFETIME_MIN (7 jours par défaut).
     "max_lifetime_minutes": None,
+    # Lien « Soutenir PixShare » (Ko-fi...). "" = variable SUPPORT_URL, sinon pas de bouton.
+    "support_url": "",
     "thumbnail_retention_hours": 24,
     "keep_thumbnails": True,
     # Modération NudeNet. None = valeur de l'environnement (NSFW_*), tant que l'admin n'a rien enregistré.
@@ -114,6 +116,7 @@ def save_settings(settings: dict) -> dict:
     current = load_settings()
     nsfw_source = {key: settings.get(key, current.get(key)) for key in NSFW_KEYS}
     clean_settings.update(_clean_nsfw_settings(nsfw_source))
+    clean_settings["support_url"] = clean_support_url(settings.get("support_url", current.get("support_url", "")))
     max_life = settings.get("max_lifetime_minutes", current.get("max_lifetime_minutes"))
     clean_settings["max_lifetime_minutes"] = get_valid_max_lifetime(max_life)
     clean_settings["season_theme"] = clean_choice(settings.get("season_theme", current.get("season_theme", "")))
@@ -195,6 +198,24 @@ def get_valid_thumbnail_retention_hours(value) -> int:
 
 def upload_service_enabled() -> bool:
     return bool(load_settings().get("upload_service_enabled", True))
+
+
+def clean_support_url(value) -> str:
+    """Lien de soutien : seulement une vraie adresse web en https (sinon vide)."""
+    from urllib.parse import urlparse
+    value = str(value or "").strip()[:300]
+    if not value:
+        return ""
+    parsed = urlparse(value)
+    if parsed.scheme != "https" or not parsed.netloc or " " in value:
+        return ""
+    return value
+
+
+def get_support_url() -> str:
+    """Réglage de l'admin, sinon variable SUPPORT_URL de Render, sinon rien."""
+    import os
+    return clean_support_url(load_settings().get("support_url")) or clean_support_url(os.environ.get("SUPPORT_URL"))
 
 
 def get_valid_max_lifetime(value):

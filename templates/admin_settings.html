@@ -110,6 +110,33 @@
     </form>
   </div>
 </div>
+<div class="card shadow-sm mt-4" id="soutien">
+  <div class="card-body">
+    <h2 class="h5">Bouton « Soutenir PixShare »</h2>
+    <p class="text-muted small mb-3">
+      Colle le lien de ta page de dons (Ko-fi, Liberapay, Buy Me a Coffee…). Un bouton « ☕ Soutenir PixShare »
+      apparaît alors en bas de toutes les pages. Laisse vide pour le retirer.
+    </p>
+    <form method="post" action="{{ url_for('admin.admin_support_settings') }}" class="row g-2 align-items-end">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="col-sm-8">
+        <label class="form-label" for="support_url">Lien de la page de dons</label>
+        <input class="form-control" type="url" id="support_url" name="support_url" maxlength="300"
+               placeholder="https://ko-fi.com/pixshare" value="{{ support_saved }}">
+      </div>
+      <div class="col-sm-4">
+        <button class="btn btn-primary w-100" type="submit">Enregistrer</button>
+      </div>
+    </form>
+    <p class="small mt-2 mb-1">
+      Bouton affiché en ce moment : {% if support_now %}<a href="{{ support_now }}" target="_blank" rel="noopener noreferrer">{{ support_now }}</a>{% else %}<strong>aucun</strong>{% endif %}
+    </p>
+    <p class="form-text mb-0">
+      Sans disque sur Render, ce lien est perdu à chaque déploiement : pour le garder, ajoute la variable
+      <code>SUPPORT_URL</code> sur Render avec le même lien.
+    </p>
+  </div>
+</div>
 <div class="card shadow-sm mt-4" id="theme">
   <div class="card-body">
     <h2 class="h5">Thème de saison</h2>

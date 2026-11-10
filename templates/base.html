@@ -303,6 +303,23 @@ footer {
 {% from "_sky.html" import sky_layer, sky_window %}
 {% from "_season_scene.html" import season_scene %}
 {% from "_season_decor.html" import season_hat, season_extras, season_script %}
+<style>
+.support-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: .9rem;
+  text-decoration: none;
+  color: #5b3a1a;
+  background: #ffe9c7;
+  border: 1px solid #f3cf93;
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.support-btn:hover { color: #5b3a1a; transform: translateY(-1px); box-shadow: 0 6px 14px rgba(120, 80, 20, .15); }
+</style>
 {% block head %}{% endblock %}
 </head>
 <body{% if season_theme %} class="theme-{{ season_theme }}"{% endif %}>
@@ -385,6 +402,9 @@ footer {
 
     <div class="footer-meta">
       <div>PixShare © 2026</div>
+      {% if support_url %}
+      <a class="support-btn" href="{{ support_url }}" target="_blank" rel="noopener noreferrer">☕ {{ "Soutenir PixShare" if (current_lang or "fr") == "fr" else "Support PixShare" }}</a>
+      {% endif %}
     </div>
   </div>
 </footer>

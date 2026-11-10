@@ -34,6 +34,8 @@ from pixshare.services.nsfw_service import (
 )
 from pixshare.services.settings_service import (
     LIFETIME_CHOICES,
+    clean_support_url,
+    get_support_url,
     MAX_LIFETIME_CHOICES,
     get_max_lifetime,
     get_valid_lifetime,
@@ -435,6 +437,8 @@ def admin_settings():
         lifetime_choices=LIFETIME_CHOICES,
         max_lifetime_choices=[c for c in LIFETIME_CHOICES if c[0] in MAX_LIFETIME_CHOICES],
         max_lifetime_now=get_max_lifetime(),
+        support_saved=settings.get("support_url") or "",
+        support_now=get_support_url(),
         nsfw=_nsfw_context(),
         theme_choices=THEME_CHOICES,
         theme_saved=settings.get("season_theme") or "",
@@ -451,6 +455,22 @@ def _nsfw_context() -> dict:
     values["installed"] = nudenet_installed()
     values["class_groups"] = NSFW_CLASS_GROUPS
     return values
+
+
+@admin_bp.route("/admin/settings/support", methods=["POST"], endpoint="admin_support_settings")
+@admin_required
+def admin_support_settings():
+    validate_csrf()
+    raw = (request.form.get("support_url") or "").strip()
+    url = clean_support_url(raw)
+    if raw and not url:
+        flash("Lien invalide : colle une adresse complète qui commence par https://", "warning")
+        return redirect(url_for("admin.admin_settings") + "#soutien")
+    current = load_settings()
+    current["support_url"] = url
+    save_settings(current)
+    flash("Bouton « Soutenir » enregistré ✅" if url else "Bouton « Soutenir » retiré.", "success")
+    return redirect(url_for("admin.admin_settings") + "#soutien")
 
 
 @admin_bp.route("/admin/settings/theme", methods=["POST"], endpoint="admin_theme_settings")

@@ -13,7 +13,7 @@ from .routes.seo_routes import seo_bp
 from .services.translation_service import apply_requested_language, build_lang_url, get_current_language, translate
 from .services.auth_service import check_admin_config
 from .services.nsfw_service import run_after_response
-from .services.settings_service import load_settings
+from .services.settings_service import get_support_url, load_settings
 from .services.theme_service import active_theme, sky_enabled, theme_message
 
 _log = logging.getLogger(__name__)
@@ -44,9 +44,10 @@ def create_app(config_overrides: dict | None = None) -> Flask:
                 "season_theme": theme,
                 "season_message": theme_message(theme),
                 "sky_on": sky_enabled(settings.get("sky_enabled")),
+                "support_url": get_support_url(),
             }
         except Exception:
-            return {"season_theme": "", "season_message": "", "sky_on": False}
+            return {"season_theme": "", "season_message": "", "sky_on": False, "support_url": ""}
 
     @app.context_processor
     def _inject_globals():
