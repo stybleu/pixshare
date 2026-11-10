@@ -300,6 +300,8 @@ footer {
 {% include "_sky.html" %}
 {% include "_motion.html" %}
 {% from "_motion.html" import motion_script with context %}
+{% include "_shake.html" %}
+{% from "_shake.html" import shake_script with context %}
 {% from "_sky.html" import sky_layer, sky_window %}
 {% from "_season_decor.html" import season_hat, season_extras, season_script %}
 {% block head %}{% endblock %}
@@ -390,5 +392,6 @@ footer {
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 {{ season_script(season_theme) }}
 {{ motion_script() }}
+{{ shake_script() }}
 </body>
 </html>

@@ -1,0 +1,213 @@
+{# Petit jeu caché : secouer le téléphone (ou taper « boum » au clavier) fait tomber
+   les morceaux du site en bas de l'écran comme des briques. Un bouton remet tout en place. #}
+<style>
+.shk-falling { will-change: transform; transition: none !important; animation: none !important; }
+.shk-back { transition: transform .7s cubic-bezier(.2, .8, .2, 1) !important; }
+#shk-reset {
+  position: fixed;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  left: 50%;
+  z-index: 2000;
+  transform: translate(-50%, 140%);
+  padding: 12px 20px;
+  border: 0;
+  border-radius: 999px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--pix-primary, #4f46e5);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, .25);
+  transition: transform .35s cubic-bezier(.2, 1.4, .4, 1);
+}
+#shk-reset.shk-show { transform: translate(-50%, 0); }
+</style>
+
+{% macro shake_script() -%}
+<button id="shk-reset" type="button" hidden>{{ "↺ Remettre le site en place" if (current_lang or "fr") == "fr" else "↺ Put the site back" }}</button>
+<script>
+(() => {
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  const resetBtn = document.getElementById("shk-reset");
+  let bodies = [];
+  let running = false;
+  let fallen = false;
+  let raf = 0;
+  const view = { W: 0, H: 0 };
+
+  /* ---------- choix des « briques » ---------- */
+  function visible(el) {
+    const st = getComputedStyle(el);
+    if (st.display === "none" || st.visibility === "hidden" || st.position === "fixed") return false;
+    const r = el.getBoundingClientRect();
+    return r.width > 4 && r.height > 4 && r.bottom > 0 && r.top < (window.visualViewport ? visualViewport.height : innerHeight);
+  }
+
+  function collect(el, out) {
+    if (!visible(el) || el.id === "shk-reset" || el.closest("#sky-tint, #season-canvas, .topbar-sky")) return;
+    const st = getComputedStyle(el);
+    const r = el.getBoundingClientRect();
+    const kids = Array.from(el.children).filter(visible);
+    const tooBig = r.height > innerHeight * 0.42 || r.width * r.height > innerWidth * innerHeight * 0.5;
+    if (tooBig && kids.length) { kids.forEach((k) => collect(k, out)); return; }
+    if (st.display === "inline") return;
+    out.push(el);
+  }
+
+  function pickBricks() {
+    const out = [];
+    const roots = [];
+    document.querySelectorAll(".container-shell > *, footer > *").forEach((el) => roots.push(el));
+    roots.forEach((el) => collect(el, out));
+    return out.slice(0, 60);
+  }
+
+  /* ---------- petite physique maison ---------- */
+  function start() {
+    if (running || fallen) return;
+    const bricks = pickBricks();
+    if (!bricks.length) return;
+    bodies = bricks.map((el) => {
+      const r = el.getBoundingClientRect();
+      el.classList.remove("shk-back");
+      el.classList.add("shk-falling");
+      return {
+        el, w: r.width, h: r.height,
+        x0: r.left, y0: r.top, x: r.left, y: r.top,
+        vx: (Math.random() - 0.5) * 7,
+        vy: -1 - Math.random() * 5,
+        a: 0, va: (Math.random() - 0.5) * 0.04,
+        rest: 0, settled: false,
+      };
+    });
+    // Taille de l'écran figée au départ : les briques qui tournent ne doivent
+    // pas élargir la page (sinon le téléphone dézoome).
+    const vv = window.visualViewport;
+    view.W = Math.round(vv ? vv.width : document.documentElement.clientWidth);
+    view.H = Math.round(vv ? vv.height : innerHeight);
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    fallen = true; running = true;
+    if (navigator.vibrate) navigator.vibrate([30, 40, 60]);
+    resetBtn.hidden = false;
+    requestAnimationFrame(() => resetBtn.classList.add("shk-show"));
+    let last = performance.now();
+    const loop = (t) => {
+      const dt = Math.min(2, (t - last) / 16.7); last = t;
+      step(dt);
+      bodies.forEach((b) => {
+        b.el.style.transform = `translate(${b.x - b.x0}px, ${b.y - b.y0}px) rotate(${b.a}rad)`;
+      });
+      if (running) raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+  }
+
+  // Chaque brique tombe ; elle se pose sur le sol ou sur une brique déjà posée
+  // (comme au Tetris) : à l'arrêt, rien ne se chevauche.
+  function surfaceUnder(b) {
+    let top = view.H;
+    for (const o of bodies) {
+      if (o === b || !o.settled) continue;
+      const ox = Math.min(b.x + b.w, o.x + o.w) - Math.max(b.x, o.x);
+      if (ox > 2 && o.y < top) top = o.y;
+    }
+    return top;
+  }
+
+  function step(dt) {
+    const W = view.W, g = 0.6;
+    for (const b of bodies) {
+      if (b.settled) {
+        b.a += (b.rest - b.a) * 0.2;            // se redresse doucement
+        continue;
+      }
+      b.vy += g * dt;
+      b.x += b.vx * dt;
+      b.y += b.vy * dt;
+      b.a = Math.max(-0.35, Math.min(0.35, b.a + b.va * dt));
+      if (b.x < 0) { b.x = 0; b.vx = Math.abs(b.vx) * 0.4; }
+      if (b.x + b.w > W) { b.x = Math.max(0, W - b.w); b.vx = -Math.abs(b.vx) * 0.4; }
+      const floor = surfaceUnder(b);
+      if (b.vy > 0 && b.y + b.h >= floor) {
+        b.y = floor - b.h;
+        if (b.vy > 5) {                         // petit rebond
+          b.vy = -b.vy * 0.28;
+          b.vx *= 0.6;
+          b.va = -b.va * 0.5;
+        } else {
+          b.vy = 0; b.vx = 0; b.va = 0;
+          b.settled = true;
+          b.rest = (Math.random() - 0.5) * 0.08;
+        }
+      }
+    }
+  }
+
+  function restore() {
+    if (!fallen) return;
+    running = false;
+    cancelAnimationFrame(raf);
+    bodies.forEach((b) => {
+      b.el.classList.remove("shk-falling");
+      b.el.classList.add("shk-back");
+      b.el.style.transform = "";
+    });
+    setTimeout(() => {
+      bodies.forEach((b) => { b.el.classList.remove("shk-back"); b.el.style.transform = ""; });
+      bodies = [];
+      fallen = false;
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+    }, 750);
+    resetBtn.classList.remove("shk-show");
+    setTimeout(() => { if (!fallen) resetBtn.hidden = true; }, 400);
+  }
+
+  resetBtn.addEventListener("click", restore);
+  addEventListener("keydown", (e) => { if (e.key === "Escape") restore(); });
+  addEventListener("resize", () => { if (fallen) restore(); });
+
+  /* ---------- détection de la secousse ---------- */
+  let lastX = null, lastY = null, lastZ = null, jolts = [], cooldown = 0;
+  addEventListener("devicemotion", (e) => {
+    const acc = e.accelerationIncludingGravity;
+    if (!acc || acc.x == null) return;
+    if (lastX !== null) {
+      const delta = Math.abs(acc.x - lastX) + Math.abs(acc.y - lastY) + Math.abs(acc.z - lastZ);
+      const now = Date.now();
+      if (delta > 28 && now > cooldown) {
+        jolts = jolts.filter((t) => now - t < 900);
+        jolts.push(now);
+        if (jolts.length >= 3) {
+          jolts = [];
+          cooldown = now + 1500;
+          fallen ? restore() : start();
+        }
+      }
+    }
+    lastX = acc.x; lastY = acc.y; lastZ = acc.z;
+  });
+
+  // Sur iPhone/iPad, Safari demande la permission d'utiliser les capteurs :
+  // on la demande au premier appui sur le logo maintenu une seconde.
+  const logo = document.querySelector(".brand-link img");
+  if (logo && typeof DeviceMotionEvent !== "undefined" && typeof DeviceMotionEvent.requestPermission === "function") {
+    let timer = 0;
+    logo.addEventListener("touchstart", () => {
+      timer = setTimeout(() => { DeviceMotionEvent.requestPermission().catch(() => {}); }, 900);
+    }, { passive: true });
+    logo.addEventListener("touchend", () => clearTimeout(timer));
+  }
+
+  // Sur ordinateur : taper « boum » au clavier (hors des champs de saisie).
+  let typed = "";
+  addEventListener("keydown", (e) => {
+    if (e.target.closest && e.target.closest("input, textarea, select, [contenteditable]")) return;
+    typed = (typed + (e.key || "")).slice(-4).toLowerCase();
+    if (typed === "boum") { typed = ""; fallen ? restore() : start(); }
+  });
+
+  window.pixshareBoum = () => (fallen ? restore() : start());
+})();
+</script>
+{%- endmacro %}
