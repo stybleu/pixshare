@@ -104,6 +104,39 @@
     </form>
   </div>
 </div>
+<div class="card shadow-sm mt-4" id="theme">
+  <div class="card-body">
+    <h2 class="h5">Thème de saison</h2>
+    <p class="text-muted small mb-2">
+      En automatique, le décor change tout seul : Halloween (24 oct. → 1er nov.), Noël (1er déc. → 6 janv.),
+      Nouvel An (31 déc. → 2 janv.), Saint-Valentin (7 → 14 févr.), Pâques (la semaine avant le dimanche de Pâques, jusqu'au lundi)
+      et 14 Juillet (13 → 14 juil.).
+    </p>
+    <p class="small mb-3">
+      Thème affiché en ce moment : <strong>{{ theme_names.get(theme_now, "aucun") }}</strong>
+    </p>
+    <form method="post" action="{{ url_for('admin.admin_theme_settings') }}" class="row g-2 align-items-end">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="col-sm-8">
+        <label class="form-label" for="season_theme">Thème</label>
+        <select class="form-select" id="season_theme" name="season_theme">
+          {% for key, label in theme_choices %}
+          <option value="{{ key }}" {% if (theme_saved or 'auto') == key %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-sm-4">
+        <button class="btn btn-primary w-100" type="submit">Appliquer</button>
+      </div>
+    </form>
+    <p class="form-text mb-0 mt-2">
+      Sans disque sur Render, ce choix est perdu à chaque déploiement. Pour le garder, ajoute la variable
+      <code>SEASON_THEME</code> sur Render (valeurs : <code>auto</code>, <code>aucun</code>, <code>noel</code>,
+      <code>nouvel_an</code>, <code>saint_valentin</code>, <code>paques</code>, <code>halloween</code>,
+      <code>quatorze_juillet</code>).
+    </p>
+  </div>
+</div>
 <div class="card shadow-sm mt-4" id="nudenet">
   <div class="card-body">
     <h2 class="h5">Modération automatique (NudeNet)</h2>

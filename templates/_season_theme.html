@@ -1,0 +1,225 @@
+{# Thèmes de saison : décor ajouté par-dessus le style normal. season_theme vient de theme_service. #}
+{% if season_theme %}
+<style>
+/* ---------- commun ---------- */
+.topbar { position: relative; }
+.brand-link { position: relative; }
+
+.season-lights {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: -9px;
+  height: 18px;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+  z-index: 2;
+}
+.season-lights::before {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  height: 8px;
+  border-bottom: 2px solid rgba(40, 50, 40, 0.55);
+  border-radius: 0 0 50% 50% / 0 0 100% 100%;
+}
+.season-lights i {
+  position: relative;
+  top: 4px;
+  width: 8px;
+  height: 12px;
+  border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+  background: var(--bulb, #ffd23f);
+  box-shadow: 0 0 8px 2px var(--bulb, #ffd23f);
+  animation: season-blink 2.4s infinite ease-in-out;
+}
+.season-lights i::before {
+  content: "";
+  position: absolute;
+  top: -3px; left: 1px;
+  width: 6px; height: 4px;
+  border-radius: 1px;
+  background: #3a4a3a;
+}
+.season-lights i:nth-child(4n+1) { --bulb: var(--b1); animation-delay: 0s; }
+.season-lights i:nth-child(4n+2) { --bulb: var(--b2); animation-delay: .6s; }
+.season-lights i:nth-child(4n+3) { --bulb: var(--b3); animation-delay: 1.2s; }
+.season-lights i:nth-child(4n+4) { --bulb: var(--b4); animation-delay: 1.8s; }
+
+.theme-nouvel_an .season-lights i:nth-child(4n+2),
+.theme-nouvel_an .season-lights i:nth-child(4n+4),
+.theme-saint_valentin .season-lights i:nth-child(4n+2),
+.theme-quatorze_juillet .season-lights i:nth-child(4n+2),
+.theme-quatorze_juillet .season-lights i:nth-child(4n+4) { box-shadow: 0 0 0 1px rgba(0,0,0,.18), 0 0 8px 2px rgba(255,255,255,.9); }
+.season-lights i:nth-child(n+17) { display: var(--more-bulbs, inline-block); }
+
+@keyframes season-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .35; box-shadow: none; }
+}
+
+.season-hat {
+  position: absolute;
+  left: -10px;
+  top: -20px;
+  width: 40px;
+  height: 34px;
+  transform: rotate(-18deg);
+  pointer-events: none;
+  z-index: 3;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,.18));
+}
+
+.season-banner {
+  margin: -6px auto 18px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 7px 16px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: .95rem;
+  text-align: center;
+  color: var(--banner-fg);
+  background: var(--banner-bg);
+  border: 1px solid var(--banner-line);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, .08);
+}
+
+/* Les flocons, cœurs, feuilles... passent DERRIÈRE le contenu : ils décorent
+   le fond sans jamais cacher un texte, un bouton ou un formulaire. */
+#season-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+body[class*="theme-"] main,
+body[class*="theme-"] footer { position: relative; z-index: 1; }
+
+@media (max-width: 767.98px) {
+  .season-lights { --more-bulbs: none; left: 12px; right: 12px; }
+  .season-hat { width: 32px; height: 28px; top: -16px; left: -8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .season-lights i { animation: none; }
+  #season-canvas { display: none; }
+}
+
+/* ---------- Noël ---------- */
+.theme-noel {
+  --pix-primary: #c62828;
+  --pix-primary-soft: rgba(198, 40, 40, .10);
+  --b1: #ff3b3b; --b2: #ffd23f; --b3: #2ecc71; --b4: #4fc3ff;
+  --banner-fg: #8e1b1b; --banner-bg: #fff4f2; --banner-line: rgba(198, 40, 40, .25);
+}
+body.theme-noel {
+  background:
+    radial-gradient(circle at top left, rgba(198, 40, 40, .12), transparent 30%),
+    radial-gradient(circle at top right, rgba(22, 128, 61, .12), transparent 28%),
+    linear-gradient(180deg, #f7fbff 0%, #eef4fa 100%);
+}
+.theme-noel .brand-title span { background: linear-gradient(45deg, #e53935, #c62828, #2e7d32); -webkit-background-clip: text; background-clip: text; }
+.theme-noel .topbar::before {
+  content: "";
+  position: absolute;
+  left: 14px; right: 14px; top: -7px;
+  height: 14px;
+  background:
+    radial-gradient(circle at 10px 10px, #fff 9px, transparent 10px) 0 0 / 34px 14px repeat-x,
+    radial-gradient(circle at 26px 12px, #fff 7px, transparent 8px) 0 0 / 34px 14px repeat-x;
+  filter: drop-shadow(0 2px 2px rgba(120, 140, 170, .25));
+  pointer-events: none;
+}
+.theme-noel .btn-primary { background-color: #c62828; border-color: #c62828; }
+.theme-noel .btn-primary:hover { background-color: #a91f1f; border-color: #a91f1f; }
+
+/* ---------- Nouvel An ---------- */
+.theme-nouvel_an {
+  --pix-primary: #b8860b;
+  --pix-primary-soft: rgba(184, 134, 11, .12);
+  --b1: #ffd700; --b2: #ffffff; --b3: #f5c542; --b4: #e0e0e0;
+  --banner-fg: #6b4e00; --banner-bg: #fff9e6; --banner-line: rgba(184, 134, 11, .35);
+}
+body.theme-nouvel_an {
+  background:
+    radial-gradient(circle at top left, rgba(255, 215, 0, .16), transparent 30%),
+    radial-gradient(circle at top right, rgba(124, 92, 255, .12), transparent 28%),
+    linear-gradient(180deg, #fbfaf6 0%, #f3f1ea 100%);
+}
+.theme-nouvel_an .brand-title span { background: linear-gradient(45deg, #b8860b, #ffd700, #b8860b); -webkit-background-clip: text; background-clip: text; }
+
+/* ---------- Saint-Valentin ---------- */
+.theme-saint_valentin {
+  --pix-primary: #d81b60;
+  --pix-primary-soft: rgba(216, 27, 96, .10);
+  --b1: #ff4d88; --b2: #ffffff; --b3: #ff8fb3; --b4: #e91e63;
+  --banner-fg: #9c1149; --banner-bg: #fff0f5; --banner-line: rgba(216, 27, 96, .25);
+}
+body.theme-saint_valentin {
+  background:
+    radial-gradient(circle at top left, rgba(255, 77, 136, .16), transparent 30%),
+    radial-gradient(circle at top right, rgba(255, 143, 179, .16), transparent 28%),
+    linear-gradient(180deg, #fff8fb 0%, #fbf0f4 100%);
+}
+.theme-saint_valentin .brand-title span { background: linear-gradient(45deg, #ff4d88, #d81b60, #ff8fb3); -webkit-background-clip: text; background-clip: text; }
+.theme-saint_valentin .btn-primary { background-color: #d81b60; border-color: #d81b60; }
+
+/* ---------- Pâques ---------- */
+.theme-paques {
+  --pix-primary: #2e9d6a;
+  --pix-primary-soft: rgba(46, 157, 106, .10);
+  --b1: #ffd6e8; --b2: #c8f0d8; --b3: #fff1a8; --b4: #cfe3ff;
+  --banner-fg: #1f6b48; --banner-bg: #f2fbf5; --banner-line: rgba(46, 157, 106, .25);
+}
+body.theme-paques {
+  background:
+    radial-gradient(circle at top left, rgba(255, 214, 232, .45), transparent 30%),
+    radial-gradient(circle at top right, rgba(200, 240, 216, .5), transparent 28%),
+    linear-gradient(180deg, #fbfdf8 0%, #f2f7ee 100%);
+}
+.theme-paques .brand-title span { background: linear-gradient(45deg, #f48fb1, #66bb6a, #ffca28); -webkit-background-clip: text; background-clip: text; }
+
+/* ---------- Halloween ---------- */
+.theme-halloween {
+  --pix-primary: #e8710a;
+  --pix-primary-soft: rgba(232, 113, 10, .12);
+  --b1: #ff8c1a; --b2: #9b59ff; --b3: #ffb347; --b4: #7cff6b;
+  --banner-fg: #ffffff; --banner-bg: #3b1d5a; --banner-line: rgba(232, 113, 10, .55);
+}
+body.theme-halloween {
+  background:
+    radial-gradient(circle at top left, rgba(232, 113, 10, .18), transparent 30%),
+    radial-gradient(circle at top right, rgba(110, 50, 180, .16), transparent 28%),
+    linear-gradient(180deg, #fbf7f2 0%, #f1ebe4 100%);
+}
+.theme-halloween .brand-title span { background: linear-gradient(45deg, #ff8c1a, #e8710a, #7b3fc4); -webkit-background-clip: text; background-clip: text; }
+.theme-halloween .btn-primary { background-color: #e8710a; border-color: #e8710a; }
+.theme-halloween .season-web {
+  position: absolute;
+  right: -26px; top: -26px;
+  width: 56px; height: 56px;
+  pointer-events: none;
+  opacity: .55;
+}
+@media (max-width: 767.98px) { .theme-halloween .season-web { display: none; } }
+
+/* ---------- 14 Juillet ---------- */
+.theme-quatorze_juillet {
+  --pix-primary: #1f3fa8;
+  --pix-primary-soft: rgba(31, 63, 168, .10);
+  --b1: #2349c4; --b2: #ffffff; --b3: #e3262f; --b4: #ffffff;
+  --banner-fg: #1f3fa8; --banner-bg: #f3f6ff; --banner-line: rgba(227, 38, 47, .35);
+}
+body.theme-quatorze_juillet {
+  background:
+    radial-gradient(circle at top left, rgba(35, 73, 196, .14), transparent 30%),
+    radial-gradient(circle at top right, rgba(227, 38, 47, .12), transparent 28%),
+    linear-gradient(180deg, #f8faff 0%, #eff2f9 100%);
+}
+.theme-quatorze_juillet .brand-title span { background: linear-gradient(90deg, #2349c4, #8a93b0, #e3262f); -webkit-background-clip: text; background-clip: text; }
+</style>
+{% endif %}

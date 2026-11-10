@@ -296,9 +296,11 @@ footer {
 }
 </style>
 
+{% include "_season_theme.html" %}
+{% from "_season_decor.html" import season_hat, season_extras, season_script %}
 {% block head %}{% endblock %}
 </head>
-<body>
+<body{% if season_theme %} class="theme-{{ season_theme }}"{% endif %}>
 
 <main>
   <div class="container-shell">
@@ -307,6 +309,7 @@ footer {
 
       <div class="topbar">
         <a class="brand-link" href="{{ url_for('public.index') }}">
+          {{ season_hat(season_theme) }}
           <img src="{{ url_for('static', filename='images/pixshare_logo.png') }}" alt="PixShare">
           <div class="brand-meta">
             <span class="brand-kicker">Partage temporaire d'images et de fichiers</span>
@@ -328,8 +331,13 @@ footer {
             <a href="{{ switch_lang_url('en') }}" title="{{ _('lang_en') }}">🇬🇧</a>
           </div>
         </div>
+        {{ season_extras(season_theme) }}
       </div>
     </header>
+
+    {% if season_message %}
+    <div class="season-banner">{{ season_message }}</div>
+    {% endif %}
 
     <div class="flash-stack">
       {% with messages = get_flashed_messages(with_categories=true) %}
@@ -369,11 +377,11 @@ footer {
 
     <div class="footer-meta">
       <div>PixShare © 2026</div>
-      <div>API en version bêta — les fonctionnalités et réponses peuvent évoluer.</div>
     </div>
   </div>
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+{{ season_script(season_theme) }}
 </body>
 </html>

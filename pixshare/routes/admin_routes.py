@@ -42,6 +42,7 @@ from pixshare.services.settings_service import (
 )
 from pixshare.services.request_service import ip_source
 from pixshare.services.system_service import get_system_stats
+from pixshare.services.theme_service import THEME_CHOICES, THEMES, active_theme, clean_choice
 from pixshare.services.time_service import get_remaining_time_label, format_duration_minutes, utcnow
 
 admin_bp = Blueprint("admin", __name__)
@@ -414,6 +415,10 @@ def admin_settings():
         "admin_settings.html",
         settings=settings,
         nsfw=_nsfw_context(),
+        theme_choices=THEME_CHOICES,
+        theme_saved=settings.get("season_theme") or "",
+        theme_now=active_theme(settings.get("season_theme")),
+        theme_names={k: v[0] for k, v in THEMES.items()},
         version=current_app.config["APP_VERSION"],
     )
 
@@ -424,6 +429,18 @@ def _nsfw_context() -> dict:
     values["installed"] = nudenet_installed()
     values["class_groups"] = NSFW_CLASS_GROUPS
     return values
+
+
+@admin_bp.route("/admin/settings/theme", methods=["POST"], endpoint="admin_theme_settings")
+@admin_required
+def admin_theme_settings():
+    validate_csrf()
+    choice = clean_choice(request.form.get("season_theme")) or "auto"
+    current = load_settings()
+    current["season_theme"] = choice
+    save_settings(current)
+    flash("Thème enregistré ✅ (il revient au réglage de Render au prochain déploiement)", "success")
+    return redirect(url_for("admin.admin_settings") + "#theme")
 
 
 @admin_bp.route("/admin/settings/nsfw", methods=["POST"], endpoint="admin_nsfw_settings")

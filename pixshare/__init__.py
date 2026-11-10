@@ -13,6 +13,8 @@ from .routes.seo_routes import seo_bp
 from .services.translation_service import apply_requested_language, build_lang_url, get_current_language, translate
 from .services.auth_service import check_admin_config
 from .services.nsfw_service import run_after_response
+from .services.settings_service import load_settings
+from .services.theme_service import active_theme, theme_message
 
 _log = logging.getLogger(__name__)
 
@@ -32,6 +34,14 @@ def create_app(config_overrides: dict | None = None) -> Flask:
     init_storage(app)
     with app.app_context():
         check_admin_config()
+
+    @app.context_processor
+    def _inject_season_theme():
+        try:
+            theme = active_theme(load_settings().get("season_theme"))
+            return {"season_theme": theme, "season_message": theme_message(theme)}
+        except Exception:
+            return {"season_theme": "", "season_message": ""}
 
     @app.context_processor
     def _inject_globals():

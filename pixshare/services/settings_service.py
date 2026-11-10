@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pixshare.services.json_services import json_exists, load_json, save_json
+from pixshare.services.theme_service import clean_choice
 
 SETTINGS_FILENAME = "settings.json"
 
@@ -17,6 +18,8 @@ DEFAULT_SETTINGS = {
     "nsfw_block_threshold": None,
     "nsfw_tiling": True,
     "nsfw_classes": None,
+    # Thème de saison : "" = variable SEASON_THEME ou automatique (voir theme_service).
+    "season_theme": "",
 }
 
 NSFW_MIN_THRESHOLD = 0.05
@@ -97,6 +100,7 @@ def save_settings(settings: dict) -> dict:
     current = load_settings()
     nsfw_source = {key: settings.get(key, current.get(key)) for key in NSFW_KEYS}
     clean_settings.update(_clean_nsfw_settings(nsfw_source))
+    clean_settings["season_theme"] = clean_choice(settings.get("season_theme", current.get("season_theme", "")))
 
     save_json(SETTINGS_FILENAME, clean_settings)
 
