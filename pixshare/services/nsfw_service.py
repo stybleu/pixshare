@@ -29,6 +29,7 @@ from flask import current_app
 from pixshare.services.file_service import IMAGE_EXTENSIONS, delete_by_id
 from pixshare.services.json_services import _get_data_dir, load_db, save_db
 from pixshare.services.moderation_service import (
+    _utc_now_iso,
     approve_image,
     create_moderation_notice,
     mark_image_for_review,
@@ -366,10 +367,32 @@ def _process_one(file_id: str, review_threshold: float, block_threshold: float, 
             stats["errors"] += 1
 
 
+def release_waiting_images() -> int:
+    """Publie les images qui attendaient l'analyse alors que NudeNet est coupé
+    (ou absent) : sinon elles resteraient privées pour toujours. Les images déjà
+    envoyées en revue manuelle restent dans la file de revue de l'admin."""
+    db = load_db()
+    released = 0
+    for file_id, meta in list(db.items()):
+        if _is_waiting_image(meta):
+            meta["status"] = "active"
+            meta["moderated_at"] = _utc_now_iso()
+            meta["moderation_decision"] = "not_required"
+            meta["moderation_detector"] = "nudenet_off"
+            db[file_id] = meta
+            released += 1
+    if released:
+        save_db(db)
+    return released
+
+
 def run_auto_moderation(limit: int = 10) -> dict[str, int]:
     """Analyse jusqu'à `limit` images en attente. À appeler dans un contexte d'application Flask."""
     stats = {"approved": 0, "review": 0, "rejected": 0, "errors": 0}
-    if not auto_moderation_enabled() or not _scan_lock.acquire(blocking=False):
+    if not auto_moderation_enabled() or not nudenet_installed():
+        stats["approved"] = release_waiting_images()
+        return stats
+    if not _scan_lock.acquire(blocking=False):
         return stats
     try:
         if not waiting_image_ids(load_db(), 1):

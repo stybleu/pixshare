@@ -29,6 +29,7 @@ from pixshare.services.nsfw_service import (
     is_manual_review,
     nudenet_installed,
     queue_status as nsfw_queue_status,
+    release_waiting_images,
     run_after_response as nsfw_run_after_response,
 )
 from pixshare.services.settings_service import (
@@ -477,6 +478,10 @@ def admin_nsfw_settings():
         current["nsfw_classes"] = classes
     save_settings(current)
     flash("Réglages NudeNet enregistrés ✅", "success")
+    if not nsfw_effective_settings()["enabled"]:
+        released = release_waiting_images()
+        if released:
+            flash(f"NudeNet coupé : {released} image(s) en attente publiée(s). Les nouvelles images ne sont plus bloquées.", "info")
     return redirect(url_for("admin.admin_settings"))
 
 

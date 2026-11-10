@@ -63,7 +63,13 @@ def requires_image_moderation(extension_or_filename: str) -> bool:
     """Return True when a newly uploaded file must wait for image moderation."""
     value = (extension_or_filename or "").lower()
     extension = value if value.startswith(".") else os.path.splitext(value)[1].lower()
-    return bool(current_app.config.get("MODERATION_PENDING_IMAGES", True)) and extension in IMAGE_EXTENSIONS
+    if extension not in IMAGE_EXTENSIONS:
+        return False
+    # L'image n'attend que si NudeNet va vraiment l'analyser. Sinon (NudeNet
+    # désactivé dans l'admin, ou pas installé), personne ne la validerait et
+    # elle resterait bloquée pour toujours.
+    from .nsfw_service import auto_moderation_enabled, nudenet_installed
+    return auto_moderation_enabled() and nudenet_installed()
 
 
 def initial_upload_status(extension_or_filename: str) -> str:
