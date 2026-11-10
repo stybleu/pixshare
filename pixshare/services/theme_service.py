@@ -87,6 +87,16 @@ def active_theme(saved_choice=None, day: date | None = None) -> str:
     return theme_for_date(day or today_paris())
 
 
+def sky_enabled(saved=None) -> bool:
+    """Ciel selon l'heure (lune la nuit, soleil et nuages le jour).
+
+    Choix de l'admin s'il existe, sinon variable SKY_THEME (0 = coupé), sinon activé.
+    """
+    if isinstance(saved, bool):
+        return saved
+    return (os.environ.get("SKY_THEME", "1").strip() or "1") != "0"
+
+
 def theme_message(theme: str, day: date | None = None) -> str:
     if theme not in THEMES:
         return ""

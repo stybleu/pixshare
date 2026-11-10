@@ -128,6 +128,18 @@
       <div class="col-sm-4">
         <button class="btn btn-primary w-100" type="submit">Appliquer</button>
       </div>
+      <div class="col-12">
+        <div class="form-check form-switch mt-2">
+          <input class="form-check-input" type="checkbox" role="switch" id="sky_enabled" name="sky_enabled" value="1" {% if sky_on_setting %}checked{% endif %}>
+          <label class="form-check-label" for="sky_enabled">
+            Ciel selon l'heure du visiteur : lune et étoiles la nuit, soleil et nuages le jour, lever et coucher de soleil
+          </label>
+        </div>
+        <div class="form-text">
+          Aperçu : ajoute <code>?ciel=nuit</code>, <code>?ciel=aube</code>, <code>?ciel=jour</code> ou <code>?ciel=soir</code> à l'adresse du site.
+          Pour le couper durablement : variable <code>SKY_THEME=0</code> sur Render.
+        </div>
+      </div>
     </form>
     <p class="form-text mb-0 mt-2">
       Sans disque sur Render, ce choix est perdu à chaque déploiement. Pour le garder, ajoute la variable

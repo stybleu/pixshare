@@ -42,7 +42,7 @@ from pixshare.services.settings_service import (
 )
 from pixshare.services.request_service import ip_source
 from pixshare.services.system_service import get_system_stats
-from pixshare.services.theme_service import THEME_CHOICES, THEMES, active_theme, clean_choice
+from pixshare.services.theme_service import THEME_CHOICES, THEMES, active_theme, clean_choice, sky_enabled
 from pixshare.services.time_service import get_remaining_time_label, format_duration_minutes, utcnow
 
 admin_bp = Blueprint("admin", __name__)
@@ -419,6 +419,7 @@ def admin_settings():
         theme_saved=settings.get("season_theme") or "",
         theme_now=active_theme(settings.get("season_theme")),
         theme_names={k: v[0] for k, v in THEMES.items()},
+        sky_on_setting=sky_enabled(settings.get("sky_enabled")),
         version=current_app.config["APP_VERSION"],
     )
 
@@ -438,6 +439,7 @@ def admin_theme_settings():
     choice = clean_choice(request.form.get("season_theme")) or "auto"
     current = load_settings()
     current["season_theme"] = choice
+    current["sky_enabled"] = request.form.get("sky_enabled") == "1"
     save_settings(current)
     flash("Thème enregistré ✅ (il revient au réglage de Render au prochain déploiement)", "success")
     return redirect(url_for("admin.admin_settings") + "#theme")

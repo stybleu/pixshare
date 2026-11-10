@@ -1,0 +1,174 @@
+{# Ciel selon l'heure du visiteur (son horloge à lui) : nuit, aube, jour, soir.
+   Tout reste derrière le contenu et en couleurs claires pour garder les textes lisibles. #}
+{% if sky_on %}
+<style>
+main, footer { position: relative; z-index: 1; }
+
+/* Léger voile de couleur en haut de la page, selon le moment. */
+#sky-tint {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 60%);
+  mask-image: linear-gradient(180deg, #000 0%, transparent 60%);
+}
+body[data-sky] #sky-tint { opacity: .55; }
+body[data-sky="nuit"] #sky-tint { background: #c3c8ef; }
+body[data-sky="aube"] #sky-tint { background: #ffd9c2; }
+body[data-sky="jour"] #sky-tint { background: #bfe3ff; }
+body[data-sky="soir"] #sky-tint { background: #f9c6b8; }
+
+/* Le ciel se voit dans l'en-tête, comme par une fenêtre : il ne passe
+   jamais derrière les textes de la page. */
+.topbar { position: relative; }
+.topbar > *:not(.topbar-sky):not(.season-lights):not(.season-web) { position: relative; z-index: 1; }
+.topbar-sky {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+}
+body[data-sky] .topbar-sky { opacity: 1; }
+body[data-sky="nuit"] .topbar-sky { background: linear-gradient(120deg, rgba(255,255,255,.55) 0%, rgba(196,201,240,.88) 50%, #8e97dc 100%); }
+body[data-sky="aube"] .topbar-sky { background: linear-gradient(120deg, rgba(255,255,255,.6) 0%, rgba(255,226,206,.85) 55%, #ffc9a8 100%); }
+body[data-sky="jour"] .topbar-sky { background: linear-gradient(120deg, rgba(255,255,255,.6) 0%, rgba(214,238,255,.85) 55%, #aed9ff 100%); }
+body[data-sky="soir"] .topbar-sky { background: linear-gradient(120deg, rgba(255,255,255,.6) 0%, rgba(250,214,204,.85) 55%, #f5ad9a 100%); }
+
+.sky-sun, .sky-moon, .sky-stars, .sky-cloud { position: absolute; display: none; }
+
+/* soleil */
+.sky-sun {
+  width: 64px; height: 64px;
+  right: 38%; top: 50%;
+  margin-top: -32px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff6c4 0%, #ffe066 50%, #ffc93c 75%);
+  box-shadow: 0 0 34px 14px rgba(255, 210, 80, .45);
+  animation: sky-glow 5s ease-in-out infinite alternate;
+}
+.sky-sun::before {
+  content: "";
+  position: absolute;
+  inset: -22px;
+  border-radius: 50%;
+  background: repeating-conic-gradient(rgba(255, 214, 90, .35) 0 8deg, transparent 8deg 30deg);
+  -webkit-mask-image: radial-gradient(circle, transparent 46%, #000 48%, transparent 72%);
+  mask-image: radial-gradient(circle, transparent 46%, #000 48%, transparent 72%);
+  animation: sky-spin 40s linear infinite;
+}
+body[data-sky="jour"] .sky-sun { display: block; }
+body[data-sky="aube"] .sky-sun, body[data-sky="soir"] .sky-sun {
+  display: block; top: auto; bottom: -26px; margin-top: 0; right: 42%;
+}
+body[data-sky="aube"] .sky-sun { background: radial-gradient(circle, #fff1d6 0%, #ffc078 55%, #ff9f5a 78%); box-shadow: 0 0 34px 14px rgba(255, 160, 90, .45); }
+body[data-sky="soir"] .sky-sun { background: radial-gradient(circle, #ffe0c2 0%, #ff9a6b 55%, #f2704e 78%); box-shadow: 0 0 34px 14px rgba(242, 112, 78, .4); }
+
+/* lune et étoiles */
+.sky-moon {
+  width: 46px; height: 46px;
+  right: 38%; top: 50%;
+  margin-top: -23px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ffffff 0%, #f4f1e3 55%, #e2ddc6 100%);
+  box-shadow: 0 0 26px 8px rgba(255, 255, 240, .75);
+  animation: sky-glow 6s ease-in-out infinite alternate;
+}
+.sky-moon::before, .sky-moon::after { content: ""; position: absolute; border-radius: 50%; background: rgba(190, 182, 150, .5); }
+.sky-moon::before { width: 9px; height: 9px; left: 12px; top: 23px; }
+.sky-moon::after { width: 6px; height: 6px; left: 27px; top: 12px; box-shadow: 3px 17px 0 2px rgba(190, 182, 150, .4); }
+body[data-sky="nuit"] .sky-moon { display: block; }
+
+.sky-stars {
+  inset: 0;
+  background-image:
+    radial-gradient(2px 2px at 30% 22%, #fff, transparent 60%),
+    radial-gradient(1.5px 1.5px at 40% 70%, #fff, transparent 60%),
+    radial-gradient(2px 2px at 48% 35%, #fff, transparent 60%),
+    radial-gradient(1.5px 1.5px at 56% 80%, #fff, transparent 60%),
+    radial-gradient(2.5px 2.5px at 70% 18%, #fff, transparent 60%),
+    radial-gradient(1.5px 1.5px at 76% 62%, #fff, transparent 60%),
+    radial-gradient(2px 2px at 84% 30%, #fff, transparent 60%),
+    radial-gradient(1.5px 1.5px at 92% 75%, #fff, transparent 60%),
+    radial-gradient(2px 2px at 97% 15%, #fff, transparent 60%);
+  animation: sky-twinkle 3s ease-in-out infinite alternate;
+}
+body[data-sky="nuit"] .sky-stars { display: block; }
+
+/* nuages */
+.sky-cloud {
+  left: -120px;
+  width: 90px; height: 26px;
+  background: #fff;
+  border-radius: 26px;
+  opacity: .9;
+  animation: sky-drift linear infinite;
+}
+.sky-cloud::before, .sky-cloud::after { content: ""; position: absolute; background: #fff; border-radius: 50%; }
+.sky-cloud::before { width: 40px; height: 40px; left: 14px; top: -20px; }
+.sky-cloud::after { width: 30px; height: 30px; left: 46px; top: -13px; }
+.sky-cloud.c1 { top: 28%; animation-duration: 38s; animation-delay: -6s; }
+.sky-cloud.c2 { top: 62%; transform: scale(.75); opacity: .75; animation-duration: 52s; animation-delay: -30s; }
+.sky-cloud.c3 { top: 12%; transform: scale(.55); opacity: .8; animation-duration: 64s; animation-delay: -50s; }
+body[data-sky="jour"] .sky-cloud { display: block; }
+body[data-sky="aube"] .sky-cloud.c2, body[data-sky="soir"] .sky-cloud.c2 { display: block; opacity: .55; }
+
+@keyframes sky-drift { from { left: -120px; } to { left: calc(100% + 20px); } }
+@keyframes sky-spin { to { transform: rotate(360deg); } }
+@keyframes sky-glow { from { filter: brightness(1); } to { filter: brightness(1.08); } }
+@keyframes sky-twinkle { from { opacity: .5; } to { opacity: 1; } }
+
+@media (max-width: 767.98px) {
+  .sky-sun, .sky-moon { right: 10%; top: 34%; }
+  body[data-sky="aube"] .sky-sun, body[data-sky="soir"] .sky-sun { right: 12%; }
+  .sky-cloud.c3 { display: none !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sky-sun, .sky-sun::before, .sky-moon, .sky-stars, .sky-cloud { animation: none; }
+  .sky-cloud.c1 { left: 55%; } .sky-cloud.c2 { left: 20%; }
+}
+</style>
+{% endif %}
+
+{% macro sky_layer(enabled) -%}
+{% if enabled %}
+<div id="sky-tint" aria-hidden="true"></div>
+<script>
+(() => {
+  const forced = new URLSearchParams(location.search).get("ciel");
+  const names = ["nuit", "aube", "jour", "soir"];
+  function moment() {
+    if (names.includes(forced)) return forced;
+    const h = new Date().getHours();          // heure du téléphone / ordinateur du visiteur
+    if (h >= 21 || h < 6) return "nuit";
+    if (h < 9) return "aube";
+    if (h < 18) return "jour";
+    return "soir";
+  }
+  function apply() { document.body.dataset.sky = moment(); }
+  apply();
+  setInterval(apply, 5 * 60 * 1000);
+})();
+</script>
+{% endif %}
+{%- endmacro %}
+
+{% macro sky_window(enabled) -%}
+{% if enabled %}
+<div class="topbar-sky" aria-hidden="true">
+  <div class="sky-stars"></div>
+  <div class="sky-moon"></div>
+  <div class="sky-sun"></div>
+  <div class="sky-cloud c1"></div>
+  <div class="sky-cloud c2"></div>
+  <div class="sky-cloud c3"></div>
+</div>
+{% endif %}
+{%- endmacro %}

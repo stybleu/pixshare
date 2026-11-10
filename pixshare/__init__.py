@@ -14,7 +14,7 @@ from .services.translation_service import apply_requested_language, build_lang_u
 from .services.auth_service import check_admin_config
 from .services.nsfw_service import run_after_response
 from .services.settings_service import load_settings
-from .services.theme_service import active_theme, theme_message
+from .services.theme_service import active_theme, sky_enabled, theme_message
 
 _log = logging.getLogger(__name__)
 
@@ -38,10 +38,15 @@ def create_app(config_overrides: dict | None = None) -> Flask:
     @app.context_processor
     def _inject_season_theme():
         try:
-            theme = active_theme(load_settings().get("season_theme"))
-            return {"season_theme": theme, "season_message": theme_message(theme)}
+            settings = load_settings()
+            theme = active_theme(settings.get("season_theme"))
+            return {
+                "season_theme": theme,
+                "season_message": theme_message(theme),
+                "sky_on": sky_enabled(settings.get("sky_enabled")),
+            }
         except Exception:
-            return {"season_theme": "", "season_message": ""}
+            return {"season_theme": "", "season_message": "", "sky_on": False}
 
     @app.context_processor
     def _inject_globals():

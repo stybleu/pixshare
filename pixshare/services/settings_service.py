@@ -20,6 +20,8 @@ DEFAULT_SETTINGS = {
     "nsfw_classes": None,
     # Thème de saison : "" = variable SEASON_THEME ou automatique (voir theme_service).
     "season_theme": "",
+    # Ciel selon l'heure : None = variable SKY_THEME (activé par défaut).
+    "sky_enabled": None,
 }
 
 NSFW_MIN_THRESHOLD = 0.05
@@ -101,6 +103,8 @@ def save_settings(settings: dict) -> dict:
     nsfw_source = {key: settings.get(key, current.get(key)) for key in NSFW_KEYS}
     clean_settings.update(_clean_nsfw_settings(nsfw_source))
     clean_settings["season_theme"] = clean_choice(settings.get("season_theme", current.get("season_theme", "")))
+    sky = settings.get("sky_enabled", current.get("sky_enabled"))
+    clean_settings["sky_enabled"] = sky if isinstance(sky, bool) else None
 
     save_json(SETTINGS_FILENAME, clean_settings)
 
