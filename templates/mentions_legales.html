@@ -42,36 +42,6 @@
         <li>{{ _("retention_availability_not_guaranteed") }}</li>
       </ul>
 
-      <p class="mb-2">
-        Lorsque le service le permet, certains fichiers peuvent également être envoyés via une API.
-        Les mêmes principes de stockage temporaire, de suppression automatique et d’absence de garantie de conservation s’appliquent aux fichiers envoyés via l’API.
-      </p>
-
-      <h2 class="h6 mt-4">API publique</h2>
-
-      <p class="mb-2">
-        PixShare peut mettre à disposition une API permettant l’envoi automatisé et la gestion technique de fichiers via des requêtes HTTP.
-      </p>
-
-      <p class="mb-2">
-        L’accès à l’API peut nécessiter une clé API personnelle. Toute clé API reste strictement personnelle et ne doit pas être exposée publiquement.
-      </p>
-
-      <p class="mb-2">
-        Les actions disponibles peuvent inclure notamment :
-      </p>
-
-      <ul class="mb-2">
-        <li>l’envoi de fichiers</li>
-        <li>la génération de liens d’accès ou d’affichage</li>
-        <li>la récupération d’informations techniques liées au fichier</li>
-        <li>la suppression d’un fichier via un lien ou un mécanisme prévu à cet effet</li>
-      </ul>
-
-      <p class="mb-2">
-        PixShare peut limiter, suspendre ou bloquer l’accès à l’API en cas d’utilisation abusive, de dépassement de quota, de tentative de contournement des limitations ou de non-respect des conditions d’utilisation.
-      </p>
-
       <h2 class="h6 mt-4">{{ _("personal_data") }}</h2>
 
       <p class="mb-2">
@@ -93,8 +63,8 @@
       </ul>
 
       <p class="mb-2">
-        Des informations techniques liées à l’utilisation du site ou de l’API
-        (par exemple journaux d’accès, erreurs, quotas, événements techniques ou données de sécurité)
+        Des informations techniques liées à l’utilisation du site
+        (par exemple journaux d’accès, erreurs, événements techniques ou données de sécurité)
         peuvent être enregistrées temporairement lorsque cela est nécessaire au bon fonctionnement, à la protection et à la stabilité du service.
       </p>
 
@@ -116,6 +86,29 @@
         {{ _("no_profile_no_commercial_use") }}
       </p>
 
+      <h2 class="h6 mt-4">Durées de conservation et vos droits</h2>
+
+      <ul class="mb-2">
+        <li>Fichiers envoyés, et l’adresse IP et les informations techniques qui leur sont liées : supprimés à l’expiration du fichier ou dès sa suppression.</li>
+        <li>Miniatures servant à la modération : supprimées automatiquement après un court délai.</li>
+        <li>Messages envoyés par le formulaire de contact (avec l’adresse IP) : conservés au plus 12 mois.</li>
+        <li>Adresses IP bloquées pour abus : conservées jusqu’à la levée du blocage.</li>
+        <li>Essais de connexion à l’administration ratés : effacés après quelques minutes.</li>
+      </ul>
+
+      <p class="mb-2">
+        Les images peuvent être analysées automatiquement par un outil de détection de nudité (NudeNet)
+        qui fonctionne directement sur le serveur de PixShare, sans transmission à un service tiers.
+        Les informations cachées des photos (position GPS, appareil, date) sont retirées à l’envoi des formats courants.
+        PixShare n’affiche aucune publicité et n’utilise aucun cookie publicitaire ou de mesure d’audience.
+      </p>
+
+      <p class="mb-2">
+        Conformément au RGPD, vous pouvez demander l’accès à vos données, leur rectification ou leur suppression via le
+        <a href="{{ url_for('public.contact') }}">{{ _("contact_form") }}</a>.
+        Vous pouvez aussi adresser une réclamation à la CNIL (www.cnil.fr).
+      </p>
+
       <h2 class="h6 mt-4">{{ _("responsibility") }}</h2>
 
       <p class="mb-2">
@@ -123,7 +116,7 @@
       </p>
 
       <p class="mb-2">
-        L’utilisateur est également seul responsable de l’usage de sa clé API, de la conservation de ses liens sensibles et de l’ensemble des requêtes émises sous son accès.
+        L’utilisateur est également seul responsable de la conservation de ses liens sensibles (liens de partage et de suppression).
       </p>
 
       <p class="mb-2">
@@ -135,7 +128,7 @@
       </p>
 
       <p class="mb-2">
-        PixShare ne garantit ni la disponibilité permanente du site ou de l’API, ni la conservation continue des fichiers envoyés, ni l’absence d’interruption, de maintenance ou de suppression technique.
+        PixShare ne garantit ni la disponibilité permanente du site, ni la conservation continue des fichiers envoyés, ni l’absence d’interruption, de maintenance ou de suppression technique.
       </p>
 
       <h2 class="h6 mt-4">{{ _("illegal_content_report") }}</h2>

@@ -26,12 +26,12 @@
 
         <div class="col-md-6">
           <label class="form-label">{{ _("name_optional") }}</label>
-          <input type="text" name="name" class="form-control">
+          <input type="text" name="name" class="form-control" maxlength="200">
         </div>
 
         <div class="col-md-6">
           <label class="form-label">{{ _("email_optional") }}</label>
-          <input type="email" name="email" class="form-control">
+          <input type="email" name="email" class="form-control" maxlength="200">
         </div>
 
         {% if prefill_file_url %}
@@ -54,6 +54,7 @@
         <div class="col-12">
           <label class="form-label">{{ _("message") }}</label>
           <textarea
+            maxlength="5000"
             name="message"
             class="form-control"
             rows="6"

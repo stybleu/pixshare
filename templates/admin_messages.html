@@ -72,7 +72,7 @@
                     {{ m.subject or "Sans sujet" }}
                   </div>
 
-                  {% if m.file_url %}
+                  {% if m.file_url and (m.file_url.lower().startswith('http://') or m.file_url.lower().startswith('https://')) %}
                     <div class="small mt-1">
                       <span class="text-muted">URL concernée :</span>
                       <a href="{{ m.file_url }}" target="_blank" rel="noopener">{{ m.file_url }}</a>

@@ -10,14 +10,9 @@ from .services.request_service import get_client_ip
 from .routes.public_routes import public_bp
 from .routes.admin_routes import admin_bp
 from .routes.seo_routes import seo_bp
-from .routes.api_public_routes import api_public_bp
-from .routes.api_v1_routes import api_v1_bp
-from .routes.moderation_api_routes import moderation_api_bp
 from .services.translation_service import apply_requested_language, build_lang_url, get_current_language, translate
-from .services.api_auth_service import ensure_default_api_keys
 from .services.auth_service import check_admin_config
 from .services.nsfw_service import run_after_response
-from .services import rate_limit_service
 
 _log = logging.getLogger(__name__)
 
@@ -35,9 +30,7 @@ def create_app(config_overrides: dict | None = None) -> Flask:
     app.config["UPLOAD_FOLDER"] = project_path(app, app.config["UPLOAD_FOLDER"])
 
     init_storage(app)
-    rate_limit_service.reset()
     with app.app_context():
-        ensure_default_api_keys()
         check_admin_config()
 
     @app.context_processor
@@ -86,7 +79,7 @@ def create_app(config_overrides: dict | None = None) -> Flask:
         # les images en attente. Seuls les envois de fichiers déclenchent l'analyse.
         if (
             request.method == "POST"
-            and request.endpoint in {"public.index", "api.api_upload", "api_v1.api_v1_upload"}
+            and request.endpoint == "public.index"
             and response.status_code < 400
         ):
             response.call_on_close(lambda: run_after_response(app))
@@ -100,10 +93,6 @@ def create_app(config_overrides: dict | None = None) -> Flask:
 
     app.register_blueprint(seo_bp)
     app.register_blueprint(public_bp)
-    app.register_blueprint(api_public_bp)
-    app.register_blueprint(api_v1_bp)
-    app.after_request(rate_limit_service.apply_headers)
-    app.register_blueprint(moderation_api_bp)
     app.register_blueprint(admin_bp)
 
     return app

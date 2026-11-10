@@ -112,6 +112,19 @@
     </div>
   </div>
 
+
+  <div class="card shadow-sm mt-3">
+    <div class="card-body">
+      <h2 class="h6 mb-3">Ton adresse IP vue par le site</h2>
+      <div><strong>{{ ip_check.ip }}</strong> <span class="text-muted">(lue dans : {{ ip_check.source }})</span></div>
+      <div class="small text-muted mt-2">
+        Si cette IP n'est pas la tienne, préviens-moi avec ces lignes :<br>
+        X-Forwarded-For : <code>{{ ip_check.xff or "absent" }}</code><br>
+        CF-Connecting-IP : <code>{{ ip_check.cf or "absent" }}</code><br>
+        Connexion directe : <code>{{ ip_check.remote or "absent" }}</code>
+      </div>
+    </div>
+  </div>
 </div>
 
 {% endblock %}

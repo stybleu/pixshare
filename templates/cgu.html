@@ -59,9 +59,7 @@ font-size:0.85rem;
 <li><a href="#responsabilite_utilisateur">6. Responsabilité de l’utilisateur</a></li>
 <li><a href="#responsabilite_service">7. Responsabilité du service</a></li>
 <li><a href="#evolution">8. Évolution des conditions</a></li>
-<li><a href="#api">9. API publique</a></li>
-<li><a href="#api_limites">10. Limites, quotas et restrictions API</a></li>
-<li><a href="#financier">11. Conditions financières</a></li>
+<li><a href="#financier">9. Conditions financières</a></li>
 </ul>
 
 </div>
@@ -75,10 +73,6 @@ font-size:0.85rem;
 <p>
 PixShare est un service permettant d’envoyer et de partager des fichiers via un lien temporaire.
 Le service est conçu pour un usage simple et rapide sans création de compte utilisateur.
-</p>
-
-<p>
-Le service peut être utilisé depuis l’interface web publique ainsi que, lorsque cette fonctionnalité est proposée, via une API permettant l’envoi automatisé de fichiers.
 </p>
 
 <p>
@@ -177,12 +171,24 @@ Un identifiant technique temporaire peut également être stocké dans le naviga
 afin de permettre l’affichage de l’historique des fichiers envoyés depuis ce navigateur,
 de faciliter certaines mesures de sécurité et, le cas échéant, d’afficher un message d’information
 ou de modération lors d’une visite ultérieure depuis le même navigateur.
-Cet identifiant n’est pas utilisé pour le suivi publicitaire.
+Cet identifiant n’est pas utilisé pour le suivi publicitaire. PixShare n’affiche aucune publicité.
 </p>
 
 <p>
 Ces cookies ou identifiants techniques sont utilisés uniquement pour le bon fonctionnement du site,
 la stabilité du service, la prévention des abus et une modération plus efficace.
+</p>
+
+<p>
+Les images envoyées peuvent être analysées automatiquement par un outil de détection de nudité (NudeNet)
+qui fonctionne directement sur le serveur de PixShare : les images ne sont transmises à aucun service tiers.
+Selon le résultat, une image peut être publiée, mise en attente de vérification par l’éditeur ou supprimée.
+Les vidéos ne sont pas analysées automatiquement.
+</p>
+
+<p>
+Les informations cachées dans les photos (position GPS, modèle d’appareil, date de prise de vue…)
+sont retirées automatiquement à l’envoi des formats courants (JPEG, PNG, WebP), sans modifier l’image.
 </p>
 
 <p>
@@ -261,77 +267,10 @@ La version en vigueur est celle publiée sur le site au moment de la consultatio
 <a href="#sommaire">⬆ Retour au sommaire</a>
 </div>
 
-<h2 id="api" class="h6 mt-4">9. API publique</h2>
+<h2 id="financier" class="h6 mt-4">9. Conditions financières</h2>
 
 <p>
-PixShare peut proposer une API publique permettant l’envoi automatisé de fichiers ainsi que, selon les fonctionnalités disponibles, l’accès à certaines informations ou actions liées à ces fichiers.
-</p>
-
-<p>
-L’utilisation de l’API nécessite une clé API personnelle lorsqu’elle est exigée par le service.
-Toute requête effectuée via l’API doit respecter la documentation, les limitations techniques et les présentes CGU.
-</p>
-
-<ul>
-<li>Chaque requête doit inclure une authentification valide lorsque cela est requis.</li>
-<li>L’API peut permettre l’envoi de fichiers, la récupération de liens d’accès, l’affichage direct de fichiers, ainsi que la suppression d’un fichier lorsque cette action est autorisée.</li>
-<li>Les liens générés (affichage, téléchargement, suppression) sont strictement liés au fichier concerné.</li>
-<li>Un lien de suppression ou une URL technique sensible ne doit pas être diffusé publiquement sans nécessité.</li>
-</ul>
-
-<p>
-Toute utilisation de l’API implique l’acceptation pleine et entière des présentes conditions, au même titre que l’utilisation du site web.
-</p>
-
-<div class="back-summary">
-<a href="#sommaire">⬆ Retour au sommaire</a>
-</div>
-
-<h2 id="api_limites" class="h6 mt-4">10. Limites, quotas et restrictions API</h2>
-
-<p>
-Afin de garantir la stabilité, la sécurité et la disponibilité du service, PixShare peut appliquer à l’API des limitations automatiques ou manuelles.
-</p>
-
-<ul>
-<li>nombre maximal de requêtes par jour</li>
-<li>nombre total maximal d’uploads autorisés</li>
-<li>limitation par clé API</li>
-<li>limitation par adresse IP</li>
-<li>taille maximale de fichier</li>
-<li>blocage automatique en cas d’abus, d’erreurs répétées ou de tentative de contournement</li>
-</ul>
-
-<p>
-PixShare se réserve le droit, à tout moment et sans préavis, de :
-</p>
-
-<ul>
-<li>désactiver ou suspendre une clé API</li>
-<li>bloquer une adresse IP</li>
-<li>supprimer un fichier ou en restreindre l’accès</li>
-<li>restreindre temporairement ou définitivement l’accès à tout ou partie de l’API</li>
-<li>modifier les quotas, formats acceptés, durées de conservation ou conditions d’accès</li>
-</ul>
-
-<p>
-Toute tentative de contournement des limitations, de surcharge volontaire du service,
-d’automatisation abusive ou d’exploitation détournée de l’API est strictement interdite.
-</p>
-
-<p>
-Les erreurs API, y compris notamment celles liées à l’authentification, à l’absence de clé API,
-à l’épuisement d’un quota ou à une requête invalide, peuvent être renvoyées sous forme de réponses JSON.
-</p>
-
-<div class="back-summary">
-<a href="#sommaire">⬆ Retour au sommaire</a>
-</div>
-
-<h2 id="financier" class="h6 mt-4">11. Conditions financières</h2>
-
-<p>
-Le service PixShare est actuellement proposé gratuitement et sans but lucratif.
+Le service PixShare est actuellement proposé gratuitement, sans but lucratif et sans publicité.
 </p>
 
 <p>

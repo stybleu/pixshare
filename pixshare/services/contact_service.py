@@ -1,4 +1,5 @@
 import secrets
+from datetime import timedelta
 from .json_services import load_contacts, save_contacts
 from .request_service import get_client_ip
 from .time_service import utcnow
@@ -18,4 +19,7 @@ def create_contact_message(msg_type: str, name: str, email: str, subject: str, m
         "ip": get_client_ip(),
         "status": "new",
     })
+    # On garde au plus les 500 derniers messages, et rien de plus vieux qu'un an.
+    limit = (utcnow() - timedelta(days=365)).isoformat(timespec="seconds")
+    contacts = [c for c in contacts if not isinstance(c, dict) or str(c.get("created_at") or "") >= limit][-500:]
     save_contacts(contacts)

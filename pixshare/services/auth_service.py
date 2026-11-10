@@ -150,12 +150,6 @@ def process_admin_login(username: str, password: str) -> tuple[bool, int | None]
     if locked:
         return False, 429
 
-    # Verrou global : si trop d'échecs au total (IP qui change à chaque essai),
-    # plus personne ne peut tenter de se connecter pendant le délai de blocage.
-    global_locked, _secs = is_locked(_GLOBAL_KEY)
-    if global_locked:
-        return False, 429
-
     user_ok = _same(username, cfg["ADMIN_USER"])
     pass_ok = _same(password, cfg["ADMIN_PASS"])
     if user_ok and pass_ok:
@@ -165,7 +159,13 @@ def process_admin_login(username: str, password: str) -> tuple[bool, int | None]
 
     time.sleep(0.6)
     _count, lock_sec = register_fail(ip)
-    register_fail(_GLOBAL_KEY, max_failures=cfg["GLOBAL_MAX_FAILED_LOGINS"])
+    # Compteur global : seulement une alerte dans les logs. Avant, il bloquait
+    # TOUT le monde (toi compris) : n'importe qui pouvait t'enfermer dehors
+    # avec 30 faux essais. Le verrou par IP suffit maintenant que l'IP ne
+    # peut plus être falsifiée ; garde un ADMIN_PASS long.
+    total, _lock = register_fail(_GLOBAL_KEY, max_failures=10**9)
+    if total == cfg["GLOBAL_MAX_FAILED_LOGINS"]:
+        _log.warning("Beaucoup d'essais de connexion admin ratés (%s en peu de temps).", total)
     if lock_sec > 0:
         return False, 429
     return False, 401

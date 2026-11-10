@@ -52,18 +52,41 @@ class UrlImportError(ValueError):
 
 def _is_public_ip(ip_text: str) -> bool:
     try:
-        ip_obj = ipaddress.ip_address(ip_text)
+        ip_obj = ipaddress.ip_address(str(ip_text).split("%", 1)[0])
     except ValueError:
         return False
 
-    return not (
-        ip_obj.is_private
-        or ip_obj.is_loopback
-        or ip_obj.is_link_local
-        or ip_obj.is_multicast
-        or ip_obj.is_reserved
-        or ip_obj.is_unspecified
+    mapped = getattr(ip_obj, "ipv4_mapped", None)
+    if mapped is not None:
+        ip_obj = mapped
+
+    # is_global écarte aussi les plages « partagées » (100.64.0.0/10...)
+    # que is_private laissait passer.
+    return bool(ip_obj.is_global) and not (
+        ip_obj.is_multicast or ip_obj.is_reserved or ip_obj.is_unspecified
     )
+
+
+def _peer_ip(response) -> str:
+    """Adresse réellement contactée (pour contrer le « DNS rebinding »)."""
+    raw = getattr(response, "raw", None)
+    candidates = []
+    try:
+        conn = getattr(raw, "_connection", None) or getattr(raw, "connection", None)
+        candidates.append(getattr(conn, "sock", None))
+    except Exception:
+        pass
+    try:
+        candidates.append(raw._fp.fp.raw._sock)
+    except Exception:
+        pass
+    for sock in candidates:
+        try:
+            if sock is not None:
+                return str(sock.getpeername()[0])
+        except Exception:
+            continue
+    return ""
 
 
 def _resolve_public_addresses(hostname: str, port: int | None) -> list[str]:
@@ -142,6 +165,13 @@ def _download_with_checked_redirects(source_url: str):
                 "Accept": "image/*,*/*;q=0.8",
             },
         )
+
+        # Le nom a pu changer d'adresse entre la vérification et la connexion :
+        # on revérifie l'adresse à laquelle on est vraiment connecté.
+        peer = _peer_ip(response)
+        if peer and not _is_public_ip(peer):
+            response.close()
+            raise UrlImportError("Adresse refusée pour des raisons de sécurité.")
 
         if response.is_redirect or response.is_permanent_redirect:
             next_url = response.headers.get("Location", "").strip()

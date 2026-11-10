@@ -1,51 +1,56 @@
+import ipaddress
 import logging
 
 from flask import current_app, request
 
 _log = logging.getLogger(__name__)
-_warned_legacy_xff = False
+
+
+def _valid_ip(value: str) -> str:
+    value = (value or "").strip()
+    try:
+        return str(ipaddress.ip_address(value))
+    except ValueError:
+        return ""
+
+
+def ip_source() -> tuple[str, str]:
+    """Retourne (IP du visiteur, d'où elle vient) : sert aussi à la page Système.
+
+    Ordre de confiance :
+      1. ``TRUSTED_PROXY_COUNT`` si tu l'as défini sur Render (réglage manuel) ;
+      2. ``CF-Connecting-IP`` : Render passe par Cloudflare, qui écrase toujours
+         cet en-tête avec la vraie IP du visiteur (le visiteur ne peut pas le
+         falsifier) ;
+      3. la DERNIÈRE entrée de ``X-Forwarded-For`` : elle est ajoutée par le
+         proxy le plus proche ; les entrées de gauche peuvent être inventées
+         par le visiteur, on les ignore ;
+      4. l'adresse de connexion directe.
+    """
+    xff = request.headers.get("X-Forwarded-For", "")
+    parts = [p.strip() for p in xff.split(",") if p.strip()]
+    trusted = current_app.config.get("TRUSTED_PROXY_COUNT")
+
+    if trusted is not None:
+        if trusted > 0 and parts:
+            pick = parts[-trusted] if len(parts) >= trusted else parts[0]
+            ip = _valid_ip(pick)
+            if ip:
+                return ip, f"X-Forwarded-For (TRUSTED_PROXY_COUNT={trusted})"
+        return (request.remote_addr or "").strip(), "connexion directe (TRUSTED_PROXY_COUNT)"
+
+    cf = _valid_ip(request.headers.get("CF-Connecting-IP", ""))
+    if cf:
+        return cf, "CF-Connecting-IP (Cloudflare)"
+
+    if parts:
+        ip = _valid_ip(parts[-1])
+        if ip:
+            return ip, "X-Forwarded-For (derniere entree)"
+
+    return (request.remote_addr or "").strip(), "connexion directe"
 
 
 def get_client_ip() -> str:
-    """Retourne l'IP du visiteur.
-
-    ``X-Forwarded-For`` est une valeur que le client peut falsifier : sans
-    précaution, n'importe qui peut choisir l'IP qui sera enregistrée (et donc
-    contourner le blocage d'IP, les limites de création de clés, le verrouillage
-    admin...).
-
-    Configuration via la variable d'environnement ``TRUSTED_PROXY_COUNT`` :
-      - ``0``  : aucun proxy devant l'app, on ignore ``X-Forwarded-For``.
-      - ``N``  : N proxys de confiance ajoutent chacun une entrée à droite de
-                 l'en-tête ; l'IP du visiteur est la N-ième entrée en partant de
-                 la droite (les entrées ajoutées par le client, à gauche, sont
-                 ignorées).
-      - non défini : ancien comportement (première entrée, falsifiable) conservé
-                 pour ne rien casser, avec un avertissement dans les logs.
-    """
-    global _warned_legacy_xff
-
-    xff = request.headers.get("X-Forwarded-For", "")
-    trusted = current_app.config.get("TRUSTED_PROXY_COUNT")
-
-    if trusted is None:
-        if xff:
-            if not _warned_legacy_xff:
-                _warned_legacy_xff = True
-                _log.warning(
-                    "TRUSTED_PROXY_COUNT n'est pas défini : l'IP lue dans X-Forwarded-For "
-                    "peut être falsifiée par le client. Définis TRUSTED_PROXY_COUNT "
-                    "(0 sans proxy, 1 derrière un seul proxy...)."
-                )
-            return xff.split(",")[0].strip()
-        return (request.remote_addr or "").strip()
-
-    if trusted <= 0 or not xff:
-        return (request.remote_addr or "").strip()
-
-    parts = [p.strip() for p in xff.split(",") if p.strip()]
-    if not parts:
-        return (request.remote_addr or "").strip()
-    if len(parts) >= trusted:
-        return parts[-trusted]
-    return parts[0]
+    """IP du visiteur, impossible à choisir avec un faux en-tête X-Forwarded-For."""
+    return ip_source()[0]

@@ -44,7 +44,7 @@ def _load_or_create_secret_key() -> str:
     Priorité à la variable d'environnement SECRET_KEY. Sinon on génère une clé
     UNE fois et on la garde dans un fichier : avant, chaque processus (donc
     chaque worker gunicorn et chaque redémarrage) tirait une clé différente, ce
-    qui invalidait les sessions admin/API et les jetons CSRF en cours.
+    qui invalidait les sessions admin et les jetons CSRF en cours.
     """
     env_key = os.environ.get("SECRET_KEY")
     if env_key:
@@ -78,7 +78,6 @@ def _load_or_create_secret_key() -> str:
 class Config:
     ADMIN_USER = os.environ.get("ADMIN_USER") or "0"
     ADMIN_PASS = os.environ.get("ADMIN_PASS") or "0"
-    MODERATION_API_KEY = os.environ.get("MODERATION_API_KEY", "")
     MODERATION_PENDING_IMAGES = (os.environ.get("MODERATION_PENDING_IMAGES", "1") == "1")
     # NudeNet intégré au site : analyse les images en attente juste après l'envoi.
     NSFW_AUTO_MODERATION = (os.environ.get("NSFW_AUTO_MODERATION", "1") == "1")
@@ -93,7 +92,6 @@ class Config:
     FAILED_LOGINS_FILE = os.path.join(DATA_DIR, "failed_logins.json")
     VIEWS_FILE = os.path.join(DATA_DIR, "views.json")
     CONTACTS_FILE = os.path.join(DATA_DIR, "contacts.json")
-    API_KEYS_FILE = os.path.join(DATA_DIR, "api_keys.json")
     THUMBNAIL_FOLDER = os.path.join(DATA_DIR, "mod_thumbs")
 
     UPLOAD_FOLDER = "tmp/fichiers"
@@ -117,8 +115,11 @@ class Config:
     MAX_LIFETIME_MIN = 10080
     DEFAULT_LIFETIME_MIN = 5
 
-    PERMANENT_UPLOADS_ENABLED = (os.environ.get("PERMANENT_UPLOADS", "0") == "0")
-    PERMANENT_UPLOADS_ADMIN_ONLY = (os.environ.get("PERMANENT_UPLOADS_ADMIN_ONLY", "1") == "0")
+    # Fichiers sans expiration : autorisés (PERMANENT_UPLOADS=0 pour les couper),
+    # et réservés à l'admin par défaut (PERMANENT_UPLOADS_ADMIN_ONLY=0 pour les
+    # ouvrir à tous). Avant, ces deux réglages marchaient à l'envers.
+    PERMANENT_UPLOADS_ENABLED = (os.environ.get("PERMANENT_UPLOADS", "1") != "0")
+    PERMANENT_UPLOADS_ADMIN_ONLY = (os.environ.get("PERMANENT_UPLOADS_ADMIN_ONLY", "1") != "0")
 
     SECRET_KEY = _load_or_create_secret_key()
     SESSION_COOKIE_HTTPONLY = True
@@ -146,11 +147,7 @@ class Config:
     UPLOAD_RATE_LIMIT = _env_int_default("UPLOAD_RATE_LIMIT", 30)
     UPLOAD_RATE_WINDOW_SEC = _env_int_default("UPLOAD_RATE_WINDOW_SEC", 3600)
 
-    API_DEFAULT_MAX_FILE_SIZE_MB = 10
-    # Requêtes API par minute et par clé (0 = illimité ; absent = 60).
-    API_RATE_LIMIT_PER_MINUTE = _env_int("API_RATE_LIMIT_PER_MINUTE")
-    # Un envoi en base64 arrive dans un champ de formulaire, limité à 500 Ko par défaut.
+    # Taille max d'un champ texte de formulaire.
     MAX_FORM_MEMORY_SIZE = 16 * 1024 * 1024
     
-    API_MAX_DIMENSION = 6000
     
