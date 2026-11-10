@@ -1,8 +1,22 @@
 {# Petit jeu caché : secouer le téléphone (ou taper « boum » au clavier) fait tomber
-   les morceaux du site en bas de l'écran comme des briques. Un bouton remet tout en place. #}
+   les morceaux du site ; ils se cassent en éclats en touchant le sol. Un bouton remet
+   tout en place, et le site se reconstruit tout seul au bout de 12 secondes. #}
 <style>
 .shk-falling { will-change: transform; transition: none !important; animation: none !important; }
 .shk-back { transition: transform .7s cubic-bezier(.2, .8, .2, 1) !important; }
+.shk-hidden { visibility: hidden !important; }
+.shk-shard {
+  position: fixed !important;
+  margin: 0 !important;
+  pointer-events: none !important;
+  z-index: 1500 !important;
+  will-change: transform, opacity;
+  transition: opacity .45s ease !important;
+  animation: none !important;
+  box-sizing: border-box;
+}
+.shk-shard.shk-gone { opacity: 0; }
+.shk-shard *, .shk-shard *::before, .shk-shard *::after { animation: none !important; transition: none !important; }
 #shk-reset {
   position: fixed;
   bottom: max(18px, env(safe-area-inset-bottom));
@@ -33,6 +47,9 @@
   let fallen = false;
   let raf = 0;
   const view = { W: 0, H: 0 };
+  let shards = [];
+  let autoTimer = 0;
+  const MAX_SHARDS = innerWidth < 768 ? 120 : 220;   // moins d'éclats sur téléphone
 
   /* ---------- choix des « briques » ---------- */
   function visible(el) {
@@ -90,12 +107,19 @@
     if (navigator.vibrate) navigator.vibrate([30, 40, 60]);
     resetBtn.hidden = false;
     requestAnimationFrame(() => resetBtn.classList.add("shk-show"));
+    // Le site se reconstruit tout seul au bout de 12 secondes : il reste utilisable.
+    clearTimeout(autoTimer);
+    autoTimer = setTimeout(restore, 12000);
     let last = performance.now();
     const loop = (t) => {
       const dt = Math.min(2, (t - last) / 16.7); last = t;
       step(dt);
+      stepShards(dt);
       bodies.forEach((b) => {
-        b.el.style.transform = `translate(${b.x - b.x0}px, ${b.y - b.y0}px) rotate(${b.a}rad)`;
+        if (!b.broken) b.el.style.transform = `translate(${b.x - b.x0}px, ${b.y - b.y0}px) rotate(${b.a}rad)`;
+      });
+      shards.forEach((p) => {
+        p.el.style.transform = `translate(${p.x}px, ${p.y}px) rotate(${p.a}rad)`;
       });
       if (running) raf = requestAnimationFrame(loop);
     };
@@ -107,7 +131,7 @@
   function surfaceUnder(b) {
     let top = view.H;
     for (const o of bodies) {
-      if (o === b || !o.settled) continue;
+      if (o === b || !o.settled || o.broken) continue;
       const ox = Math.min(b.x + b.w, o.x + o.w) - Math.max(b.x, o.x);
       if (ox > 2 && o.y < top) top = o.y;
     }
@@ -117,6 +141,7 @@
   function step(dt) {
     const W = view.W, g = 0.6;
     for (const b of bodies) {
+      if (b.broken) continue;
       if (b.settled) {
         b.a += (b.rest - b.a) * 0.2;            // se redresse doucement
         continue;
@@ -130,6 +155,7 @@
       const floor = surfaceUnder(b);
       if (b.vy > 0 && b.y + b.h >= floor) {
         b.y = floor - b.h;
+        if (shards.length < MAX_SHARDS) { shatter(b); continue; }
         if (b.vy > 5) {                         // petit rebond
           b.vy = -b.vy * 0.28;
           b.vx *= 0.6;
@@ -143,12 +169,94 @@
     }
   }
 
+  /* ---------- la brique se casse en morceaux ---------- */
+  function shatter(b) {
+    const el = b.el;
+    const cols = Math.max(2, Math.min(5, Math.round(b.w / 80)));
+    const rows = Math.max(1, Math.min(4, Math.round(b.h / 55)));
+    // Grille aux coins déplacés au hasard : des éclats irréguliers.
+    const pts = [];
+    for (let r = 0; r <= rows; r++) {
+      pts.push([]);
+      for (let c = 0; c <= cols; c++) {
+        const edgeX = c === 0 || c === cols, edgeY = r === 0 || r === rows;
+        const jx = edgeX ? 0 : (Math.random() - 0.5) * (b.w / cols) * 0.6;
+        const jy = edgeY ? 0 : (Math.random() - 0.5) * (b.h / rows) * 0.6;
+        pts[r].push([c * b.w / cols + jx, r * b.h / rows + jy]);
+      }
+    }
+    const polys = [];
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const p1 = pts[r][c], p2 = pts[r][c + 1], p3 = pts[r + 1][c + 1], p4 = pts[r + 1][c];
+        if (Math.random() < 0.5) { polys.push([p1, p2, p3], [p1, p3, p4]); }
+        else { polys.push([p1, p2, p4], [p2, p3, p4]); }
+      }
+    }
+    const room = Math.max(2, MAX_SHARDS - shards.length);
+    const chosen = polys.length > room ? polys.slice(0, room) : polys;
+    const style = getComputedStyle(el);
+    chosen.forEach((poly) => {
+      const cx = (poly[0][0] + poly[1][0] + poly[2][0]) / 3;
+      const cy = (poly[0][1] + poly[1][1] + poly[2][1]) / 3;
+      const shard = el.cloneNode(true);
+      shard.removeAttribute("id");
+      shard.querySelectorAll("[id]").forEach((n) => n.removeAttribute("id"));
+      shard.querySelectorAll("input, select, textarea, button").forEach((n) => { n.disabled = true; n.removeAttribute("name"); });
+      shard.classList.remove("shk-falling", "mx-reveal");
+      shard.classList.add("shk-shard");
+      shard.style.left = b.x0 + "px";
+      shard.style.top = b.y0 + "px";
+      shard.style.width = b.w + "px";
+      shard.style.height = b.h + "px";
+      shard.style.backgroundColor = style.backgroundColor;
+      shard.style.transformOrigin = cx + "px " + cy + "px";
+      shard.style.clipPath = "polygon(" + poly.map((q) => q[0].toFixed(1) + "px " + q[1].toFixed(1) + "px").join(",") + ")";
+      shard.setAttribute("aria-hidden", "true");
+      el.parentNode.insertBefore(shard, el.nextSibling);
+      const out = (cx - b.w / 2) / Math.max(40, b.w / 2);
+      shards.push({
+        el: shard, baseY: b.y0,
+        x: b.x - b.x0, y: b.y - b.y0,
+        cy, size: Math.max(8, b.h / rows / 2),
+        vx: out * (2 + Math.random() * 4) + (Math.random() - 0.5) * 2,
+        vy: -2 - Math.random() * 5,
+        a: b.a, va: (Math.random() - 0.5) * 0.25,
+      });
+    });
+    b.broken = true;
+    el.classList.add("shk-hidden");
+    if (navigator.vibrate) navigator.vibrate(15);
+  }
+
+  function stepShards(dt) {
+    const g = 0.6;
+    for (const p of shards) {
+      if (p.rest) continue;
+      p.vy += g * dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.a += p.va * dt;
+      // p.y est un décalage : le bas de l'éclat vaut (haut d'origine + cy + taille).
+      const bottom = p.baseY + p.cy + p.y + p.size;
+      if (bottom > view.H) {
+        p.y = view.H - p.baseY - p.cy - p.size;
+        if (Math.abs(p.vy) > 2) { p.vy = -p.vy * 0.3; p.vx *= 0.7; p.va *= 0.6; }
+        else { p.vy = 0; p.vx *= 0.8; p.va *= 0.5; if (Math.abs(p.vx) < 0.05) p.rest = true; }
+      }
+    }
+  }
+
   function restore() {
     if (!fallen) return;
     running = false;
     cancelAnimationFrame(raf);
+    clearTimeout(autoTimer);
+    const old = shards; shards = [];
+    old.forEach((p) => p.el.classList.add("shk-gone"));
+    setTimeout(() => old.forEach((p) => p.el.remove()), 480);
     bodies.forEach((b) => {
-      b.el.classList.remove("shk-falling");
+      b.el.classList.remove("shk-falling", "shk-hidden");
       b.el.classList.add("shk-back");
       b.el.style.transform = "";
     });
