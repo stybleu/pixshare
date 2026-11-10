@@ -1,0 +1,201 @@
+{# Décor animé en fond, selon le thème de saison : tout reste DERRIÈRE le contenu
+   (z-index 0, aucun clic capturé) et s'arrête si l'appareil demande moins d'animations. #}
+{% macro season_scene(theme) -%}
+{% if theme %}
+<style>
+#season-scene {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  height: 190px;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+#season-scene.tall { top: 0; height: auto; }
+#season-scene svg { position: absolute; overflow: visible; }
+.sc-ground { left: 0; bottom: 0; width: 100%; height: 60px; }
+@keyframes sc-sway { 0%, 100% { transform: rotate(-2.2deg); } 50% { transform: rotate(2.4deg); } }
+@keyframes sc-walk-r { from { transform: translateX(-140px); } to { transform: translateX(calc(100vw + 140px)); } }
+@keyframes sc-walk-l { from { transform: translateX(calc(100vw + 140px)) scaleX(-1); } to { transform: translateX(-140px) scaleX(-1); } }
+@keyframes sc-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes sc-leg-a { 0%, 100% { transform: rotate(22deg); } 50% { transform: rotate(-22deg); } }
+@keyframes sc-leg-b { 0%, 100% { transform: rotate(-22deg); } 50% { transform: rotate(22deg); } }
+@keyframes sc-flap { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(-.6); } }
+@keyframes sc-fly { from { transform: translate(-80px, 0); } 25% { transform: translate(25vw, -40px); } 50% { transform: translate(50vw, 10px); } 75% { transform: translate(75vw, -30px); } to { transform: translate(calc(100vw + 80px), 0); } }
+@keyframes sc-rise { from { transform: translateY(40px); opacity: 0; } 10% { opacity: .9; } 90% { opacity: .9; } to { transform: translateY(-110vh); opacity: 0; } }
+@keyframes sc-hop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-26px); } }
+@keyframes sc-glow { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+
+/* Noël : sapins qui plient sous le vent */
+.sc-tree { bottom: 30px; transform-origin: 50% 100%; animation: sc-sway 5s ease-in-out infinite; }
+
+/* Halloween : squelettes qui marchent, chauves-souris, citrouilles */
+.sc-walker { bottom: 26px; left: 0; width: 70px; height: 110px; animation: sc-walk-r 38s linear infinite;
+  filter: drop-shadow(0 0 1px #2b1840) drop-shadow(0 0 2px rgba(43, 24, 64, .7)); }
+.sc-walker.back { animation-name: sc-walk-l; animation-duration: 52s; animation-delay: -20s; }
+.sc-walker .body { animation: sc-bob .9s ease-in-out infinite; }
+.sc-walker .leg-a, .sc-walker .arm-b { transform-origin: 35px 62px; animation: sc-leg-a .9s ease-in-out infinite; }
+.sc-walker .leg-b, .sc-walker .arm-a { transform-origin: 35px 62px; animation: sc-leg-b .9s ease-in-out infinite; }
+.sc-walker .arm-a, .sc-walker .arm-b { transform-origin: 35px 34px; }
+.sc-bat-path { position: fixed; left: 0; animation: sc-fly 26s linear infinite; }
+.sc-bat-path svg { position: static !important; }
+.sc-bat .wing { transform-origin: 20px 10px; animation: sc-flap .35s ease-in-out infinite; }
+.sc-pumpkin { bottom: 22px; }
+.sc-pumpkin .light { animation: sc-glow 1.6s ease-in-out infinite; }
+
+/* Saint-Valentin : ballons cœurs qui montent */
+.sc-balloon { bottom: -60px; animation: sc-rise 16s linear infinite; }
+.sc-balloon .swing { transform-origin: 20px 70px; animation: sc-sway 3s ease-in-out infinite; }
+
+/* Pâques : lapin qui saute, fleurs au vent */
+.sc-bunny-path { position: absolute; bottom: 30px; left: 0; animation: sc-walk-r 30s linear infinite; }
+.sc-bunny-path svg { position: static !important; animation: sc-hop .8s ease-in-out infinite; }
+.sc-flower { bottom: 28px; transform-origin: 50% 100%; animation: sc-sway 3.6s ease-in-out infinite; }
+
+/* Nouvel An et 14 Juillet : feux d'artifice */
+#sc-fireworks { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+
+@media (max-width: 767.98px) {
+  #season-scene { height: 140px; }
+  .sc-hide-mobile { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #season-scene *, #season-scene { animation: none !important; }
+  #sc-fireworks { display: none; }
+}
+</style>
+
+<div id="season-scene"{% if theme == "saint_valentin" %} class="tall"{% endif %} aria-hidden="true">
+{% if theme == "noel" %}
+  <svg class="sc-ground" viewBox="0 0 1200 60" preserveAspectRatio="none"><path d="M0 28 Q150 8 300 24 T600 22 T900 26 T1200 18 V60 H0 Z" fill="#ffffff" opacity=".95"/></svg>
+  {% for left, size, delay, dur in [(2, 1.0, 0, 5), (11, 0.7, -1.5, 4.4), (20, 0.85, -3, 5.6), (74, 0.75, -2, 4.8), (84, 1.05, -0.5, 5.2), (93, 0.65, -3.4, 4.2)] %}
+  <svg class="sc-tree {% if loop.index in (2, 5) %}sc-hide-mobile{% endif %}" style="left: {{ left }}%; width: {{ (70 * size)|round|int }}px; height: {{ (110 * size)|round|int }}px; animation-delay: {{ delay }}s; animation-duration: {{ dur }}s" viewBox="0 0 70 110">
+    <rect x="31" y="92" width="8" height="18" fill="#6d4c2f"/>
+    <path d="M35 4 L58 40 H46 L64 66 H50 L68 94 H2 L20 66 H6 L24 40 H12 Z" fill="#1f7a3f"/>
+    <path d="M35 4 L46 22 L40 20 L35 26 L30 20 L24 22 Z M24 40 L34 46 L46 40 L42 44 L35 49 L28 44 Z M20 66 L35 74 L50 66 L46 71 L35 77 L24 71 Z" fill="#ffffff" opacity=".9"/>
+    <circle cx="28" cy="56" r="2.6" fill="#e53935"/><circle cx="44" cy="80" r="2.6" fill="#ffd23f"/><circle cx="40" cy="34" r="2.2" fill="#4fc3ff"/>
+  </svg>
+  {% endfor %}
+
+{% elif theme == "halloween" %}
+  <svg class="sc-ground" viewBox="0 0 1200 60" preserveAspectRatio="none"><path d="M0 30 Q200 10 420 30 T820 26 T1200 20 V60 H0 Z" fill="#3b1d5a" opacity=".85"/></svg>
+  {% for back in (False, True) %}
+  <svg class="sc-walker{% if back %} back sc-hide-mobile{% endif %}" viewBox="0 0 70 110">
+    <g class="body" stroke="#f4f1e8" stroke-width="3.2" stroke-linecap="round" fill="none">
+      <line x1="35" y1="22" x2="35" y2="62"/>
+      <path d="M27 32 H43 M26 39 H44 M27 46 H43 M29 53 H41" stroke-width="2.4"/>
+      <g class="arm-a"><path d="M35 30 L27 48 L25 60"/></g>
+      <g class="arm-b"><path d="M35 30 L43 48 L45 60"/></g>
+      <g class="leg-a"><path d="M35 62 L30 84 L32 104 L26 106"/></g>
+      <g class="leg-b"><path d="M35 62 L40 84 L38 104 L44 106"/></g>
+      <circle cx="35" cy="12" r="10" fill="#f4f1e8" stroke="none"/>
+      <circle cx="31.5" cy="11" r="2.6" fill="#2b1840" stroke="none"/><circle cx="38.5" cy="11" r="2.6" fill="#2b1840" stroke="none"/>
+      <path d="M31 17 H39" stroke="#2b1840" stroke-width="1.6"/>
+    </g>
+  </svg>
+  {% endfor %}
+  {% for left in (6, 88) %}
+  <svg class="sc-pumpkin" style="left: {{ left }}%; width: 54px; height: 46px" viewBox="0 0 54 46">
+    <ellipse cx="27" cy="27" rx="25" ry="18" fill="#e8710a"/>
+    <path d="M14 14 Q12 27 15 42 M40 14 Q42 27 39 42 M27 9 V45" stroke="#b5540a" stroke-width="2" fill="none"/>
+    <rect x="24" y="2" width="5" height="9" rx="2" fill="#4e7d2e"/>
+    <g class="light" fill="#ffe08a"><path d="M15 22 L21 18 L22 25 Z M39 22 L33 18 L32 25 Z"/><path d="M16 31 Q27 40 38 31 L34 33 L31 30 L27 34 L23 30 L20 33 Z"/></g>
+  </svg>
+  {% endfor %}
+  {% for top, delay, dur in [(18, 0, 26), (34, -11, 31), (26, -19, 23)] %}
+  <div class="sc-bat-path {% if loop.index == 3 %}sc-hide-mobile{% endif %}" style="top: {{ top }}vh; animation-delay: {{ delay }}s; animation-duration: {{ dur }}s">
+    <svg class="sc-bat" width="40" height="20" viewBox="0 0 40 20">
+      <g class="wing" fill="#2b1840"><path d="M20 10 Q10 0 0 6 Q6 8 6 14 Q12 10 20 12 Q28 10 34 14 Q34 8 40 6 Q30 0 20 10 Z"/></g>
+      <ellipse cx="20" cy="11" rx="3" ry="4" fill="#2b1840"/>
+    </svg>
+  </div>
+  {% endfor %}
+
+{% elif theme == "saint_valentin" %}
+  {% for left, delay, dur, color in [(5, 0, 17, "#e91e63"), (18, -6, 21, "#ff8fb3"), (33, -12, 18, "#ff4d88"), (62, -3, 20, "#e91e63"), (77, -9, 16, "#ffb3c9"), (91, -14, 22, "#ff4d88")] %}
+  <svg class="sc-balloon {% if loop.index in (2, 5) %}sc-hide-mobile{% endif %}" style="left: {{ left }}%; width: 40px; height: 90px; animation-delay: {{ delay }}s; animation-duration: {{ dur }}s" viewBox="0 0 40 90">
+    <g class="swing">
+      <path d="M20 38 Q16 55 22 70 Q26 80 20 90" stroke="#b56" stroke-width="1" fill="none"/>
+      <path d="M20 38 C6 28 0 20 0 12 C0 5 5 1 10.5 1 C15 1 18 4 20 7 C22 4 25 1 29.5 1 C35 1 40 5 40 12 C40 20 34 28 20 38 Z" fill="{{ color }}"/>
+      <ellipse cx="11" cy="9" rx="3" ry="4.5" fill="#fff" opacity=".45"/>
+    </g>
+  </svg>
+  {% endfor %}
+
+{% elif theme == "paques" %}
+  <svg class="sc-ground" viewBox="0 0 1200 60" preserveAspectRatio="none"><path d="M0 26 Q160 6 340 24 T700 22 T1000 26 T1200 16 V60 H0 Z" fill="#8bd17c" opacity=".9"/></svg>
+  {% for left, color, delay in [(3, "#f48fb1", 0), (9, "#ffca28", -1.2), (15, "#ce93d8", -2.1), (80, "#ffca28", -0.6), (87, "#f48fb1", -1.7), (94, "#64b5f6", -2.6)] %}
+  <svg class="sc-flower {% if loop.index in (3, 4) %}sc-hide-mobile{% endif %}" style="left: {{ left }}%; width: 26px; height: 58px; animation-delay: {{ delay }}s" viewBox="0 0 26 58">
+    <path d="M13 58 V22" stroke="#4e9a3e" stroke-width="2.4"/><path d="M13 44 Q4 38 3 30 Q10 34 13 40" fill="#5cb04a"/>
+    <path d="M3 10 Q3 24 13 24 Q23 24 23 10 L18 15 L13 6 L8 15 Z" fill="{{ color }}"/>
+  </svg>
+  {% endfor %}
+  {% for left, colors in [(26, ("#cfe3ff", "#f48fb1")), (68, ("#fff1a8", "#66bb6a"))] %}
+  <svg style="left: {{ left }}%; bottom: 24px; width: 24px; height: 30px" viewBox="0 0 24 30">
+    <ellipse cx="12" cy="16" rx="10" ry="13" fill="{{ colors[0] }}"/><path d="M2.5 13 Q7 10 12 13 T21.5 13" stroke="{{ colors[1] }}" stroke-width="2.4" fill="none"/>
+  </svg>
+  {% endfor %}
+  <div class="sc-bunny-path">
+    <svg width="54" height="50" viewBox="0 0 54 50">
+      <ellipse cx="26" cy="34" rx="16" ry="12" fill="#ffffff" stroke="#e0d6cf"/>
+      <circle cx="40" cy="24" r="8" fill="#ffffff" stroke="#e0d6cf"/>
+      <ellipse cx="38" cy="8" rx="3" ry="10" fill="#ffffff" stroke="#e0d6cf" transform="rotate(-10 38 8)"/>
+      <ellipse cx="44" cy="9" rx="3" ry="10" fill="#ffffff" stroke="#e0d6cf" transform="rotate(12 44 9)"/>
+      <circle cx="43" cy="22" r="1.4" fill="#333"/><circle cx="47.5" cy="25" r="1.3" fill="#f48fb1"/>
+      <circle cx="10" cy="32" r="4.5" fill="#ffffff" stroke="#e0d6cf"/>
+      <ellipse cx="30" cy="45" rx="7" ry="3" fill="#ffffff" stroke="#e0d6cf"/>
+    </svg>
+  </div>
+
+{% elif theme in ("nouvel_an", "quatorze_juillet") %}
+  <canvas id="sc-fireworks"></canvas>
+{% endif %}
+</div>
+
+{% if theme in ("nouvel_an", "quatorze_juillet") %}
+<script>
+(() => {
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const canvas = document.getElementById("sc-fireworks");
+  if (!canvas || !canvas.getContext) return;
+  const ctx = canvas.getContext("2d");
+  const colors = {{ (["#2349c4", "#ffffff", "#e3262f"] if theme == "quatorze_juillet" else ["#ffd700", "#ffffff", "#ff5bbd", "#7c5cff", "#4facfe"])|tojson }};
+  let w = 0, h = 0, sparks = [], next = 0;
+  function resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    w = innerWidth; h = innerHeight;
+    canvas.width = w * dpr; canvas.height = h * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  function burst() {
+    const x = w * (0.1 + Math.random() * 0.8);
+    const y = h * (0.12 + Math.random() * 0.45);
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    const n = innerWidth < 768 ? 34 : 54;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2, v = 1.2 + Math.random() * 2.2;
+      sparks.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 1, color });
+    }
+  }
+  function tick(t) {
+    if (document.hidden) { requestAnimationFrame(tick); return; }
+    ctx.clearRect(0, 0, w, h);
+    if (t > next) { burst(); next = t + 1400 + Math.random() * 1600; }
+    for (const s of sparks) {
+      s.vy += 0.025; s.vx *= 0.985; s.vy *= 0.985;
+      s.x += s.vx; s.y += s.vy; s.life -= 0.012;
+      ctx.globalAlpha = Math.max(0, s.life) * 0.75;
+      ctx.fillStyle = s.color;
+      ctx.beginPath(); ctx.arc(s.x, s.y, 1.8, 0, Math.PI * 2); ctx.fill();
+    }
+    sparks = sparks.filter((s) => s.life > 0);
+    requestAnimationFrame(tick);
+  }
+  addEventListener("resize", resize);
+  resize();
+  requestAnimationFrame(tick);
+})();
+</script>
+{% endif %}
+{% endif %}
+{%- endmacro %}
