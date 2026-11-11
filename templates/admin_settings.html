@@ -165,11 +165,12 @@
         <div class="form-check form-switch mt-2">
           <input class="form-check-input" type="checkbox" role="switch" id="sky_enabled" name="sky_enabled" value="1" {% if sky_on_setting %}checked{% endif %}>
           <label class="form-check-label" for="sky_enabled">
-            Ciel selon l'heure du visiteur : lune et étoiles la nuit, soleil et nuages le jour, lever et coucher de soleil
+            Ciel réel vu de France : soleil et lune à leur vraie place (le bas de l'en-tête est l'horizon), phases de la lune, étoiles la nuit, nuages le jour
           </label>
         </div>
         <div class="form-text">
-          Aperçu : ajoute <code>?ciel=nuit</code>, <code>?ciel=aube</code>, <code>?ciel=jour</code> ou <code>?ciel=soir</code> à l'adresse du site.
+          Aperçu : ajoute <code>?ciel=nuit</code>, <code>?ciel=aube</code>, <code>?ciel=jour</code> ou <code>?ciel=soir</code> à l'adresse du site,
+          ou une date et une heure : <code>?quand=2026-11-24T17:15</code> (coucher du soleil et lever de la pleine lune).
           Pour le couper durablement : variable <code>SKY_THEME=0</code> sur Render.
         </div>
       </div>

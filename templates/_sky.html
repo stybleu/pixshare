@@ -44,10 +44,12 @@ body[data-sky="soir"] .topbar-sky { background: linear-gradient(120deg, rgba(255
 .sky-sun, .sky-moon, .sky-stars, .sky-cloud { position: absolute; display: none; }
 
 /* soleil */
+/* Soleil et lune : le bas de l'en-tête est l'horizon. Le script les place à leur
+   vraie position dans le ciel de France (gauche = est, milieu = sud, droite = ouest). */
+.sky-sun, .sky-moon { transform: translate(-50%, -50%); transition: left 2s ease, top 2s ease, opacity 1s ease; }
 .sky-sun {
   width: 64px; height: 64px;
-  right: 38%; top: 50%;
-  margin-top: -32px;
+  left: 60%; top: 50%;
   border-radius: 50%;
   background: radial-gradient(circle, #fff6c4 0%, #ffe066 50%, #ffc93c 75%);
   box-shadow: 0 0 34px 14px rgba(255, 210, 80, .45);
@@ -63,10 +65,7 @@ body[data-sky="soir"] .topbar-sky { background: linear-gradient(120deg, rgba(255
   mask-image: radial-gradient(circle, transparent 46%, #000 48%, transparent 72%);
   animation: sky-spin 40s linear infinite;
 }
-body[data-sky="jour"] .sky-sun { display: block; }
-body[data-sky="aube"] .sky-sun, body[data-sky="soir"] .sky-sun {
-  display: block; top: auto; bottom: -26px; margin-top: 0; right: 42%;
-}
+body[data-sun-up="1"] .sky-sun { display: block; }
 body[data-sky="aube"] .sky-sun { background: radial-gradient(circle, #fff1d6 0%, #ffc078 55%, #ff9f5a 78%); box-shadow: 0 0 34px 14px rgba(255, 160, 90, .45); }
 body[data-sky="soir"] .sky-sun { background: radial-gradient(circle, #ffe0c2 0%, #ff9a6b 55%, #f2704e 78%); box-shadow: 0 0 34px 14px rgba(242, 112, 78, .4); }
 
@@ -75,14 +74,16 @@ body[data-sky="soir"] .sky-sun { background: radial-gradient(circle, #ffe0c2 0%,
    rien à la nouvelle lune, croissant, quartier, gibbeuse, pleine lune. */
 .sky-moon {
   width: 46px; height: 46px;
-  right: 38%; top: 50%;
-  margin-top: -23px;
+  left: 62%; top: 50%;
   animation: sky-glow 6s ease-in-out infinite alternate;
 }
 .sky-moon svg { display: block; width: 100%; height: 100%; overflow: visible; }
 .sky-moon .moon-lit { filter: drop-shadow(0 0 7px rgba(255, 255, 235, .9)); }
-body[data-sky="nuit"] .sky-moon { display: block; }
-body[data-sky="nuit"][data-moon="nouvelle"] .sky-moon { display: none; }
+body[data-moon-up="1"] .sky-moon { display: block; }
+body[data-moon="nouvelle"] .sky-moon { display: none !important; }
+/* En plein jour, la lune est pâle, comme dans le vrai ciel. */
+body[data-sky="jour"] .sky-moon { opacity: .55; }
+body[data-sky="aube"] .sky-moon, body[data-sky="soir"] .sky-moon { opacity: .85; }
 
 .sky-stars {
   inset: 0;
@@ -124,8 +125,8 @@ body[data-sky="aube"] .sky-cloud.c2, body[data-sky="soir"] .sky-cloud.c2 { displ
 @keyframes sky-twinkle { from { opacity: .5; } to { opacity: 1; } }
 
 @media (max-width: 767.98px) {
-  .sky-sun, .sky-moon { right: 10%; top: 34%; }
-  body[data-sky="aube"] .sky-sun, body[data-sky="soir"] .sky-sun { right: 12%; }
+  .sky-sun { width: 50px; height: 50px; }
+  .sky-moon { width: 38px; height: 38px; }
   .sky-cloud.c3 { display: none !important; }
 }
 
@@ -141,40 +142,88 @@ body[data-sky="aube"] .sky-cloud.c2, body[data-sky="soir"] .sky-cloud.c2 { displ
 <div id="sky-tint" aria-hidden="true"></div>
 <script>
 (() => {
-  const forced = new URLSearchParams(location.search).get("ciel");
-  const names = ["nuit", "aube", "jour", "soir"];
-  function moment() {
-    if (names.includes(forced)) return forced;
-    const h = new Date().getHours();          // heure du téléphone / ordinateur du visiteur
-    if (h >= 21 || h < 6) return "nuit";
-    if (h < 9) return "aube";
-    if (h < 18) return "jour";
-    return "soir";
+  /* Ciel réel, vu de France (Paris) : le soleil et la lune sont placés à leur vraie
+     position, calculée dans le navigateur (formules astronomiques simplifiées, à
+     environ 1° près). Aperçus possibles dans l'adresse :
+       ?quand=2026-11-24T23:00   simule une date et une heure
+       ?ciel=nuit|aube|jour|soir force le moment de la journée
+       ?lune=0.25                force la phase de la lune */
+  const params = new URLSearchParams(location.search);
+  const forcedSky = params.get("ciel");
+  const forcedWhen = params.get("quand") ? new Date(params.get("quand")) : null;
+  const LAT = 48.8566, LNG = 2.3522;
+  const rad = Math.PI / 180, e = rad * 23.4397;
+
+  const now = () => (forcedWhen && !isNaN(forcedWhen) ? forcedWhen : new Date());
+  const toDays = (date) => date.getTime() / 86400000 - 0.5 + 2440588 - 2451545;
+  const rightAscension = (l, b) => Math.atan2(Math.sin(l) * Math.cos(e) - Math.tan(b) * Math.sin(e), Math.cos(l));
+  const declination = (l, b) => Math.asin(Math.sin(b) * Math.cos(e) + Math.cos(b) * Math.sin(e) * Math.sin(l));
+
+  // Hauteur au-dessus de l'horizon et direction (0 = sud, -90 = est, +90 = ouest), en degrés.
+  function horizontal(date, ra, dec) {
+    const d = toDays(date), phi = rad * LAT, lw = rad * -LNG;
+    const H = rad * (280.16 + 360.9856235 * d) - lw - ra;
+    const alt = Math.asin(Math.sin(phi) * Math.sin(dec) + Math.cos(phi) * Math.cos(dec) * Math.cos(H));
+    const az = Math.atan2(Math.sin(H), Math.cos(H) * Math.sin(phi) - Math.tan(dec) * Math.cos(phi));
+    return { alt: alt / rad, az: az / rad };
   }
+  function sunPosition(date) {
+    const d = toDays(date);
+    const M = rad * (357.5291 + 0.98560028 * d);
+    const C = rad * (1.9148 * Math.sin(M) + 0.02 * Math.sin(2 * M) + 0.0003 * Math.sin(3 * M));
+    const L = M + C + rad * 102.9372 + Math.PI;
+    return horizontal(date, rightAscension(L, 0), declination(L, 0));
+  }
+  function moonPosition(date) {
+    const d = toDays(date);
+    const L = rad * (218.316 + 13.176396 * d), M = rad * (134.963 + 13.064993 * d), F = rad * (93.272 + 13.229350 * d);
+    const l = L + rad * 6.289 * Math.sin(M), b = rad * 5.128 * Math.sin(F);
+    return horizontal(date, rightAscension(l, b), declination(l, b));
+  }
+
+  // Le cadre de l'en-tête = le ciel : bas = horizon, gauche = nord-est → est,
+  // milieu = sud, droite = ouest → nord-ouest. Un astre à l'horizon ne montre
+  // qu'un petit bout au-dessus du bord.
+  function place(el, pos, hideBelow) {
+    if (!el) return false;
+    if (pos.alt < hideBelow) return false;
+    const x = Math.max(4, Math.min(96, 50 + (pos.az / 180) * 50));
+    const alt = Math.max(-5, Math.min(60, pos.alt));
+    const y = 112 - (alt / 60) * 97;
+    el.style.left = x.toFixed(1) + "%";
+    el.style.top = y.toFixed(1) + "%";
+    return true;
+  }
+
+  // Moment de la journée d'après la hauteur du soleil (plus juste que l'heure).
+  function moment(sun) {
+    if (["nuit", "aube", "jour", "soir"].includes(forcedSky)) return forcedSky;
+    if (sun.alt < -6) return "nuit";
+    if (sun.alt < 8) return sun.az < 0 ? "aube" : "soir";
+    return "jour";
+  }
+
   // Phase de la lune : 0 = nouvelle lune, 0,25 = premier quartier,
   // 0,5 = pleine lune, 0,75 = dernier quartier (mois lunaire de 29,53 jours,
   // compté depuis la nouvelle lune du 6 janvier 2000 à 18 h 14 UTC).
   function moonPhase(date) {
-    const forcedPhase = parseFloat(new URLSearchParams(location.search).get("lune"));
+    const forcedPhase = parseFloat(params.get("lune"));
     if (!isNaN(forcedPhase)) return ((forcedPhase % 1) + 1) % 1;
     const days = (date.getTime() - Date.UTC(2000, 0, 6, 18, 14)) / 86400000;
     return ((days / 29.530588853) % 1 + 1) % 1;
   }
 
-  function drawMoon() {
+  function drawMoon(date) {
     const lit = document.querySelector(".sky-moon .moon-lit");
     if (!lit) return;
-    const p = moonPhase(new Date());
+    const p = moonPhase(date);
     const illum = (1 - Math.cos(2 * Math.PI * p)) / 2;      // part éclairée, de 0 à 1
     if (illum < 0.02) { document.body.dataset.moon = "nouvelle"; return; }
     document.body.dataset.moon = illum > 0.98 ? "pleine" : "visible";
     const r = 20, cx = 23, cy = 23;
     const waxing = p < 0.5;                                // croissante : éclairée à droite (vue de France)
-    const k = Math.cos(2 * Math.PI * p);                   // largeur de la ligne d'ombre
-    const rx = Math.abs(k) * r;
-    // Bord éclairé : demi-cercle à droite (croissante) ou à gauche (décroissante).
+    const rx = Math.abs(Math.cos(2 * Math.PI * p)) * r;    // largeur de la ligne d'ombre
     const outerSweep = waxing ? 1 : 0;
-    // Ligne d'ombre : bombée vers le côté éclairé pour un croissant, vers l'autre pour une gibbeuse.
     const crescent = illum < 0.5;
     const innerSweep = waxing ? (crescent ? 0 : 1) : (crescent ? 1 : 0);
     lit.setAttribute("d",
@@ -182,11 +231,27 @@ body[data-sky="aube"] .sky-cloud.c2, body[data-sky="soir"] .sky-cloud.c2 { displ
       `A ${rx.toFixed(2)} ${r} 0 0 ${innerSweep} ${cx} ${cy - r} Z`);
   }
 
-  function apply() { document.body.dataset.sky = moment(); drawMoon(); }
-  apply();
-  // La lune est dans l'en-tête, chargé après ce script : on la dessine dès qu'il est là.
-  document.addEventListener("DOMContentLoaded", drawMoon);
-  setInterval(apply, 5 * 60 * 1000);
+  function apply() {
+    const date = now();
+    let sun = sunPosition(date);
+    const sky = moment(sun);
+    // Aperçu forcé (?ciel=...) sans date : on montre un soleil typique du moment.
+    if (forcedSky && !forcedWhen) {
+      sun = { jour: { alt: 35, az: 10 }, aube: { alt: 2, az: -60 }, soir: { alt: 2, az: 60 }, nuit: { alt: -30, az: 0 } }[forcedSky] || sun;
+    }
+    document.body.dataset.sky = sky;
+    document.body.dataset.sunUp = place(document.querySelector(".sky-sun"), sun, -2) ? "1" : "0";
+    let moon = moonPosition(date);
+    if (forcedSky === "nuit" && !forcedWhen && moon.alt < 5) moon = { alt: 35, az: 15 };   // aperçu : lune bien visible
+    document.body.dataset.moonUp = place(document.querySelector(".sky-moon"), moon, -1.5) ? "1" : "0";
+    drawMoon(date);
+  }
+
+  // Le soleil et la lune sont dans l'en-tête, chargé après ce script.
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", apply);
+  else apply();
+  document.body.dataset.sky = moment(sunPosition(now()));
+  setInterval(apply, 60 * 1000);
 })();
 </script>
 {% endif %}
