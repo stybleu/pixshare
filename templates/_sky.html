@@ -119,6 +119,71 @@ body[data-sky="nuit"] .sky-stars { display: block; }
 body[data-sky="jour"] .sky-cloud { display: block; }
 body[data-sky="aube"] .sky-cloud.c2, body[data-sky="soir"] .sky-cloud.c2 { display: block; opacity: .55; }
 
+/* Ciel sur toute la page (derrière le contenu) : étoiles la nuit, nuages le jour. */
+#sky-wide { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+#sky-wide .w-star, #sky-wide .w-cloud, #sky-wide .w-shoot { position: absolute; display: none; }
+#sky-wide .w-star {
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0 28%, rgba(105, 114, 222, .95) 50%, rgba(105, 114, 222, .35) 66%, transparent 74%);
+  animation: wide-twinkle ease-in-out infinite alternate;
+}
+#sky-wide .w-star.big::before, #sky-wide .w-star.big::after {
+  content: ""; position: absolute; left: 50%; top: 50%;
+  background: linear-gradient(90deg, transparent, rgba(110, 118, 226, .95), transparent);
+  transform: translate(-50%, -50%);
+}
+#sky-wide .w-star.big::before { width: 420%; height: 1.5px; }
+#sky-wide .w-star.big::after { width: 1.5px; height: 420%; background: linear-gradient(180deg, transparent, rgba(110, 118, 226, .95), transparent); }
+body[data-sky="nuit"] #sky-wide .w-star { display: block; }
+body[data-sky="soir"] #sky-wide .w-star.early, body[data-sky="aube"] #sky-wide .w-star.early { display: block; opacity: .45; animation: none; }
+
+#sky-wide .w-shoot {
+  top: 12%; left: 70%;
+  width: 130px; height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0), #fff 70%, rgba(170, 178, 245, 1));
+  box-shadow: 0 0 6px rgba(160, 168, 240, .9);
+  opacity: 0;
+  transform: rotate(-28deg);
+  animation: wide-shoot 14s linear infinite 4s;
+}
+body[data-sky="nuit"] #sky-wide .w-shoot { display: block; }
+
+#sky-wide .w-cloud {
+  left: 0;
+  width: 150px; height: 44px;
+  background: #fff;
+  border-radius: 44px;
+  filter: drop-shadow(0 8px 14px rgba(90, 135, 200, .22));
+  animation: wide-drift linear infinite;
+}
+#sky-wide .w-cloud::before, #sky-wide .w-cloud::after { content: ""; position: absolute; background: inherit; border-radius: 50%; }
+#sky-wide .w-cloud::before { width: 66px; height: 66px; left: 22px; top: -34px; }
+#sky-wide .w-cloud::after { width: 50px; height: 50px; left: 76px; top: -22px; }
+body[data-sky="jour"] #sky-wide .w-cloud { display: block; }
+body[data-sky="aube"] #sky-wide .w-cloud.warm, body[data-sky="soir"] #sky-wide .w-cloud.warm { display: block; background: #ffe7dc; }
+
+/* La nuit et le jour, le voile de couleur descend un peu plus bas pour que le ciel se voie partout. */
+body[data-sky="nuit"] #sky-tint, body[data-sky="jour"] #sky-tint {
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, .6) 55%, rgba(0, 0, 0, .45) 100%);
+  mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, .6) 55%, rgba(0, 0, 0, .45) 100%);
+}
+body[data-sky="nuit"] #sky-tint { opacity: .75; background: #b7bdee; }
+
+@keyframes wide-twinkle { from { opacity: .45; transform: scale(.8); } to { opacity: 1; transform: scale(1.1); } }
+@keyframes wide-drift { from { transform: translateX(-260px) scale(var(--s, 1)); } to { transform: translateX(calc(100vw + 60px)) scale(var(--s, 1)); } }
+@keyframes wide-shoot {
+  0%, 90% { opacity: 0; transform: rotate(-28deg) translateX(0); }
+  92% { opacity: 1; }
+  97% { opacity: 0; transform: rotate(-28deg) translateX(-340px); }
+  100% { opacity: 0; transform: rotate(-28deg) translateX(-340px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #sky-wide .w-star, #sky-wide .w-shoot { animation: none; }
+  #sky-wide .w-shoot { display: none !important; }
+  #sky-wide .w-cloud { animation: none; transform: translateX(var(--x, 0)) scale(var(--s, 1)); }
+}
+
 @keyframes sky-drift { from { left: -120px; } to { left: calc(100% + 20px); } }
 @keyframes sky-spin { to { transform: rotate(360deg); } }
 @keyframes sky-glow { from { filter: brightness(1); } to { filter: brightness(1.08); } }
@@ -140,6 +205,7 @@ body[data-sky="aube"] .sky-cloud.c2, body[data-sky="soir"] .sky-cloud.c2 { displ
 {% macro sky_layer(enabled) -%}
 {% if enabled %}
 <div id="sky-tint" aria-hidden="true"></div>
+<div id="sky-wide" aria-hidden="true"><div class="w-shoot"></div></div>
 <script>
 (() => {
   /* Ciel réel, vu de France (Paris) : le soleil et la lune sont placés à leur vraie
@@ -247,9 +313,42 @@ body[data-sky="aube"] .sky-cloud.c2, body[data-sky="soir"] .sky-cloud.c2 { displ
     drawMoon(date);
   }
 
+  // Étoiles et nuages sur toute la page : placés une fois, toujours au même endroit
+  // pour une taille d'écran donnée (tirage pseudo-aléatoire fixe).
+  function fillWide() {
+    const box = document.getElementById("sky-wide");
+    if (!box || box.dataset.done) return;
+    box.dataset.done = "1";
+    let seed = 20261111;
+    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    const w = window.innerWidth, h = window.innerHeight;
+    const stars = Math.min(140, Math.max(45, Math.round(w * h / 7500)));
+    for (let i = 0; i < stars; i++) {
+      const st = document.createElement("i");
+      const big = rnd() < 0.18;
+      const size = big ? 5 + rnd() * 2.5 : 2.5 + rnd() * 2.5;
+      st.className = "w-star" + (big ? " big" : "") + (rnd() < 0.15 ? " early" : "");
+      st.style.cssText = `left:${(rnd() * 98 + 1).toFixed(2)}%;top:${(rnd() * 96 + 2).toFixed(2)}%;` +
+        `width:${size.toFixed(1)}px;height:${size.toFixed(1)}px;` +
+        `animation-duration:${(2 + rnd() * 3).toFixed(2)}s;animation-delay:-${(rnd() * 5).toFixed(2)}s`;
+      box.appendChild(st);
+    }
+    const clouds = w < 700 ? 5 : 8;
+    for (let i = 0; i < clouds; i++) {
+      const c = document.createElement("i");
+      const dur = 70 + rnd() * 80;
+      c.className = "w-cloud" + (i % 3 === 0 ? " warm" : "");
+      c.style.cssText = `top:${(8 + (i / clouds) * 82 + rnd() * 6).toFixed(1)}%;` +
+        `--s:${(0.45 + rnd() * 0.75).toFixed(2)};opacity:${(0.55 + rnd() * 0.4).toFixed(2)};` +
+        `--x:${(rnd() * 90).toFixed(1)}vw;animation-duration:${dur.toFixed(0)}s;animation-delay:-${(rnd() * dur).toFixed(0)}s`;
+      box.appendChild(c);
+    }
+  }
+
   // Le soleil et la lune sont dans l'en-tête, chargé après ce script.
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", apply);
   else apply();
+  fillWide();
   document.body.dataset.sky = moment(sunPosition(now()));
   setInterval(apply, 60 * 1000);
 })();
