@@ -71,19 +71,18 @@ body[data-sky="aube"] .sky-sun { background: radial-gradient(circle, #fff1d6 0%,
 body[data-sky="soir"] .sky-sun { background: radial-gradient(circle, #ffe0c2 0%, #ff9a6b 55%, #f2704e 78%); box-shadow: 0 0 34px 14px rgba(242, 112, 78, .4); }
 
 /* lune et étoiles */
+/* La lune suit sa vraie phase du jour (calculée dans le navigateur) :
+   rien à la nouvelle lune, croissant, quartier, gibbeuse, pleine lune. */
 .sky-moon {
   width: 46px; height: 46px;
   right: 38%; top: 50%;
   margin-top: -23px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #ffffff 0%, #f4f1e3 55%, #e2ddc6 100%);
-  box-shadow: 0 0 26px 8px rgba(255, 255, 240, .75);
   animation: sky-glow 6s ease-in-out infinite alternate;
 }
-.sky-moon::before, .sky-moon::after { content: ""; position: absolute; border-radius: 50%; background: rgba(190, 182, 150, .5); }
-.sky-moon::before { width: 9px; height: 9px; left: 12px; top: 23px; }
-.sky-moon::after { width: 6px; height: 6px; left: 27px; top: 12px; box-shadow: 3px 17px 0 2px rgba(190, 182, 150, .4); }
+.sky-moon svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.sky-moon .moon-lit { filter: drop-shadow(0 0 7px rgba(255, 255, 235, .9)); }
 body[data-sky="nuit"] .sky-moon { display: block; }
+body[data-sky="nuit"][data-moon="nouvelle"] .sky-moon { display: none; }
 
 .sky-stars {
   inset: 0;
@@ -152,8 +151,41 @@ body[data-sky="aube"] .sky-cloud.c2, body[data-sky="soir"] .sky-cloud.c2 { displ
     if (h < 18) return "jour";
     return "soir";
   }
-  function apply() { document.body.dataset.sky = moment(); }
+  // Phase de la lune : 0 = nouvelle lune, 0,25 = premier quartier,
+  // 0,5 = pleine lune, 0,75 = dernier quartier (mois lunaire de 29,53 jours,
+  // compté depuis la nouvelle lune du 6 janvier 2000 à 18 h 14 UTC).
+  function moonPhase(date) {
+    const forcedPhase = parseFloat(new URLSearchParams(location.search).get("lune"));
+    if (!isNaN(forcedPhase)) return ((forcedPhase % 1) + 1) % 1;
+    const days = (date.getTime() - Date.UTC(2000, 0, 6, 18, 14)) / 86400000;
+    return ((days / 29.530588853) % 1 + 1) % 1;
+  }
+
+  function drawMoon() {
+    const lit = document.querySelector(".sky-moon .moon-lit");
+    if (!lit) return;
+    const p = moonPhase(new Date());
+    const illum = (1 - Math.cos(2 * Math.PI * p)) / 2;      // part éclairée, de 0 à 1
+    if (illum < 0.02) { document.body.dataset.moon = "nouvelle"; return; }
+    document.body.dataset.moon = illum > 0.98 ? "pleine" : "visible";
+    const r = 20, cx = 23, cy = 23;
+    const waxing = p < 0.5;                                // croissante : éclairée à droite (vue de France)
+    const k = Math.cos(2 * Math.PI * p);                   // largeur de la ligne d'ombre
+    const rx = Math.abs(k) * r;
+    // Bord éclairé : demi-cercle à droite (croissante) ou à gauche (décroissante).
+    const outerSweep = waxing ? 1 : 0;
+    // Ligne d'ombre : bombée vers le côté éclairé pour un croissant, vers l'autre pour une gibbeuse.
+    const crescent = illum < 0.5;
+    const innerSweep = waxing ? (crescent ? 0 : 1) : (crescent ? 1 : 0);
+    lit.setAttribute("d",
+      `M ${cx} ${cy - r} A ${r} ${r} 0 0 ${outerSweep} ${cx} ${cy + r} ` +
+      `A ${rx.toFixed(2)} ${r} 0 0 ${innerSweep} ${cx} ${cy - r} Z`);
+  }
+
+  function apply() { document.body.dataset.sky = moment(); drawMoon(); }
   apply();
+  // La lune est dans l'en-tête, chargé après ce script : on la dessine dès qu'il est là.
+  document.addEventListener("DOMContentLoaded", drawMoon);
   setInterval(apply, 5 * 60 * 1000);
 })();
 </script>
@@ -164,7 +196,17 @@ body[data-sky="aube"] .sky-cloud.c2, body[data-sky="soir"] .sky-cloud.c2 { displ
 {% if enabled %}
 <div class="topbar-sky" aria-hidden="true">
   <div class="sky-stars"></div>
-  <div class="sky-moon"></div>
+  <div class="sky-moon">
+    <svg viewBox="0 0 46 46" aria-hidden="true">
+      <defs>
+        <radialGradient id="moonGlow" cx="40%" cy="38%" r="65%">
+          <stop offset="0%" stop-color="#ffffff"/><stop offset="60%" stop-color="#f4f1e3"/><stop offset="100%" stop-color="#ddd7bf"/>
+        </radialGradient>
+      </defs>
+      <circle cx="23" cy="23" r="20" fill="#5c6390" opacity=".18"/>
+      <path class="moon-lit" fill="url(#moonGlow)" d=""/>
+    </svg>
+  </div>
   <div class="sky-sun"></div>
   <div class="sky-cloud c1"></div>
   <div class="sky-cloud c2"></div>
