@@ -159,6 +159,19 @@
                   <span class="badge text-bg-secondary">Expiré</span>
                 {% else %}
                   <span class="badge text-bg-danger">Supprimé</span>
+                  {% set _r = (f.delete_reason or "")|lower %}
+                  {% if _r == "deleted" %}
+                    <span class="badge text-bg-primary">par l'utilisateur</span>
+                  {% elif _r.startswith("auto:") %}
+                    <span class="badge text-bg-warning">par NudeNet</span>
+                  {% elif _r == "view_limit" %}
+                    <span class="badge text-bg-secondary">limite de vues</span>
+                  {% elif _r %}
+                    <span class="badge text-bg-dark">par l'admin ({{ _r }})</span>
+                  {% else %}
+                    <span class="badge text-bg-secondary">motif inconnu</span>
+                  {% endif %}
+                  {% if f.deleted_at %}<span class="small text-muted">le {{ f.deleted_at[:16]|replace("T", " ") }} UTC</span>{% endif %}
                 {% endif %}
               </div>
             </div>
