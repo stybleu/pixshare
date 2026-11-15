@@ -129,6 +129,23 @@
                       Supprimer
                     </button>
                   </form>
+
+                  {% if m.ip %}
+                    {% if m.ip in blocked_ips %}
+                      <div class="badge text-bg-secondary mt-2">IP bloquée</div>
+                    {% else %}
+                      <form method="post"
+                            action="{{ url_for('admin.admin_block_message_ip') }}"
+                            class="m-0 mt-2"
+                            onsubmit="return confirm('Bloquer cette IP ?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <input type="hidden" name="ip" value="{{ m.ip }}">
+                        <button class="btn btn-sm btn-outline-danger" type="submit">
+                          Bloquer l'IP
+                        </button>
+                      </form>
+                    {% endif %}
+                  {% endif %}
                 </td>
               </tr>
             {% endfor %}

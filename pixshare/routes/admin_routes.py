@@ -96,8 +96,34 @@ def admin_messages():
     return render_template(
         "admin_messages.html",
         messages=items,
+        blocked_ips=set(load_blocked()),
         version=current_app.config["APP_VERSION"],
     )
+
+
+@admin_bp.route("/admin/messages/block-ip", methods=["POST"], endpoint="admin_block_message_ip")
+@admin_required
+def admin_block_message_ip():
+    """Bloque l'IP de l'expéditeur d'un message de contact."""
+    validate_csrf()
+    try:
+        ip = str(ipaddress.ip_address((request.form.get("ip") or "").strip()))
+    except ValueError:
+        flash("IP invalide.", "warning")
+        return redirect(url_for("admin.admin_messages"))
+
+    if ip == ip_source()[0]:
+        flash("Tu ne peux pas bloquer ta propre IP.", "warning")
+        return redirect(url_for("admin.admin_messages"))
+
+    blocked = load_blocked()
+    if ip in blocked:
+        flash(f"IP déjà bloquée : {ip}", "info")
+    else:
+        blocked.append(ip)
+        save_blocked(blocked)
+        flash(f"IP bloquée ✅ : {ip}", "success")
+    return redirect(url_for("admin.admin_messages"))
 
 
 @admin_bp.route("/admin/messages/delete", methods=["POST"])

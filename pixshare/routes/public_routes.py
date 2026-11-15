@@ -338,6 +338,10 @@ def _contact_rate_ok(ip: str) -> bool:
 
 @public_bp.route("/contact", methods=["GET", "POST"], endpoint="contact")
 def contact():
+    ip = get_client_ip()
+    if ip and ip in load_blocked():
+        return redirect("https://www.google.fr"), 302
+
     if request.method == "POST":
         validate_csrf()
 
