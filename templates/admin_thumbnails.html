@@ -46,6 +46,26 @@
   </div>
 </div>
 
+{% set ns = namespace(user=0, nude=0, admin=0, review=0) %}
+{% for f in thumbnails %}
+  {% set _r = (f.delete_reason or "")|lower %}
+  {% if f.status == "pending" and f.moderation_decision == "manual_review" %}
+    {% set ns.review = ns.review + 1 %}
+  {% elif f.status not in ["active", "pending", "expired"] %}
+    {% if _r == "deleted" %}{% set ns.user = ns.user + 1 %}
+    {% elif _r.startswith("auto:") %}{% set ns.nude = ns.nude + 1 %}
+    {% elif _r and _r != "view_limit" %}{% set ns.admin = ns.admin + 1 %}
+    {% endif %}
+  {% endif %}
+{% endfor %}
+<div class="d-flex flex-wrap gap-2 mb-1">
+  <span class="badge text-bg-primary">Supprimées par l'utilisateur : {{ ns.user }}</span>
+  <span class="badge text-bg-warning">Supprimées par NudeNet : {{ ns.nude }}</span>
+  <span class="badge text-bg-dark">Supprimées par l'admin : {{ ns.admin }}</span>
+  <span class="badge text-bg-info">À vérifier : {{ ns.review }}</span>
+</div>
+<div class="text-muted small mb-3">Compteurs sur les miniatures encore conservées (durée réglée dans les paramètres).</div>
+
 {% if thumbnails %}
   <div class="row g-3">
     {% for f in thumbnails %}
@@ -62,17 +82,49 @@
               <div class="text-muted small">ID : <code>{{ f.id }}</code></div>
             </div>
 
-            {% if f.status == "active" %}
-              <span class="badge text-bg-success">Actif</span>
-            {% elif f.status == "expired" %}
-              <span class="badge text-bg-secondary">Expiré</span>
-            {% else %}
-              <span class="badge text-bg-danger">Supprimé</span>
-            {% endif %}
+            {% set _r = (f.delete_reason or "")|lower %}
+            <div class="d-flex flex-column align-items-end gap-1">
+              {% if f.status == "active" %}
+                <span class="badge text-bg-success">Actif</span>
+              {% elif f.status == "pending" %}
+                {% if f.moderation_decision == "manual_review" %}
+                  <span class="badge text-bg-warning">À vérifier</span>
+                {% else %}
+                  <span class="badge text-bg-info">En attente d'analyse</span>
+                {% endif %}
+              {% elif f.status == "expired" %}
+                <span class="badge text-bg-secondary">Expiré</span>
+              {% else %}
+                <span class="badge text-bg-danger">Supprimé</span>
+                {% if _r == "deleted" %}
+                  <span class="badge text-bg-primary">par l'utilisateur</span>
+                {% elif _r.startswith("auto:") %}
+                  <span class="badge text-bg-warning">par NudeNet</span>
+                {% elif _r == "view_limit" %}
+                  <span class="badge text-bg-secondary">limite de vues</span>
+                {% elif _r %}
+                  <span class="badge text-bg-dark">par l'admin</span>
+                {% else %}
+                  <span class="badge text-bg-secondary">motif inconnu</span>
+                {% endif %}
+              {% endif %}
+            </div>
           </div>
 
           <div class="thumb-meta text-muted small d-grid gap-1 mb-3">
             <div>Date : {{ f.mtime_h }}</div>
+            {% if f.status not in ["active", "pending", "expired"] %}
+              <div>Supprimée le : {% if f.deleted_at %}{{ f.deleted_at[:16]|replace("T", " ") }} UTC{% else %}—{% endif %}</div>
+              {% if _r.startswith("auto:") %}
+                <div>Détection NudeNet :
+                  {% if f.moderation_label_fr %}
+                    <strong>{{ f.moderation_label_fr }}</strong>{% if f.moderation_score is not none %} · score {{ "%.2f"|format(f.moderation_score|float) }}{% endif %}
+                  {% else %}
+                    <span>non enregistrée (supprimée avant cette mise à jour)</span>
+                  {% endif %}
+                </div>
+              {% endif %}
+            {% endif %}
             <div>IP : {% if f.ip %}<code>{{ f.ip }}</code>{% else %}—{% endif %}</div>
             <div>Expiration du fichier :
               {% if f.status == "active" and f.remaining_time %}

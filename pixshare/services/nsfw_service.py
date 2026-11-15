@@ -326,6 +326,21 @@ def _record_failure(file_id: str, error: str) -> str:
     return "retry"
 
 
+def _record_rejection(file_id: str, label: str | None, score: float) -> None:
+    """Garde la preuve de la détection (partie du corps, score) sur la fiche de l'image supprimée."""
+    db = load_db()
+    meta = db.get(file_id)
+    if not isinstance(meta, dict):
+        return
+    meta["moderated_at"] = _utc_now_iso()
+    meta["moderation_decision"] = "rejected"
+    meta["moderation_detector"] = DETECTOR_NAME
+    meta["moderation_score"] = float(score)
+    meta["moderation_label"] = (label or "")[:80]
+    db[file_id] = meta
+    save_db(db)
+
+
 def _process_one(file_id: str, review_threshold: float, block_threshold: float, stats: dict, tiling: bool = True, classes=None) -> None:
     db = load_db()
     meta = db.get(file_id)
@@ -360,6 +375,7 @@ def _process_one(file_id: str, review_threshold: float, block_threshold: float, 
         _log.warning("Image envoyée en revue manuelle: file_id=%s label=%s score=%.3f", file_id, label, score)
     else:
         if delete_by_id(file_id, reason="auto:non_respect_cgu"):
+            _record_rejection(file_id, label, score)
             create_moderation_notice(meta, file_id, reason="non_respect_cgu")
             stats["rejected"] += 1
             _log.warning("Image supprimée: file_id=%s label=%s score=%.3f", file_id, label, score)
