@@ -117,3 +117,8 @@ def mark_image_for_review(database: dict, file_id: str, meta: dict, detector: st
     meta["moderation_label"] = label[:80]
     database[file_id] = meta
     save_db(database)
+    try:  # alerte mail pour l'admin : ne doit jamais gêner la modération
+        from pixshare.services.mail_service import notify_review
+        notify_review()
+    except Exception:
+        pass

@@ -47,6 +47,7 @@ from pixshare.services.settings_service import (
     load_settings,
     save_settings,
 )
+from pixshare.services.mail_service import mail_configured, send_mail_now
 from pixshare.services.request_service import ip_source
 from pixshare.services.system_service import get_system_stats
 from pixshare.services.theme_service import THEME_CHOICES, THEMES, active_theme, clean_choice, sky_enabled
@@ -465,6 +466,7 @@ def admin_settings():
         max_lifetime_now=get_max_lifetime(),
         support_saved=settings.get("support_url") or "",
         support_now=get_support_url(),
+        mail_ready=mail_configured(),
         nsfw=_nsfw_context(),
         theme_choices=THEME_CHOICES,
         theme_saved=settings.get("season_theme") or "",
@@ -549,6 +551,16 @@ def admin_nsfw_settings():
         if released:
             flash(f"NudeNet coupé : {released} image(s) en attente publiée(s). Les nouvelles images ne sont plus bloquées.", "info")
     return redirect(url_for("admin.admin_settings"))
+
+
+@admin_bp.route("/admin/mail-test", methods=["POST"], endpoint="admin_mail_test")
+@admin_required
+def admin_mail_test():
+    """Envoie un mail de test pour vérifier la configuration SMTP."""
+    validate_csrf()
+    ok, detail = send_mail_now("PixShare : mail de test", "Si tu lis ce message, les alertes par mail fonctionnent ✅\n")
+    flash("Mail de test envoyé ✅" if ok else f"Échec de l'envoi : {detail}", "success" if ok else "warning")
+    return redirect(url_for("admin.admin_settings") + "#mail")
 
 
 @admin_bp.route("/admin/moderation/run", methods=["POST"], endpoint="admin_nsfw_run")

@@ -266,4 +266,21 @@
     </form>
   </div>
 </div>
+
+<div class="card shadow-sm mt-4" id="mail">
+  <div class="card-body">
+    <h2 class="h5">Alerte par e-mail</h2>
+    <div class="text-muted small mb-3">Tu reçois un mail quand NudeNet met une image de côté « à vérifier » : 1 mail au plus toutes les 5 minutes, avec la liste des images en attente.</div>
+    {% if mail_ready %}
+      <div class="mb-2"><span class="badge text-bg-success">Configuré</span></div>
+      <form method="post" action="{{ url_for('admin.admin_mail_test') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="btn btn-outline-primary btn-sm" type="submit">Envoyer un mail de test</button>
+      </form>
+    {% else %}
+      <div class="mb-2"><span class="badge text-bg-secondary">Non configuré</span></div>
+      <div class="form-text">Sur Render, ajoute les variables <code>MAIL_SMTP_HOST</code>, <code>MAIL_SMTP_USER</code>, <code>MAIL_SMTP_PASS</code> et <code>MAIL_TO</code> (facultatif : <code>MAIL_SMTP_PORT</code>, 587 par défaut, et <code>MAIL_FROM</code>).</div>
+    {% endif %}
+  </div>
+</div>
 {% endblock %}
