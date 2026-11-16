@@ -55,8 +55,8 @@ def mail_configured() -> bool:
     return bool(cfg["host"] and cfg["to"])
 
 
-def send_mail_now(subject: str, body: str) -> tuple[bool, str]:
-    """Envoie un mail tout de suite. Renvoie (réussi, message d'erreur)."""
+def send_mail_now(subject: str, body: str, html: str | None = None, images: dict | None = None) -> tuple[bool, str]:
+    """Envoie un mail tout de suite (texte, et HTML avec images intégrées si fourni). Renvoie (réussi, erreur)."""
     cfg = _cfg()
     if not (cfg["host"] and cfg["to"]):
         return False, "variables MAIL_SMTP_HOST et MAIL_TO manquantes"
@@ -65,6 +65,11 @@ def send_mail_now(subject: str, body: str) -> tuple[bool, str]:
     msg["From"] = cfg["sender"]
     msg["To"] = cfg["to"]
     msg.set_content(body)
+    if html:
+        msg.add_alternative(html, subtype="html")
+        html_part = msg.get_payload()[-1]
+        for cid, data in (images or {}).items():
+            html_part.add_related(data, "image", "jpeg", cid=f"<{cid}>")
     try:
         context = ssl.create_default_context()
         if cfg["port"] == 465:
@@ -83,7 +88,12 @@ def send_mail_now(subject: str, body: str) -> tuple[bool, str]:
         return False, f"{type(exc).__name__}: {exc}"[:200]
 
 
-def _build_summary(app) -> tuple[str, str] | None:
+def _build_summary(app):
+    """(sujet, texte, html, images) : une carte par image avec l'aperçu et les boutons Approuver / Supprimer."""
+    from html import escape
+
+    from pixshare.services import review_link_service as rl
+
     with app.app_context():
         waiting = [
             (file_id, meta) for file_id, meta in load_db().items()
@@ -91,30 +101,49 @@ def _build_summary(app) -> tuple[str, str] | None:
             and str(meta.get("status") or "").lower() == "pending"
             and str(meta.get("moderation_decision") or "").lower() == "manual_review"
         ]
-    if not waiting:
-        return None
-    waiting.sort(key=lambda item: str(item[1].get("moderated_at") or ""), reverse=True)
-    lines = []
-    for file_id, meta in waiting[:MAX_LISTED]:
-        raw_label = str(meta.get("moderation_label") or "")
-        label = nsfw_class_label(raw_label) or "—"
-        score = meta.get("moderation_score")
-        score_txt = f" · score {float(score):.2f}" if isinstance(score, (int, float)) else ""
-        name = str(meta.get("original_name") or file_id).replace("\n", " ")[:80]
-        lines.append(f"- {name} : {label}{score_txt}")
+        if not waiting:
+            return None
+        waiting.sort(key=lambda item: str(item[1].get("moderated_at") or ""), reverse=True)
+        site = _cfg()["site"]
+        mode = rl.mail_image_mode()
+        lines, cards, images = [], [], {}
+        for index, (file_id, meta) in enumerate(waiting[:MAX_LISTED]):
+            raw_label = str(meta.get("moderation_label") or "")
+            label = nsfw_class_label(raw_label) or "—"
+            score = meta.get("moderation_score")
+            score_txt = f" · score {float(score):.2f}" if isinstance(score, (int, float)) else ""
+            name = str(meta.get("original_name") or file_id).replace("\n", " ")[:80]
+            link = f"{site}/moderation/{rl.make_token(file_id)}"
+            lines.append(f"- {name} : {label}{score_txt}\n  Approuver : {link}?a=approve\n  Supprimer : {link}?a=delete")
+            thumb = rl.mail_thumbnail(meta, mode)
+            img_html = ""
+            if thumb:
+                cid = f"pixshare-review-{index}"
+                images[cid] = thumb
+                img_html = f'<img src="cid:{cid}" alt="Aperçu" style="max-width:100%;max-height:360px;border-radius:6px;display:block;margin:0 auto 10px">'
+            cards.append(
+                '<div style="border:1px solid #ddd;border-radius:10px;padding:12px;margin:0 0 14px">'
+                f"{img_html}"
+                f'<div style="font-size:14px;margin-bottom:10px"><b>{escape(name)}</b> · {escape(label)}{escape(score_txt)}</div>'
+                f'<a href="{link}?a=approve" style="display:inline-block;background:#198754;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none;margin-right:8px">✅ Approuver</a>'
+                f'<a href="{link}?a=delete" style="display:inline-block;background:#dc3545;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none">🗑️ Supprimer</a>'
+                "</div>"
+            )
     count = len(waiting)
-    if count > MAX_LISTED:
-        lines.append(f"... et {count - MAX_LISTED} autre(s).")
-    site = _cfg()["site"]
+    more = f"... et {count - MAX_LISTED} autre(s) dans l'admin." if count > MAX_LISTED else ""
     subject = f"PixShare : {count} image{'s' if count > 1 else ''} à vérifier"
-    body = (
-        "NudeNet ou les signalements des visiteurs ont mis de côté "
-        + ("des images qui attendent" if count > 1 else "une image qui attend")
-        + " ta décision (elles restent privées en attendant) :\n\n"
-        + "\n".join(lines)
-        + f"\n\nÀ traiter ici : {site}/admin\n"
+    intro = ("NudeNet ou les signalements des visiteurs ont mis de côté "
+             + ("des images qui attendent" if count > 1 else "une image qui attend")
+             + " ta décision (elles restent privées en attendant).")
+    body = intro + "\n\n" + "\n".join(lines) + (f"\n{more}" if more else "") + f"\n\nAdmin : {site}/admin\n"
+    html = (
+        '<div style="font-family:system-ui,Arial,sans-serif;max-width:560px;margin:auto">'
+        f"<p>{escape(intro)}</p>" + "".join(cards)
+        + (f"<p>{escape(more)}</p>" if more else "")
+        + '<p style="font-size:12px;color:#666">Chaque bouton ouvre une page de confirmation (lien personnel valable 48 h, '
+          f'sans connexion). <a href="{site}/admin">Ouvrir l\'admin</a></p></div>'
     )
-    return subject, body
+    return subject, body, html, images
 
 
 def _flush(app) -> None:
@@ -125,7 +154,8 @@ def _flush(app) -> None:
     try:
         mail = _build_summary(app)
         if mail:
-            send_mail_now(*mail)
+            subject, body, html, images = mail
+            send_mail_now(subject, body, html=html, images=images)
     except Exception:
         _log.exception("Alerte mail interrompue")
 

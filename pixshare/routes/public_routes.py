@@ -52,6 +52,9 @@ from pixshare.services.settings_service import (
 from pixshare.services.url_import_service import UrlImportError, download_remote_image_to_temp
 from pixshare.services.moderation_service import pop_pending_notice
 from pixshare.services.embed_service import embed_codes
+from pixshare.services.image_ban_service import BannedImageError
+
+BANNED_MESSAGE = "Cette image a déjà été refusée car elle ne respecte pas les conditions d'utilisation."
 from pixshare.services.report_service import REPORT_REASONS, report_file
 from pixshare.services.turnstile_service import turnstile_ok
 from pixshare.services.system_service import has_room_for
@@ -252,6 +255,9 @@ def index():
                 max_mb = get_max_upload_size_mb()
                 flash(f"Fichier trop volumineux. Taille maximale : {max_mb} Mo.", "danger")
                 return attach_guest_cookie(redirect(url_for("public.index")))
+            except BannedImageError:
+                flash(BANNED_MESSAGE, "danger")
+                return attach_guest_cookie(redirect(url_for("public.index")))
 
             if requires_image_moderation(safe_name):
                 flash("Image reçue. Elle reste privée jusqu'à la validation automatique.", "info")
@@ -281,6 +287,9 @@ def index():
                 )
             except UrlImportError as exc:
                 flash(str(exc), "danger")
+                return attach_guest_cookie(redirect(url_for("public.index")))
+            except BannedImageError:
+                flash(BANNED_MESSAGE, "danger")
                 return attach_guest_cookie(redirect(url_for("public.index")))
             except Exception:
                 flash("Impossible d'importer cette image depuis l'URL fournie.", "danger")

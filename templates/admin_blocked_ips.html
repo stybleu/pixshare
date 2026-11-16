@@ -67,7 +67,7 @@
       <div class="form-text mt-2">
         {% if auto_block.rejections %}
           Blocage automatique : {{ auto_block.rejections }} images rejetées par NudeNet en {{ auto_block.hours|round|int }} h
-          → IP bloquée {{ auto_block.hours|round|int }} h. Réglable avec les variables Render <code>AUTO_BLOCK_REJECTIONS</code> (0 = désactivé) et <code>AUTO_BLOCK_HOURS</code>.
+          (ou image interdite renvoyée) → IP bloquée {{ auto_block.hours|round|int }} h, puis 7 jours à la récidive, puis 30 jours. Réglable avec les variables Render <code>AUTO_BLOCK_REJECTIONS</code> (0 = désactivé) et <code>AUTO_BLOCK_HOURS</code>.
         {% else %}
           Blocage automatique désactivé (<code>AUTO_BLOCK_REJECTIONS</code> = 0).
         {% endif %}
@@ -153,5 +153,43 @@
 
   {% endif %}
 
+</div>
+
+<div class="card shadow-sm mt-4" id="images-interdites">
+  <div class="card-body">
+    <h2 class="h6 mb-1">Images interdites ({{ banned_images|length }})</h2>
+    <div class="small text-muted mb-2">
+      Images supprimées par NudeNet ou par toi (non-respect des CGU, contenu illicite). Si quelqu'un renvoie la même image,
+      elle est refusée tout de suite, sans passer par NudeNet. Une version retouchée (redimensionnée, recompressée, capture d'écran)
+      est mise « à vérifier ». Seule l'empreinte est gardée, jamais l'image.
+    </div>
+    {% if banned_images %}
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead><tr><th>Date</th><th>Motif</th><th>Détection</th><th>Empreinte</th><th></th></tr></thead>
+          <tbody>
+          {% for b in banned_images[:100] %}
+            <tr>
+              <td class="small text-nowrap">{{ (b.at or "")[:16]|replace("T", " ") }}</td>
+              <td class="small">{{ b.reason_label }}</td>
+              <td class="small">{{ nsfw_label(b.label) if b.label else "—" }}</td>
+              <td class="small"><code>{{ (b.sha256 or "")[:12] }}</code></td>
+              <td>
+                <form method="post" action="{{ url_for('admin.admin_unban_image') }}" class="m-0" onsubmit="return confirm('Autoriser de nouveau cette image ?');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <input type="hidden" name="sha256" value="{{ b.sha256 }}">
+                  <button class="btn btn-outline-secondary btn-sm" type="submit">Retirer</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if banned_images|length > 100 %}<div class="small text-muted mt-1">… et {{ banned_images|length - 100 }} plus anciennes.</div>{% endif %}
+    {% else %}
+      <div class="text-muted small">Aucune pour le moment.</div>
+    {% endif %}
+  </div>
 </div>
 {% endblock %}

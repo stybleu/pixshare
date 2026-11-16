@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block sr_h1 %}{% endblock %}
+{% set title = "Modération" %}
+{% block robots %}<meta name="robots" content="noindex, nofollow, noarchive">{% endblock %}
+{% block head %}
+<style>
+.review-img { max-width: 100%; max-height: 60vh; border-radius: 8px; background: #f1f3f5; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mx-auto" style="max-width: 720px;">
+  <h1 class="h4 mb-3">Décision de modération</h1>
+
+  {% if error %}
+    <div class="alert alert-warning">{{ error }}</div>
+    <a class="btn btn-outline-primary" href="{{ url_for('admin.admin_panel') }}">Ouvrir l'admin</a>
+
+  {% elif outcome %}
+    {% if outcome == "approved" %}
+      <div class="alert alert-success">Image approuvée et publiée ✅</div>
+    {% elif outcome == "deleted" %}
+      <div class="alert alert-success">Image supprimée ✅ Elle est ajoutée aux images interdites : si quelqu'un la renvoie, elle sera refusée.</div>
+    {% else %}
+      <div class="alert alert-info">Cette image a déjà été traitée.</div>
+    {% endif %}
+
+  {% elif not meta %}
+    <div class="alert alert-info">Cette image a déjà été traitée (ici ou dans l'admin), ou n'existe plus.</div>
+
+  {% else %}
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="text-center mb-3">
+          <img class="review-img" src="{{ url_for('admin.mail_review_image', token=token) }}" alt="Image à vérifier : {{ meta.original_name }}">
+        </div>
+        <div class="small text-muted mb-3">
+          <strong>{{ meta.original_name }}</strong> · {{ label or "—" }}
+          {% if meta.moderation_score is not none %} · score {{ "%.2f"|format(meta.moderation_score) }}{% endif %}
+          {% if meta.reports %} · {{ meta.reports|length }} signalement(s){% endif %}
+        </div>
+
+        <form method="post" class="mb-2">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="action" value="approve">
+          <button class="btn {% if preselect == 'approve' %}btn-success{% else %}btn-outline-success{% endif %} w-100" type="submit">✅ Confirmer : approuver et publier</button>
+        </form>
+
+        <form method="post" class="border rounded p-2">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="action" value="delete">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="notify" value="1" id="notify" checked>
+            <label class="form-check-label small" for="notify">Prévenir l'auteur (non-respect des CGU)</label>
+          </div>
+          <div class="d-flex flex-wrap gap-2 align-items-center my-2">
+            <div class="form-check m-0">
+              <input class="form-check-input" type="checkbox" name="block" value="1" id="block">
+              <label class="form-check-label small" for="block">Bloquer son IP</label>
+            </div>
+            <select name="hours" class="form-select form-select-sm w-auto" aria-label="Durée du blocage">
+              {% for h, l in block_durations %}<option value="{{ h }}" {% if h == default_block_hours %}selected{% endif %}>{{ l }}</option>{% endfor %}
+            </select>
+          </div>
+          <button class="btn {% if preselect == 'delete' %}btn-danger{% else %}btn-outline-danger{% endif %} w-100" type="submit">🗑️ Confirmer : supprimer</button>
+        </form>
+        <div class="small text-muted mt-2">Lien personnel valable 48 h, pour cette image seulement. Ne le transfère pas.</div>
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

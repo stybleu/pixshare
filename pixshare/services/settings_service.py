@@ -65,7 +65,8 @@ NSFW_CLASS_LABELS = {name: label for _group, items in NSFW_CLASS_GROUPS for name
 def nsfw_class_label(name) -> str:
     """Nom français d'une partie détectée par NudeNet (le nom d'origine si elle est inconnue)."""
     name = str(name or "")
-    special = {"signalement": "Signalée par des visiteurs", "analyse_impossible": "Analyse impossible"}
+    special = {"signalement": "Signalée par des visiteurs", "analyse_impossible": "Analyse impossible",
+               "deja_refusee": "Ressemble à une image déjà refusée"}
     return special.get(name) or NSFW_CLASS_LABELS.get(name, name)
 
 # Durées proposées (minutes, clé de traduction du libellé).

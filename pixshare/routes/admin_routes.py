@@ -2,7 +2,7 @@ import ipaddress
 import os
 from datetime import timedelta
 
-from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, send_file, session, url_for
+from flask import Blueprint, abort, current_app, flash, jsonify, make_response, redirect, render_template, request, send_file, session, url_for
 
 from pixshare.security.csrf import validate_csrf
 from pixshare.services.auth_service import admin_required, process_admin_login
@@ -56,6 +56,8 @@ from pixshare.services.settings_service import (
     save_settings,
 )
 from pixshare.services.abuse_service import auto_block_settings
+from pixshare.services.image_ban_service import list_banned, unban
+from pixshare.services.settings_service import nsfw_class_label
 from pixshare.services.nsfw_stats_service import bump as bump_stat, load_stats as load_nsfw_stats, reset_stats as reset_nsfw_stats
 from pixshare.services.mail_service import mail_configured, send_mail_now
 from pixshare.services.request_service import ip_source
@@ -68,7 +70,7 @@ admin_bp = Blueprint("admin", __name__)
 
 @admin_bp.context_processor
 def _block_duration_choices():
-    return {"block_durations": BLOCK_DURATIONS, "default_block_hours": DEFAULT_BLOCK_HOURS}
+    return {"block_durations": BLOCK_DURATIONS, "default_block_hours": DEFAULT_BLOCK_HOURS, "nsfw_label": nsfw_class_label}
 
 
 def _form_block_hours() -> float | None:
@@ -189,6 +191,7 @@ def admin_blocked_ips():
         "admin_blocked_ips.html",
         blocked_ips=blocked,
         blocked_info=load_blocked_info(),
+        banned_images=list_banned(),
         block_remaining={ip: block_remaining_label(entry) for ip, entry in load_blocked_info().items()},
         auto_block=auto_block_settings(),
         version=current_app.config["APP_VERSION"],
@@ -237,6 +240,18 @@ def admin_block_duration():
     else:
         flash("Cette IP n'est pas dans la liste.", "warning")
     return redirect(url_for("admin.admin_blocked_ips"))
+
+
+@admin_bp.route("/admin/banned-images/remove", methods=["POST"], endpoint="admin_unban_image")
+@admin_required
+def admin_unban_image():
+    """Retire une image de la liste des images interdites (elle repassera par NudeNet)."""
+    validate_csrf()
+    if unban((request.form.get("sha256") or "").strip()):
+        flash("Image retirée de la liste des images interdites.", "success")
+    else:
+        flash("Image introuvable dans la liste.", "warning")
+    return redirect(url_for("admin.admin_blocked_ips") + "#images-interdites")
 
 
 @admin_bp.route("/admin/blocked-ips/unblock", methods=["POST"], endpoint="admin_unblock_ip")
@@ -620,6 +635,48 @@ def admin_nsfw_run():
     if status["waiting"] and nsfw_effective_settings()["enabled"]:
         app = current_app._get_current_object()
         response.call_on_close(lambda: nsfw_run_after_response(app))
+    return response
+
+
+@admin_bp.route("/moderation/<token>", methods=["GET", "POST"], endpoint="mail_review")
+def mail_review(token):
+    """Page de décision ouverte depuis le mail d'alerte (sans connexion : le lien signé suffit)."""
+    from pixshare.services import review_link_service as rl
+
+    file_id, error = rl.read_token(token)
+    meta = rl.waiting_meta(file_id) if file_id else None
+    outcome = ""
+    if request.method == "POST" and file_id and not error:
+        validate_csrf()
+        action = request.form.get("action")
+        hours = None
+        if action == "delete" and request.form.get("block") == "1":
+            hours = _form_block_hours() or 0  # 0 = définitif
+        outcome = rl.decide(file_id, action, notify=request.form.get("notify") == "1", block_hours=hours)
+        meta = None
+    response = make_response(render_template(
+        "mail_review.html", token=token, error=error, meta=meta, outcome=outcome,
+        preselect=request.args.get("a", ""), label=nsfw_class_label((meta or {}).get("moderation_label")),
+        version=current_app.config["APP_VERSION"],
+    ))
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["X-Robots-Tag"] = "noindex, nofollow"
+    return response
+
+
+@admin_bp.route("/moderation/<token>/image", methods=["GET"], endpoint="mail_review_image")
+def mail_review_image(token):
+    from pixshare.services import review_link_service as rl
+
+    file_id, error = rl.read_token(token)
+    meta = rl.waiting_meta(file_id) if file_id and not error else None
+    if not meta or not os.path.isfile(rl.image_path(meta)):
+        abort(404)
+    response = send_file(rl.image_path(meta), conditional=True, max_age=0)
+    response.headers["Cache-Control"] = "private, no-store"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["X-Robots-Tag"] = "noindex, noimageindex"
     return response
 
 

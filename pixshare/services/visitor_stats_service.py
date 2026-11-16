@@ -30,7 +30,7 @@ _BOT = re.compile(
     r"httpclient|java/|go-http|okhttp|headless|lighthouse|monitor|uptime|render|pingdom|scan|fetch",
     re.I,
 )
-_SKIP_PREFIXES = ("/admin", "/static", "/healthz", "/robots.txt", "/sitemap.xml", "/report", "/delete")
+_SKIP_PREFIXES = ("/admin", "/static", "/healthz", "/robots.txt", "/sitemap.xml", "/report", "/delete", "/moderation")
 
 
 def _today() -> date:

@@ -56,7 +56,7 @@ def test_three_rejected_images_block_the_ip_for_a_while(make_app):
     with app.app_context():
         assert json_services.load_blocked() == ["203.0.113.9"]
         entry = json_services.load_blocked_info()["203.0.113.9"]
-    assert "NudeNet" in entry["reason"] and entry["until"]
+    assert "Auto" in entry["reason"] and "1er blocage" in entry["reason"] and entry["until"]
     assert client.get("/", environ_overrides=VISITOR).status_code == 302  # renvoyé ailleurs
 
 

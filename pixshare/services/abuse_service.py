@@ -15,6 +15,26 @@ from pixshare.services.json_services import _json_lock, block_ip, load_json, sav
 
 _log = logging.getLogger(__name__)
 OFFENSES_FILE = "auto_block_offenses.json"
+HISTORY_FILE = "auto_block_history.json"
+# Blocages de plus en plus longs pour une même IP (sur 90 jours) : 1er = AUTO_BLOCK_HOURS (24 h), puis 7 j, puis 30 j.
+ESCALATION_HOURS = (None, 168, 720)
+HISTORY_DAYS = 90
+
+
+def _next_block_hours(ip: str, base_hours: float, now) -> tuple[float, int]:
+    """Durée du prochain blocage automatique et son rang (1 = premier) ; note ce blocage dans l'historique."""
+    history = load_json(HISTORY_FILE, {})
+    if not isinstance(history, dict):
+        history = {}
+    since = now - timedelta(days=HISTORY_DAYS)
+    past = [s for s in history.get(ip, []) if _after(s, since)]
+    rank = len(past) + 1
+    hours = ESCALATION_HOURS[min(rank - 1, len(ESCALATION_HOURS) - 1)] or base_hours
+    history = {k: [s for s in v if _after(s, since)] for k, v in history.items() if k != ip}
+    history = {k: v for k, v in history.items() if v}
+    history[ip] = past + [now.isoformat(timespec="seconds")]
+    save_json(HISTORY_FILE, history)
+    return float(hours), rank
 
 
 def _env_number(name: str, default: float) -> float:
@@ -54,10 +74,11 @@ def record_rejection(ip: str) -> bool:
         data = {k: v for k, v in data.items() if k != ip and any(_after(s, since) for s in v)}
         blocked = False
         if len(recent) >= cfg["rejections"]:
-            hours = cfg["hours"]
-            blocked = block_ip(ip, f"Auto : {len(recent)} images rejetées par NudeNet", hours)
+            hours, rank = _next_block_hours(ip, cfg["hours"], now)
+            what = "1er blocage" if rank == 1 else f"récidive n°{rank - 1}"
+            blocked = block_ip(ip, f"Auto : {len(recent)} images refusées ({what})", hours)
             if blocked:
-                _log.warning("IP bloquée automatiquement pour %s h après %d images rejetées.", hours, len(recent))
+                _log.warning("IP bloquée automatiquement %s h (%s).", hours, what)
         else:
             data[ip] = recent
         save_json(OFFENSES_FILE, data)

@@ -607,6 +607,27 @@ def _reports_summary(meta: dict) -> str:
     return reasons_summary(meta)
 
 
+def _check_banned(dest: str, client_ip: str = ""):
+    """Image déjà refusée ? Identique : on l'efface et on refuse l'envoi. Ressemblante : revue manuelle."""
+    if not is_image_extension(os.path.splitext(dest)[1].lower()):
+        return None
+    from .image_ban_service import BannedImageError, check_file
+    result = check_file(dest)
+    if result and result[0] == "exact":
+        try:
+            os.remove(dest)
+        except OSError:
+            pass
+        if not is_admin():
+            try:  # renvoyer une image interdite compte comme une image rejetée (récidive)
+                from .abuse_service import record_rejection
+                record_rejection(client_ip)
+            except Exception:
+                pass
+        raise BannedImageError("image déjà refusée")
+    return result
+
+
 def _prepare_file_destination(original_name: str) -> tuple[str, str, str, str]:
     ext = safe_ext(original_name)
 
@@ -654,6 +675,7 @@ def _normalize_view_limit(view_limit_enabled: bool = False, max_views: int | Non
 
 def _register_saved_public_file(
     *,
+    banned=None,
     file_id: str,
     server_name: str,
     original_name: str,
@@ -701,6 +723,10 @@ def _register_saved_public_file(
 
     if thumb_path:
         db[file_id]["thumb_delete_at"] = get_expected_thumb_delete_at(db[file_id])
+    if banned and banned[0] == "similar" and db[file_id]["status"] == "pending":
+        # ressemble fortement à une image déjà refusée : NudeNet n'est pas sollicité, l'admin décide
+        from .moderation_service import mark_image_for_review
+        mark_image_for_review(db, file_id, db[file_id], "empreinte", None, "deja_refusee")
     save_db(db)
     try:  # statistiques de l'admin (envois par jour)
         from .visitor_stats_service import record_upload
@@ -728,6 +754,7 @@ def save_saved_local_file(
         os.replace(local_path, dest)
         server_name, dest, ext, original_name = _convert_heic_to_jpeg(dest, server_name, ext, original_name)
         strip_uploaded_image(dest)
+        banned = _check_banned(dest, client_ip)
 
         thumb_path = ""
         if is_image_extension(ext):
@@ -749,6 +776,7 @@ def save_saved_local_file(
             view_limit_enabled=view_limit_enabled,
             max_views=max_views,
             password=password,
+            banned=banned,
         )
     except Exception:
         if os.path.exists(local_path):
@@ -815,6 +843,7 @@ def save_uploaded_file(
     # Photos iPhone -> JPEG, puis retire GPS, appareil, date… (sans toucher aux pixels).
     server_name, dest, ext, original_name = _convert_heic_to_jpeg(dest, server_name, ext, original_name)
     strip_uploaded_image(dest)
+    banned = _check_banned(dest, client_ip)
 
     thumb_path = ""
     if is_image_extension(ext):
@@ -838,6 +867,7 @@ def save_uploaded_file(
         view_limit_enabled=view_limit_enabled,
         max_views=max_views,
         password=password,
+        banned=banned,
     )
 
 
@@ -916,6 +946,12 @@ def delete_by_id(file_id: str, reason: str = "deleted") -> bool:
     path = os.path.join(current_app.config["UPLOAD_FOLDER"], server_name) if server_name else ""
 
     deleted_anything = False
+    if server_name and os.path.isfile(path):
+        try:  # image refusée : on garde son empreinte pour la refuser si elle revient
+            from .image_ban_service import ban_file
+            ban_file(path, reason, str(meta.get("moderation_label") or ""), file_id)
+        except Exception:
+            pass
     try:
         if server_name and os.path.isfile(path):
             os.remove(path)
