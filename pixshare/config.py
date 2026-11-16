@@ -92,9 +92,17 @@ class Config:
     FAILED_LOGINS_FILE = os.path.join(DATA_DIR, "failed_logins.json")
     VIEWS_FILE = os.path.join(DATA_DIR, "views.json")
     CONTACTS_FILE = os.path.join(DATA_DIR, "contacts.json")
-    THUMBNAIL_FOLDER = os.path.join(DATA_DIR, "mod_thumbs")
-
-    UPLOAD_FOLDER = "tmp/fichiers"
+    # Disque persistant (Render) : PIXSHARE_DATA_DIR=/var/data -> données, images et miniatures y sont rangées
+    # et survivent aux déploiements. Sans disque : dossiers temporaires du projet.
+    PERSISTENT_DIR = (os.environ.get("PIXSHARE_DATA_DIR") or "").strip()
+    THUMBNAIL_FOLDER = (os.environ.get("THUMBNAIL_FOLDER") or "").strip() or (
+        os.path.join(PERSISTENT_DIR, "mod_thumbs") if PERSISTENT_DIR else os.path.join(DATA_DIR, "mod_thumbs")
+    )
+    UPLOAD_FOLDER = (os.environ.get("UPLOAD_FOLDER") or "").strip() or (
+        os.path.join(PERSISTENT_DIR, "fichiers") if PERSISTENT_DIR else "tmp/fichiers"
+    )
+    # Place minimale à garder libre sur le disque (Mo) : au-delà, les envois sont refusés.
+    DISK_RESERVE_MB = _env_int_default("DISK_RESERVE_MB", 50)
     APP_VERSION = (os.environ.get("RENDER_GIT_COMMIT", "")[:7] or "dev")
 
     MAX_CONTENT_LENGTH = 1000 * 1024 * 1024

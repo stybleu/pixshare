@@ -25,6 +25,31 @@
 
 <div class="row g-3">
 
+  <!-- STOCKAGE -->
+  <div class="col-12">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h2 class="h6 mb-3">Stockage des images</h2>
+        {% set st = stats.storage if stats is defined else none %}
+        {% if st and st.ok %}
+          {% set p = st.percent or 0 %}
+          <div class="mb-2">
+            <strong>{{ st.used_mb }} Mo utilisés sur {{ st.total_mb }} Mo</strong>
+            <span class="text-muted">({{ st.free_mb }} Mo libres)</span>
+            {% if st.persistent %}<span class="badge text-bg-success ms-1">Disque persistant</span>
+            {% else %}<span class="badge text-bg-secondary ms-1">Temporaire : effacé à chaque déploiement</span>{% endif %}
+          </div>
+          <div class="progress mb-2" style="height: 12px;" role="progressbar" aria-label="Espace disque utilisé" aria-valuenow="{{ p }}" aria-valuemin="0" aria-valuemax="100">
+            <div class="progress-bar {% if p >= 90 %}bg-danger{% elif p >= 70 %}bg-warning text-dark{% else %}bg-success{% endif %}" style="width: {{ p }}%;"></div>
+          </div>
+          <div class="small text-muted">Les envois sont refusés quand il reste moins de {{ config.DISK_RESERVE_MB }} Mo libres. Les fichiers expirés sont effacés automatiquement.</div>
+        {% else %}
+          <div class="text-muted">Indisponible</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
   <!-- RAM PROCESSUS -->
   <div class="col-12 col-lg-6">
     <div class="card shadow-sm">

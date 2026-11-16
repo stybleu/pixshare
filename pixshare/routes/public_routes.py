@@ -54,6 +54,7 @@ from pixshare.services.moderation_service import pop_pending_notice
 from pixshare.services.embed_service import embed_codes
 from pixshare.services.report_service import REPORT_REASONS, report_file
 from pixshare.services.turnstile_service import turnstile_ok
+from pixshare.services.system_service import has_room_for
 
 from pixshare.services.time_service import get_remaining_time_label, format_duration_minutes
 from pixshare.services.usage_tracking_service import record_usage_event
@@ -190,6 +191,12 @@ def index():
         if not turnstile_ok(request.form, ip):
             flash("Vérification anti-robot échouée : coche la case puis réessaie.", "warning")
             return attach_guest_cookie(redirect(url_for("public.index")))
+
+        if not has_room_for(request.content_length):
+            cleanup_expired()  # libère d'abord les fichiers expirés
+            if not has_room_for(request.content_length):
+                flash("Le stockage est plein pour le moment. Réessaie un peu plus tard.", "warning")
+                return attach_guest_cookie(redirect(url_for("public.index")))
 
         f = request.files.get("file")
         image_url = (request.form.get("image_url") or "").strip()

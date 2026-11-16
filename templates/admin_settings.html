@@ -210,7 +210,7 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <button class="btn btn-outline-secondary btn-sm" type="submit">Remettre à zéro</button>
       </form>
-      <div class="text-muted mt-1">Remises à zéro à chaque déploiement (pas de disque persistant).</div>
+      {% if not config.PERSISTENT_DIR %}<div class="text-muted mt-1">Remises à zéro à chaque déploiement (pas de disque persistant).</div>{% endif %}
     </div>
 
     <form method="post" action="{{ url_for('admin.admin_nsfw_settings') }}" class="row g-3">
@@ -282,7 +282,10 @@
 <div class="card shadow-sm mt-4" id="sauvegarde">
   <div class="card-body">
     <h2 class="h5">Garder mes réglages après un déploiement</h2>
-    {% if settings_export_saved %}
+    {% if config.PERSISTENT_DIR %}
+      <div class="mb-2"><span class="badge text-bg-success">Disque persistant : tes réglages sont déjà gardés ✅</span>
+        <span class="small text-muted">Cette copie dans Render reste une sauvegarde de secours, facultative.</span></div>
+    {% elif settings_export_saved %}
       <div class="mb-2"><span class="badge text-bg-success">Réglages actuels déjà sauvegardés dans Render ✅</span></div>
     {% else %}
       <div class="mb-2"><span class="badge text-bg-warning">Réglages pas encore sauvegardés : ils seront perdus au prochain déploiement</span></div>

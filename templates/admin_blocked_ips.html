@@ -74,7 +74,7 @@
         {% else %}
           Blocage automatique désactivé (<code>AUTO_BLOCK_REJECTIONS</code> = 0).
         {% endif %}
-        Les blocages sont perdus à chaque déploiement (pas de disque persistant).
+        {% if not config.PERSISTENT_DIR %}Les blocages sont perdus à chaque déploiement (pas de disque persistant).{% endif %}
       </div>
     </div>
   </div>
