@@ -64,3 +64,25 @@ def test_uploads_counted_and_admin_page(make_app):
     assert today(app)["uploads"] == 1
     page = login(app.test_client()).get("/admin/stats").get_data(as_text=True)
     assert "Statistiques de visite" in page and "Visiteurs par jour" in page and "1 envoi" in page
+
+
+def test_audience_breakdown(make_app, monkeypatch):
+    from pixshare.services import geoip_service
+
+    monkeypatch.setattr(geoip_service, "locate", lambda ip: {"country": "BE", "city": "Liège"} if ip.endswith(".2") else {"country": "FR", "city": "Chartres"})
+    app = make_app()
+    client = app.test_client()
+    visit(client, "198.51.100.1")
+    client.get("/contact", headers={"User-Agent": FIREFOX, "Referer": "https://www.google.fr/search?q=pixshare"},
+               environ_overrides={"REMOTE_ADDR": "198.51.100.1"})
+    client.get("/", headers={"User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) Mobile Safari/604.1",
+                             "Referer": "https://discord.com/channels/1/2"}, environ_overrides={"REMOTE_ADDR": "198.51.100.2"})
+    with app.app_context():
+        st = visitor_stats_service.summary(30)
+    countries = {r["key"]: r["count"] for r in st["countries"]}
+    assert countries == {"FR": 1, "BE": 1}
+    assert {r["key"] for r in st["cities"]} == {"Chartres, FR", "Liège, BE"}
+    assert {r["key"]: r["count"] for r in st["referrers"]} == {"Accès direct": 1, "Google": 1, "Discord": 1}
+    assert sum(st["hours"]) == 3 and {r["key"]: r["count"] for r in st["devices"]} == {"Mobile": 2} and {r["key"] for r in st["browsers"]} == {"Firefox", "Safari"}
+    page = login(app.test_client()).get("/admin/stats").get_data(as_text=True)
+    assert "🇫🇷 France" in page and "Belgique" in page and "La publicité couvrirait-elle les frais" in page

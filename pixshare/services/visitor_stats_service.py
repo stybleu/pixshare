@@ -81,19 +81,92 @@ def should_count(response) -> bool:
     return not is_bot(request.headers.get("User-Agent", ""))
 
 
+MAX_KEYS_PER_DAY = 200  # villes, provenances… au-delà : « Autres »
+_SEARCH = {"google": "Google", "bing": "Bing", "duckduckgo": "DuckDuckGo", "qwant": "Qwant", "ecosia": "Ecosia",
+           "yahoo": "Yahoo", "yandex": "Yandex", "facebook": "Facebook", "instagram": "Instagram", "discord": "Discord",
+           "reddit": "Reddit", "twitter": "X / Twitter", "t.co": "X / Twitter", "x.com": "X / Twitter",
+           "whatsapp": "WhatsApp", "telegram": "Telegram", "tiktok": "TikTok", "youtube": "YouTube", "linkedin": "LinkedIn",
+           "github": "GitHub", "jeuxvideo": "Jeuxvideo.com"}
+
+
+def _bump(counter: dict, key: str, step: int = 1) -> None:
+    key = key or "Inconnu"
+    if key not in counter and len(counter) >= MAX_KEYS_PER_DAY:
+        key = "Autres"
+    counter[key] = int(counter.get(key, 0)) + step
+
+
+def _referrer_label() -> str:
+    """« Accès direct », « Google », « forum.exemple.fr »… (jamais l'adresse complète)."""
+    from urllib.parse import urlparse
+
+    ref = request.referrer or ""
+    host = (urlparse(ref).hostname or "").lower()
+    if not host:
+        return "Accès direct"
+    if host == (request.host or "").split(":")[0].lower():
+        return ""  # navigation interne
+    host = host[4:] if host.startswith("www.") else host
+    for needle, label in _SEARCH.items():
+        if needle in host:
+            return label
+    return host[:60]
+
+
+def _page_label(path: str) -> str:
+    for prefix in ("/image/", "/view/", "/file/", "/download/", "/moderation/"):
+        if path.startswith(prefix):
+            return prefix + "…"
+    return path[:40] or "/"
+
+
+def _visitor_profile(ip: str) -> dict:
+    """Pays, ville, appareil, navigateur : uniquement pour des totaux, rien n'est gardé par visiteur."""
+    from pixshare.services.geoip_service import locate
+    from pixshare.services.live_service import _device
+
+    h = request.headers
+    country = (h.get("cf-ipcountry") or "").strip().upper()[:2]
+    city = (h.get("cf-ipcity") or "").strip()[:60]
+    if not country or not city:
+        geo = locate(ip) or {}
+        country = country or geo.get("country", "")
+        city = city or geo.get("city", "")
+    if country in ("XX", "T1"):
+        country = ""
+    device = _device(h.get("User-Agent", ""))
+    kind, _sep, browser = device.partition(" · ")
+    return {"country": country or "??", "city": f"{city}, {country}" if city and country else "",
+            "device": kind, "browser": browser or "Autre"}
+
+
 def record_page_view(ip: str) -> None:
     """Compte une page vue (et un visiteur s'il n'est pas encore venu aujourd'hui)."""
     try:
         today = _today()
         key = _visitor_key(ip or "?", request.headers.get("User-Agent", ""), today)
+        hour = datetime.now(_TZ).hour
+        page = _page_label(request.path)
         with _json_lock:
             data = _load()
             entry = _day_entry(data, today)
             entry["views"] += 1
+            _bump(entry.setdefault("pages", {}), page)
+            hours = entry.setdefault("hours", [0] * 24)
+            hours[hour] = int(hours[hour]) + 1
+            ref = _referrer_label()
+            if ref:
+                _bump(entry.setdefault("referrers", {}), ref)
             keys = entry.setdefault("keys", [])
             if key not in keys:
                 keys.append(key)
                 entry["visitors"] += 1
+                profile = _visitor_profile(ip)  # une fois par visiteur et par jour
+                _bump(entry.setdefault("countries", {}), profile["country"])
+                if profile["city"]:
+                    _bump(entry.setdefault("cities", {}), profile["city"])
+                _bump(entry.setdefault("devices", {}), profile["device"])
+                _bump(entry.setdefault("browsers", {}), profile["browser"])
             _prune(data, today)
             save_json(STATS_FILE, data)
     except Exception:
@@ -109,6 +182,31 @@ def record_upload() -> None:
             save_json(STATS_FILE, data)
     except Exception:
         _log.exception("Compteur d'envois non mis à jour")
+
+
+_COUNTRIES = {
+    "FR": "France", "BE": "Belgique", "CH": "Suisse", "CA": "Canada", "LU": "Luxembourg", "MC": "Monaco",
+    "DE": "Allemagne", "ES": "Espagne", "IT": "Italie", "PT": "Portugal", "GB": "Royaume-Uni", "IE": "Irlande",
+    "NL": "Pays-Bas", "AT": "Autriche", "PL": "Pologne", "RO": "Roumanie", "SE": "Suède", "NO": "Norvège",
+    "DK": "Danemark", "FI": "Finlande", "CZ": "Tchéquie", "GR": "Grèce", "HU": "Hongrie", "UA": "Ukraine",
+    "RU": "Russie", "TR": "Turquie", "US": "États-Unis", "MX": "Mexique", "BR": "Brésil", "AR": "Argentine",
+    "MA": "Maroc", "DZ": "Algérie", "TN": "Tunisie", "SN": "Sénégal", "CI": "Côte d'Ivoire", "CM": "Cameroun",
+    "CD": "RD Congo", "MG": "Madagascar", "RE": "La Réunion", "GP": "Guadeloupe", "MQ": "Martinique",
+    "GF": "Guyane", "NC": "Nouvelle-Calédonie", "PF": "Polynésie française", "IN": "Inde", "CN": "Chine",
+    "JP": "Japon", "KR": "Corée du Sud", "VN": "Viêt Nam", "SG": "Singapour", "AU": "Australie", "IL": "Israël",
+    "AE": "Émirats arabes unis", "SA": "Arabie saoudite", "EG": "Égypte", "ZA": "Afrique du Sud", "NG": "Nigeria",
+    "??": "Inconnu",
+}
+
+
+def country_name(code: str) -> str:
+    return _COUNTRIES.get(code, code)
+
+
+def flag(code: str) -> str:
+    if len(code) != 2 or not code.isalpha() or code == "??":
+        return "🌐"
+    return "".join(chr(0x1F1E6 + ord(c) - ord("A")) for c in code.upper())
 
 
 def summary(days: int = 30) -> dict:
@@ -130,6 +228,22 @@ def summary(days: int = 30) -> dict:
     def total(last: int, key: str) -> int:
         return sum(item[key] for item in series[-last:])
 
+    def top(name: str, last: int = days, limit: int = 10) -> list[dict]:
+        merged: dict = {}
+        for offset in range(last):
+            entry = data["days"].get((today - timedelta(days=offset)).isoformat()) or {}
+            for key, value in (entry.get(name) or {}).items():
+                merged[key] = merged.get(key, 0) + int(value)
+        total = sum(merged.values()) or 1
+        rows = sorted(merged.items(), key=lambda kv: -kv[1])[:limit]
+        return [{"key": k, "count": v, "pct": round(100 * v / total)} for k, v in rows]
+
+    hours = [0] * 24
+    for offset in range(days):
+        entry = data["days"].get((today - timedelta(days=offset)).isoformat()) or {}
+        for h, value in enumerate((entry.get("hours") or [])[:24]):
+            hours[h] += int(value)
+
     peak = max(series, key=lambda item: item["visitors"]) if series else None
     first_day = min(data["days"]) if data["days"] else ""
     return {
@@ -140,5 +254,13 @@ def summary(days: int = 30) -> dict:
         "week": {key: total(7, key) for key in ("visitors", "views", "uploads")},
         "month": {key: total(30, key) for key in ("visitors", "views", "uploads")},
         "peak": peak if peak and peak["visitors"] else None,
+        "countries": [dict(r, name=country_name(r["key"]), flag=flag(r["key"])) for r in top("countries", limit=15)],
+        "cities": top("cities"),
+        "devices": top("devices", limit=5),
+        "browsers": top("browsers", limit=6),
+        "referrers": top("referrers"),
+        "pages": top("pages", limit=8),
+        "hours": hours,
+        "max_hour": max(hours + [1]),
         "since": first_day,
     }

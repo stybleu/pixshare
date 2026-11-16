@@ -62,6 +62,84 @@
   </div>
 </div>
 
+{% macro ranking(title, rows, hint="", label=none) %}
+  <div class="col-12 col-lg-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <h2 class="h6 mb-1">{{ title }}</h2>
+        {% if hint %}<div class="small text-muted mb-2">{{ hint }}</div>{% endif %}
+        {% if rows %}
+          {% for r in rows %}
+            <div class="small d-flex justify-content-between"><span>{{ label(r) if label else r.key }}</span><span class="text-muted">{{ r.count }} · {{ r.pct }} %</span></div>
+            <div class="progress mb-2" style="height: 6px;" aria-hidden="true"><div class="progress-bar" style="width: {{ r.pct }}%;"></div></div>
+          {% endfor %}
+        {% else %}
+          <div class="small text-muted">Pas encore de données.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+{% endmacro %}
+{% macro country_label(r) %}{{ r.flag }} {{ r.name }}{% endmacro %}
+
+<h2 class="h5 mt-4 mb-2">Qui utilise PixShare ? <span class="small text-muted fw-normal">(30 derniers jours, visiteurs uniques par jour)</span></h2>
+<div class="row g-3 mb-3">
+  {{ ranking("Pays", st.countries, "Position déduite de l'IP (approximative).", country_label) }}
+  {{ ranking("Villes", st.cities) }}
+  {{ ranking("Appareils", st.devices) }}
+  {{ ranking("Navigateurs", st.browsers) }}
+  {{ ranking("Comment ils arrivent", st.referrers, "Site d'où vient le visiteur (« Accès direct » = lien tapé, favori ou appli).") }}
+  {{ ranking("Pages les plus vues", st.pages, "En pages vues.") }}
+</div>
+
+<div class="card shadow-sm mb-3">
+  <div class="card-body">
+    <h2 class="h6 mb-1">Heures de visite</h2>
+    <div class="small text-muted mb-2">Pages vues par heure (heure de Paris), cumulées sur 30 jours.</div>
+    <div class="chart" style="height: 110px;" role="img" aria-label="Pages vues par heure de la journée">
+      {% for n in st.hours %}
+        <div class="bar {% if not n %}empty{% endif %}" style="height: {{ (100 * n / st.max_hour)|round|int if n else 1 }}%;" title="{{ loop.index0 }} h : {{ n }} pages vues"></div>
+      {% endfor %}
+    </div>
+    <div class="chart-labels" aria-hidden="true">{% for n in st.hours %}<span>{% if loop.index0 % 3 == 0 %}{{ loop.index0 }}h{% endif %}</span>{% endfor %}</div>
+  </div>
+</div>
+
+<div class="card shadow-sm mb-3" id="rentabilite">
+  <div class="card-body">
+    <h2 class="h6 mb-1">La publicité couvrirait-elle les frais ?</h2>
+    <div class="small text-muted mb-2">Estimation à partir de tes vraies pages vues des 30 derniers jours. Le revenu pour 1 000 pages vues (RPM) dépend beaucoup du pays des visiteurs, du sujet du site et des bloqueurs de pub : mets le chiffre que la régie t'annonce.</div>
+    <div class="row g-2 align-items-end">
+      <div class="col-6 col-md-3">
+        <label class="form-label small mb-1" for="rpm">Revenu pour 1 000 pages (€)</label>
+        <input class="form-control form-control-sm" id="rpm" type="number" min="0" step="0.1" value="1">
+      </div>
+      <div class="col-6 col-md-3">
+        <label class="form-label small mb-1" for="costs">Frais par mois (€)</label>
+        <input class="form-control form-control-sm" id="costs" type="number" min="0" step="0.1" value="8.2">
+      </div>
+      <div class="col-12 col-md-6 small" role="status" aria-live="polite">
+        <div>Pages vues sur 30 jours : <strong>{{ st.month.views }}</strong></div>
+        <div>Revenu estimé : <strong id="revenue">—</strong> par mois</div>
+        <div>Pour couvrir les frais, il faudrait environ <strong id="needed">—</strong> pages vues par mois.</div>
+      </div>
+    </div>
+    <script>
+      (function () {
+        var views = {{ st.month.views|int }};
+        var rpm = document.getElementById("rpm"), costs = document.getElementById("costs");
+        function fmt(n) { return n.toLocaleString("fr-FR", { maximumFractionDigits: 2 }); }
+        function update() {
+          var r = parseFloat(rpm.value) || 0, c = parseFloat(costs.value) || 0;
+          document.getElementById("revenue").textContent = fmt(views / 1000 * r) + " €";
+          document.getElementById("needed").textContent = r > 0 ? fmt(Math.ceil(c / r * 1000)) : "—";
+        }
+        rpm.addEventListener("input", update); costs.addEventListener("input", update); update();
+      })();
+    </script>
+  </div>
+</div>
+
 <div class="card shadow-sm">
   <div class="card-body">
     <h2 class="h6 mb-2">Détail jour par jour</h2>
