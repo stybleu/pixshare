@@ -2,7 +2,7 @@ import ipaddress
 import os
 from datetime import timedelta
 
-from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, send_file, session, url_for
+from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, send_file, session, url_for
 
 from pixshare.security.csrf import validate_csrf
 from pixshare.services.auth_service import admin_required, process_admin_login
@@ -711,6 +711,26 @@ def admin_block_ip():
         flash(f"IP déjà bloquée : {ip}", "info")
     return redirect(url_for("admin.admin_panel"))
 
+
+
+@admin_bp.route("/admin/live", methods=["GET"], endpoint="admin_live")
+@admin_required
+def admin_live():
+    return render_template("admin_live.html", version=current_app.config["APP_VERSION"])
+
+
+@admin_bp.route("/admin/live.json", methods=["GET"], endpoint="admin_live_data")
+@admin_required
+def admin_live_data():
+    from pixshare.services.live_service import snapshot
+    rows = snapshot()
+    blocked = set(load_blocked())
+    for row in rows:
+        row["blocked"] = row.get("ip") in blocked
+    located = sum(1 for row in rows if row.get("lat") is not None and row.get("lon") is not None)
+    response = jsonify({"visitors": rows, "count": len(rows), "located": located})
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @admin_bp.route("/admin/stats", methods=["GET"], endpoint="admin_stats")

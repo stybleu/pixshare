@@ -42,7 +42,7 @@ class Audit(HTMLParser):
 
 
 PUBLIC = ["/", "/contact", "/cgu", "/mentions-legales", "/admin/login"]
-ADMIN = ["/admin", "/admin/stats", "/admin/settings", "/admin/blocked-ips", "/admin/thumbnails", "/admin/messages", "/admin/system"]
+ADMIN = ["/admin", "/admin/stats", "/admin/live", "/admin/settings", "/admin/blocked-ips", "/admin/thumbnails", "/admin/messages", "/admin/system"]
 
 
 @pytest.mark.parametrize("path", PUBLIC + ADMIN)
