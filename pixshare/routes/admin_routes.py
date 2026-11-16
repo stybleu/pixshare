@@ -16,8 +16,12 @@ from pixshare.services.file_service import (
     list_all_thumbnails,
 )
 from pixshare.services.json_services import (
+    BLOCK_DURATIONS,
+    DEFAULT_BLOCK_HOURS,
     block_ip,
+    block_remaining_label,
     load_blocked,
+    set_block_duration,
     load_blocked_info,
     load_contacts,
     load_db,
@@ -60,6 +64,23 @@ from pixshare.services.theme_service import THEME_CHOICES, THEMES, active_theme,
 from pixshare.services.time_service import get_remaining_time_label, format_duration_minutes, utcnow
 
 admin_bp = Blueprint("admin", __name__)
+
+
+@admin_bp.context_processor
+def _block_duration_choices():
+    return {"block_durations": BLOCK_DURATIONS, "default_block_hours": DEFAULT_BLOCK_HOURS}
+
+
+def _form_block_hours() -> float | None:
+    """Durée choisie dans un formulaire (heures), None = définitif. Valeur inconnue -> 24 h."""
+    allowed = {float(h) for h, _label in BLOCK_DURATIONS}
+    try:
+        hours = float(request.form.get("hours", DEFAULT_BLOCK_HOURS))
+    except (TypeError, ValueError):
+        hours = float(DEFAULT_BLOCK_HOURS)
+    if hours not in allowed:
+        hours = float(DEFAULT_BLOCK_HOURS)
+    return hours or None
 
 ADMIN_EXPIRATION_OPTIONS = [
     (5, "5 minutes"),
@@ -123,7 +144,7 @@ def admin_block_message_ip():
         flash("Tu ne peux pas bloquer ta propre IP.", "warning")
         return redirect(url_for("admin.admin_messages"))
 
-    if block_ip(ip, "Message de contact"):
+    if block_ip(ip, "Message de contact", _form_block_hours()):
         flash(f"IP bloquée ✅ : {ip}", "success")
     else:
         flash(f"IP déjà bloquée : {ip}", "info")
@@ -168,6 +189,7 @@ def admin_blocked_ips():
         "admin_blocked_ips.html",
         blocked_ips=blocked,
         blocked_info=load_blocked_info(),
+        block_remaining={ip: block_remaining_label(entry) for ip, entry in load_blocked_info().items()},
         auto_block=auto_block_settings(),
         version=current_app.config["APP_VERSION"],
     )
@@ -185,12 +207,8 @@ def admin_add_blocked_ip():
         flash("IP invalide. Exemples : 82.64.12.34 ou 2001:db8::1", "warning")
         return redirect(url_for("admin.admin_blocked_ips"))
 
-    try:
-        hours = float(request.form.get("hours") or 0)
-    except ValueError:
-        hours = 0
     reason = (request.form.get("reason") or "").strip() or "Manuel"
-    if block_ip(ip, reason, hours if hours > 0 else None):
+    if block_ip(ip, reason, _form_block_hours()):
         flash(f"IP bloquée ✅ : {ip}", "success")
     else:
         flash(f"IP déjà bloquée : {ip}", "info")
@@ -203,6 +221,21 @@ def admin_clear_blocked_ips():
     validate_csrf()
     save_blocked([])
     flash("La liste des IP bloquées a été vidée.", "success")
+    return redirect(url_for("admin.admin_blocked_ips"))
+
+
+@admin_bp.route("/admin/blocked-ips/duration", methods=["POST"], endpoint="admin_block_duration")
+@admin_required
+def admin_block_duration():
+    """Change la durée d'un blocage déjà en place (comptée à partir de maintenant)."""
+    validate_csrf()
+    ip = (request.form.get("ip") or "").strip()
+    hours = _form_block_hours()
+    if set_block_duration(ip, hours):
+        label = next((lbl for h, lbl in BLOCK_DURATIONS if float(h) == float(hours or 0)), "")
+        flash(f"Blocage de {ip} : {label.lower()}{'' if not hours else ' à partir de maintenant'} ✅", "success")
+    else:
+        flash("Cette IP n'est pas dans la liste.", "warning")
     return redirect(url_for("admin.admin_blocked_ips"))
 
 
@@ -380,7 +413,7 @@ def admin_block_thumbnail_ip():
         flash("Aucune IP à bloquer.", "warning")
         return redirect(url_for("admin.admin_thumbnails"))
 
-    if block_ip(ip, "Depuis les miniatures"):
+    if block_ip(ip, "Depuis les miniatures", _form_block_hours()):
         flash(f"IP {ip} bloquée avec succès.", "success")
     else:
         flash(f"IP {ip} est déjà bloquée.", "info")
@@ -672,7 +705,7 @@ def admin_block_ip():
         flash("IP manquante.", "warning")
         return redirect(url_for("admin.admin_panel"))
 
-    if block_ip(ip, "Depuis les fichiers"):
+    if block_ip(ip, "Depuis les fichiers", _form_block_hours()):
         flash(f"IP bloquée ✅ : {ip}", "success")
     else:
         flash(f"IP déjà bloquée : {ip}", "info")

@@ -56,10 +56,7 @@
         <div class="col-6 col-md-3">
           <label class="form-label">Durée</label>
           <select aria-label="Durée" class="form-select" name="hours">
-            <option value="24">24 heures</option>
-            <option value="168">7 jours</option>
-            <option value="720">30 jours</option>
-            <option value="0">Définitif</option>
+            {% for h, label in block_durations %}<option value="{{ h }}" {% if h == default_block_hours %}selected{% endif %}>{{ label }}</option>{% endfor %}
           </select>
         </div>
 
@@ -93,7 +90,7 @@
               <th>Motif</th>
               <th>Depuis</th>
               <th>Jusqu'au</th>
-              <th style="width:140px;">Action</th>
+              <th style="width:230px;">Action</th>
             </tr>
           </thead>
 
@@ -106,9 +103,17 @@
             <td>{{ ip }}</td>
             <td class="small">{{ b.reason or "—" }}</td>
             <td class="small text-nowrap">{{ (b.at or "")[:16]|replace("T", " ") or "—" }}</td>
-            <td class="small text-nowrap">{% if b.until %}{{ b.until[:16]|replace("T", " ") }} UTC{% elif b %}Définitif{% else %}—{% endif %}</td>
+            <td class="small text-nowrap">{% if b.until %}{{ b.until[:16]|replace("T", " ") }} UTC{% if block_remaining.get(ip) %}<br><span class="text-muted">reste {{ block_remaining.get(ip) }}</span>{% endif %}{% else %}Définitif{% endif %}</td>
 
             <td>
+
+              <!-- ⏱ CHANGER LA DURÉE -->
+              <form method="post" action="{{ url_for('admin.admin_block_duration') }}" class="d-flex gap-1 mb-1">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="ip" value="{{ ip }}">
+                <select name="hours" class="form-select form-select-sm w-auto" aria-label="Durée du blocage">{% for h, label in block_durations %}<option value="{{ h }}" {% if h == default_block_hours %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+                <button type="submit" class="btn btn-sm btn-outline-primary">Changer</button>
+              </form>
 
               <!-- ✅ UNBLOCK -->
               <form method="post" action="{{ url_for('admin.admin_unblock_ip') }}" class="m-0">

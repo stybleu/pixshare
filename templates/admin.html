@@ -355,7 +355,10 @@
                       onsubmit="return confirm('Bloquer cette IP ?');">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                   <input type="hidden" name="ip" value="{{ f.ip }}">
-                  <button class="btn btn-warning btn-sm" type="submit">Bloquer IP</button>
+                  <div class="d-flex gap-1">
+                    <select name="hours" class="form-select form-select-sm w-auto" aria-label="Durée du blocage">{% for h, label in block_durations %}<option value="{{ h }}" {% if h == default_block_hours %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+                    <button class="btn btn-warning btn-sm" type="submit">Bloquer IP</button>
+                  </div>
                 </form>
               {% endif %}
               {% if not f.has_public_file %}

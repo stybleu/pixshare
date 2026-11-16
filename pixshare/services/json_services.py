@@ -226,6 +226,49 @@ def save_blocked(data):
             save_blocked_info(kept)
 
 
+# Durées proposées dans l'admin : (heures, libellé). 0 = définitif.
+BLOCK_DURATIONS = (
+    (0.5, "30 minutes"), (1, "1 heure"), (6, "6 heures"), (24, "24 heures"),
+    (168, "7 jours"), (720, "30 jours"), (0, "Définitif"),
+)
+DEFAULT_BLOCK_HOURS = 24
+
+
+def set_block_duration(ip: str, hours: float | None) -> bool:
+    """Change la durée d'un blocage existant, à partir de maintenant (None = définitif)."""
+    with _json_lock:
+        if ip not in load_blocked():
+            return False
+        info = load_blocked_info()
+        now = datetime.now(timezone.utc)
+        entry = dict(info.get(ip) or {"reason": "", "at": now.isoformat(timespec="seconds")})
+        entry["until"] = (now + timedelta(hours=float(hours))).isoformat(timespec="seconds") if hours else ""
+        info[ip] = entry
+        save_blocked_info(info)
+        return True
+
+
+def block_remaining_label(entry, now=None) -> str:
+    """« 25 min », « 5 h », « 3 j » ; "" si définitif ou terminé."""
+    until = str((entry or {}).get("until") or "")
+    if not until:
+        return ""
+    try:
+        end = datetime.fromisoformat(until)
+    except ValueError:
+        return ""
+    if end.tzinfo is None:
+        end = end.replace(tzinfo=timezone.utc)
+    seconds = (end - (now or datetime.now(timezone.utc))).total_seconds()
+    if seconds <= 0:
+        return ""
+    if seconds < 3600:
+        return f"{max(1, round(seconds / 60))} min"
+    if seconds < 172800:
+        return f"{round(seconds / 3600)} h"
+    return f"{round(seconds / 86400)} j"
+
+
 def block_ip(ip: str, reason: str = "", hours: float | None = None) -> bool:
     """Bloque une IP (définitivement si hours est vide). Retourne True si elle n'était pas déjà bloquée."""
     with _json_lock:
