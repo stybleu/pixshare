@@ -35,6 +35,7 @@ from pixshare.services.moderation_service import (
     mark_image_for_review,
 )
 from pixshare.services.settings_service import get_valid_nsfw_classes, load_settings
+from pixshare.services.nsfw_stats_service import bump as bump_stat
 
 try:  # Pillow décode GIF, TIFF, APNG, MPO... que OpenCV (donc NudeNet) lit mal.
     from PIL import Image
@@ -369,15 +370,24 @@ def _process_one(file_id: str, review_threshold: float, block_threshold: float, 
     if decision == "approve":
         approve_image(db, file_id, meta, DETECTOR_NAME, score)
         stats["approved"] += 1
+        bump_stat("auto_approved")
     elif decision == "review":
         mark_image_for_review(db, file_id, meta, DETECTOR_NAME, score, label or "")
         stats["review"] += 1
+        bump_stat("auto_review")
         _log.warning("Image envoyée en revue manuelle: file_id=%s label=%s score=%.3f", file_id, label, score)
     else:
         if delete_by_id(file_id, reason="auto:non_respect_cgu"):
             _record_rejection(file_id, label, score)
             create_moderation_notice(meta, file_id, reason="non_respect_cgu")
+            try:  # récidive : IP bloquée un moment (jamais bloquant pour la modération)
+                from pixshare.services.abuse_service import record_rejection
+                if not meta.get("by_admin"):  # l'admin qui teste NudeNet ne se bloque pas lui-même
+                    record_rejection(meta.get("ip") or "")
+            except Exception:
+                _log.exception("Blocage automatique impossible")
             stats["rejected"] += 1
+            bump_stat("auto_rejected")
             _log.warning("Image supprimée: file_id=%s label=%s score=%.3f", file_id, label, score)
         else:
             stats["errors"] += 1

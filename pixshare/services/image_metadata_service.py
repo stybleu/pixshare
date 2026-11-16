@@ -19,8 +19,11 @@ Choix de conception :
 - Au moindre doute (fichier abîmé, résultat illisible, taille différente), le
   fichier d'origine est laissé tel quel : on ne casse jamais un envoi.
 
-Formats traités : JPEG (jpg, jpeg, jfif, jpe), PNG (png, apng), WebP.
-Non traités : GIF, BMP, TIFF, HEIC/HEIF, vidéos.
+Formats traités : JPEG (jpg, jpeg, jfif, jpe), PNG (png, apng), WebP, GIF
+(commentaires et XMP retirés), TIFF (réécrit sans ses balises), vidéos MP4/MOV
+(blocs udta/meta/XMP neutralisés sur place : GPS, appareil, date).
+Les HEIC/HEIF sont convertis en JPEG à l'envoi (voir file_service), puis nettoyés.
+Non traités : BMP (pas de métadonnées), AVI, WebM.
 """
 
 from __future__ import annotations
@@ -283,6 +286,181 @@ def _strip_webp(data: bytes) -> bytes:
     return b"RIFF" + struct.pack("<I", len(payload)) + payload
 
 
+# ------------------------------------------------------------------ GIF
+
+_GIF_KEEP_APPS = (b"NETSCAPE2.0", b"ANIMEXTS1.0")  # boucle de l'animation
+
+
+def _gif_sub_blocks_end(data: bytes, pos: int) -> int:
+    """Position juste après une suite de sous-blocs GIF (terminée par un bloc de taille 0)."""
+    while True:
+        size = data[pos]
+        pos += 1
+        if size == 0:
+            return pos
+        pos += size
+        if pos > len(data):
+            raise _Unsupported("gif tronqué")
+
+
+def _strip_gif(data: bytes) -> bytes:
+    """Retire les commentaires et les extensions d'application (XMP…), garde la boucle d'animation."""
+    if data[:6] not in (b"GIF87a", b"GIF89a"):
+        raise _Unsupported("gif")
+    pos = 13
+    flags = data[10]
+    if flags & 0x80:
+        pos += 3 * (2 ** ((flags & 7) + 1))
+    out = bytearray(data[:pos])
+    while True:
+        if pos >= len(data):
+            raise _Unsupported("gif sans fin")
+        marker = data[pos]
+        if marker == 0x3B:  # fin du GIF : tout ce qui suit est supprimé
+            out.append(0x3B)
+            return bytes(out)
+        if marker == 0x2C:  # image
+            start = pos
+            img_flags = data[pos + 9]
+            pos += 10
+            if img_flags & 0x80:
+                pos += 3 * (2 ** ((img_flags & 7) + 1))
+            pos += 1  # taille LZW minimale
+            pos = _gif_sub_blocks_end(data, pos)
+            out += data[start:pos]
+            continue
+        if marker == 0x21:  # extension
+            start = pos
+            label = data[pos + 1]
+            end = _gif_sub_blocks_end(data, pos + 2)
+            if label == 0xFE:  # commentaire
+                pass
+            elif label == 0xFF:  # application : on ne garde que la boucle d'animation
+                if data[pos + 2] == 11 and data[pos + 3:pos + 14] in _GIF_KEEP_APPS:
+                    out += data[start:end]
+            else:  # contrôle graphique (délais, transparence), texte
+                out += data[start:end]
+            pos = end
+            continue
+        raise _Unsupported("gif bloc inconnu")
+
+
+# ------------------------------------------------------------------ TIFF
+
+def _strip_tiff_file(path: str, tmp_path: str) -> bool:
+    """Réécrit le TIFF sans ses balises (EXIF, GPS, XMP, IPTC, Photoshop…), sans perte."""
+    from PIL import ImageOps
+
+    with Image.open(path) as im:
+        frames = getattr(im, "n_frames", 1)
+        size = im.size
+        icc = im.info.get("icc_profile")
+        compression = "raw" if im.info.get("compression") in (None, "raw") else "tiff_adobe_deflate"
+        if frames == 1:
+            pages = [ImageOps.exif_transpose(im).copy()]
+        else:
+            pages = []
+            for i in range(frames):
+                im.seek(i)
+                pages.append(im.copy())
+    for page in pages:
+        page.info = {}
+    options = {"compression": compression}
+    if icc:
+        options["icc_profile"] = icc
+    if len(pages) > 1:
+        options.update(save_all=True, append_images=pages[1:])
+    pages[0].save(tmp_path, "TIFF", **options)
+    with Image.open(tmp_path) as check:
+        if getattr(check, "n_frames", 1) != frames or (frames > 1 and check.size != size):
+            raise _Unsupported("tiff contrôle")
+    os.replace(tmp_path, path)
+    return True
+
+
+# ------------------------------------------------------------------ vidéos MP4 / MOV
+
+_VIDEO_CONTAINERS = {b"moov", b"trak", b"mdia", b"minf", b"stbl", b"edts"}
+_VIDEO_PRIVATE = {b"udta", b"meta"}
+_XMP_UUID = bytes.fromhex("BE7ACFCB97A942E89C71999491E3AFAC")
+
+
+def _iter_boxes(f, start: int, end: int):
+    pos = start
+    while pos + 8 <= end:
+        f.seek(pos)
+        head = f.read(8)
+        size, kind = struct.unpack(">I4s", head)
+        header = 8
+        if size == 1:
+            size = struct.unpack(">Q", f.read(8))[0]
+            header = 16
+        elif size == 0:
+            size = end - pos
+        if size < header or pos + size > end:
+            raise _Unsupported("boîte vidéo invalide")
+        yield pos, size, header, kind
+        pos += size
+
+
+def _blank_box(f, pos: int, size: int, header: int) -> None:
+    """Transforme la boîte en « free » (ignorée par les lecteurs) et efface son contenu, sans changer de taille."""
+    f.seek(pos + 4 if header == 8 else pos + 4)
+    f.write(b"free")
+    f.seek(pos + header)
+    remaining = size - header
+    zeros = b"\x00" * 65536
+    while remaining > 0:
+        n = min(remaining, len(zeros))
+        f.write(zeros[:n])
+        remaining -= n
+
+
+def strip_video_metadata_file(path) -> bool:
+    """Neutralise sur place les métadonnées d'une vidéo MP4/MOV (GPS, appareil, date, XMP).
+
+    Les tailles et positions ne changent pas : la vidéo reste lisible telle quelle.
+    """
+    path = os.fspath(path)
+    try:
+        total = os.path.getsize(path)
+        with open(path, "rb") as f:
+            if f.read(12)[4:8] not in (b"ftyp", b"wide", b"mdat", b"moov", b"free"):
+                return False
+            targets = []
+            dates = []  # (position, longueur) des dates de création/modification à mettre à zéro
+
+            def walk(start, end, in_moov):
+                for pos, size, header, kind in _iter_boxes(f, start, end):
+                    if in_moov and kind in _VIDEO_PRIVATE:
+                        targets.append((pos, size, header))
+                    elif in_moov and kind in (b"mvhd", b"tkhd", b"mdhd") and size >= header + 12:
+                        f.seek(pos + header)
+                        length = 16 if f.read(1) == b"\x01" else 8
+                        if size >= header + 4 + length:
+                            dates.append((pos + header + 4, length))
+                    elif kind == b"uuid":
+                        f.seek(pos + header)
+                        if f.read(16) == _XMP_UUID:
+                            targets.append((pos, size, header))
+                    elif kind in _VIDEO_CONTAINERS and (in_moov or kind == b"moov"):
+                        walk(pos + header, pos + size, True)
+
+            walk(0, total, False)
+        if not targets and not dates:
+            return False
+        with open(path, "r+b") as f:
+            for pos, size, header in targets:
+                _blank_box(f, pos, size, header)
+            for pos, length in dates:
+                f.seek(pos)
+                f.write(b"\x00" * length)
+        return True
+    except Exception:
+        _log.exception("Nettoyage des métadonnées vidéo impossible.")
+        return False
+
+
 # ------------------------------------------------------------------ API publique
 
 def strip_image_metadata_bytes(data: bytes) -> bytes:
@@ -293,6 +471,8 @@ def strip_image_metadata_bytes(data: bytes) -> bytes:
         return _strip_png(data)
     if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
         return _strip_webp(data)
+    if data[:6] in (b"GIF87a", b"GIF89a"):
+        return _strip_gif(data)
     raise _Unsupported("format")
 
 
@@ -318,7 +498,10 @@ def strip_image_metadata_file(path) -> bool:
         is_jpeg = head[:3] == b"\xff\xd8\xff"
         is_png = head[:8] == _PNG_SIGNATURE
         is_webp = head[:4] == b"RIFF" and head[8:12] == b"WEBP"
-        if not (is_jpeg or is_png or is_webp):
+        is_gif = head[:6] in (b"GIF87a", b"GIF89a")
+        if head[:4] in (b"II*\x00", b"MM\x00*"):
+            return _strip_tiff_file(path, tmp_path)
+        if not (is_jpeg or is_png or is_webp or is_gif):
             return False
 
         with open(path, "rb") as f:
@@ -360,4 +543,6 @@ def strip_uploaded_image(path) -> bool:
             return False
     except RuntimeError:
         pass  # hors contexte Flask : on nettoie quand même
+    if os.path.splitext(os.fspath(path))[1].lower() in {".mp4", ".mov", ".m4v"}:
+        return strip_video_metadata_file(path)
     return strip_image_metadata_file(path)

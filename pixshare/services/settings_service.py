@@ -267,7 +267,8 @@ def get_max_upload_size_bytes() -> int:
 
 
 def permanent_files_enabled() -> bool:
-    return bool(load_settings().get("allow_permanent_files", True))
+    # Option retirée : sans disque persistant, rien ne survit à un déploiement.
+    return False
 
 
 def get_thumbnail_retention_hours() -> int:

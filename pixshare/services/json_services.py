@@ -3,6 +3,7 @@ import logging
 import os
 import threading
 import time
+from datetime import datetime, timedelta, timezone
 
 _json_lock = threading.RLock()
 _log = logging.getLogger(__name__)
@@ -176,13 +177,73 @@ def save_blocked_ips(data):
     _write_json_file(_json_path("blocked_ips.json"), data)
 
 
+def load_blocked_info():
+    """Détails des blocages : {ip: {"reason": ..., "at": date ISO, "until": date ISO ou "" (définitif)}}."""
+    data = _read_json_file(_json_path("blocked_ips_info.json"), {})
+    return data if isinstance(data, dict) else {}
+
+
+def save_blocked_info(data):
+    _write_json_file(_json_path("blocked_ips_info.json"), data)
+
+
+def _block_is_over(entry, now) -> bool:
+    until = str((entry or {}).get("until") or "")
+    if not until:
+        return False
+    try:
+        end = datetime.fromisoformat(until)
+    except ValueError:
+        return False
+    if end.tzinfo is None:
+        end = end.replace(tzinfo=timezone.utc)
+    return end <= now
+
+
 # Alias compatibles avec le reste du projet
 def load_blocked():
-    return load_blocked_ips()
+    """Liste des IP bloquées ; les blocages temporaires terminés sont retirés au passage."""
+    with _json_lock:
+        ips = load_blocked_ips()
+        if not isinstance(ips, list):
+            return []
+        info = load_blocked_info()
+        now = datetime.now(timezone.utc)
+        over = {ip for ip in ips if _block_is_over(info.get(ip), now)}
+        if over:
+            ips = [ip for ip in ips if ip not in over]
+            save_blocked_ips(ips)
+            save_blocked_info({ip: entry for ip, entry in info.items() if ip in ips})
+        return ips
 
 
 def save_blocked(data):
-    save_blocked_ips(data)
+    with _json_lock:
+        save_blocked_ips(data)
+        info = load_blocked_info()
+        kept = {ip: entry for ip, entry in info.items() if ip in set(data)}
+        if kept != info:
+            save_blocked_info(kept)
+
+
+def block_ip(ip: str, reason: str = "", hours: float | None = None) -> bool:
+    """Bloque une IP (définitivement si hours est vide). Retourne True si elle n'était pas déjà bloquée."""
+    with _json_lock:
+        ips = load_blocked()
+        info = load_blocked_info()
+        now = datetime.now(timezone.utc)
+        is_new = ip not in ips
+        if is_new:
+            ips.append(ip)
+            save_blocked_ips(ips)
+        if is_new or ip not in info:
+            info[ip] = {
+                "reason": (reason or "")[:120],
+                "at": now.isoformat(timespec="seconds"),
+                "until": (now + timedelta(hours=float(hours))).isoformat(timespec="seconds") if hours else "",
+            }
+            save_blocked_info(info)
+        return is_new
 
 
 # =========================================================

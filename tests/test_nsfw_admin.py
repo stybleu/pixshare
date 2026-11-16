@@ -140,7 +140,7 @@ def test_admin_can_disable_auto_moderation(admin):
     save_nsfw(client, nsfw_auto_moderation="0")
     upload(client, "a.png", image_bytes("PNG", [GREEN]))
     _id, meta = only_record(app)
-    assert meta["status"] == "pending" and meta["moderation_decision"] == "pending"
+    assert meta["status"] == "active" and meta["moderation_decision"] == "not_required"
     assert FakeDetector.calls == 0
 
 
@@ -218,10 +218,10 @@ def test_approve_publishes_the_image(admin):
 def test_approve_only_works_on_manual_review_images(admin):
     app, client = admin
     save_nsfw(client, nsfw_auto_moderation="0")
-    upload(client, "a.png", image_bytes("PNG", [GREEN]))  # en attente d'analyse, pas en revue
+    upload(client, "a.png", image_bytes("PNG", [GREEN]))  # publiée sans analyse, pas en revue
     file_id, _meta = only_record(app)
     post(client, "/admin/review/approve", file_id=file_id)
-    assert records(app)[file_id]["status"] == "pending"
+    assert records(app)[file_id]["moderation_decision"] == "not_required"
     post(client, "/admin/review/approve", file_id="n-existe-pas")
 
 
@@ -240,7 +240,11 @@ def test_run_now_analyses_waiting_images(admin):
     save_nsfw(client, nsfw_auto_moderation="0")
     upload(client, "a.png", image_bytes("PNG", [GREEN]))
     upload(client, "b.png", image_bytes("PNG", [RED]))
-    assert {m["status"] for m in records(app).values()} == {"pending"}
+    with app.app_context():  # images restées en attente (ex. envoyées pendant un redémarrage)
+        db = json_services.load_db()
+        for meta in db.values():
+            meta["status"], meta["moderation_decision"] = "pending", "pending"
+        json_services.save_db(db)
     html = client.get("/admin/settings").get_data(as_text=True)
     assert "2 en attente d'analyse" in html
 

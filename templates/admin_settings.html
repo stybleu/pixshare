@@ -73,14 +73,6 @@
         </div>
       </div>
 
-      <div class="col-12 col-md-6">
-        <label class="form-label fw-semibold">Fichiers permanents</label>
-        <select name="allow_permanent_files" class="form-select">
-          <option value="1" {% if settings.allow_permanent_files %}selected{% endif %}>Autorisés</option>
-          <option value="0" {% if not settings.allow_permanent_files %}selected{% endif %}>Désactivés</option>
-        </select>
-        <div class="form-text">Autorise ou masque l'option “sans expiration”.</div>
-      </div>
 
       <div class="col-12 col-md-6">
         <label class="form-label fw-semibold">Garder les miniatures de modération</label>
@@ -192,13 +184,32 @@
       {% if nsfw.installed %}
         <span class="badge text-bg-success">NudeNet installé</span>
       {% else %}
-        <span class="badge text-bg-danger">NudeNet non installé : les images restent en attente</span>
+        <span class="badge text-bg-danger">NudeNet non installé : les images sont publiées sans analyse</span>
       {% endif %}
       {% if not nsfw.pending_images %}
         <span class="badge text-bg-warning">Les images ne sont pas mises en attente (MODERATION_PENDING_IMAGES=0)</span>
       {% endif %}
       <span class="badge text-bg-secondary">{{ nsfw.waiting }} en attente d'analyse</span>
       <a class="badge text-bg-warning text-decoration-none" href="{{ url_for('admin.admin_panel') }}">{{ nsfw.review }} à vérifier</a>
+    </div>
+
+    {% set st = nsfw.stats %}
+    <div class="border rounded p-2 mb-3 small">
+      <div class="fw-semibold mb-1">Fiabilité{% if st.since %} <span class="text-muted fw-normal">(depuis le {{ st.since[:10] }})</span>{% endif %}</div>
+      <div class="d-flex flex-wrap gap-2 mb-1">
+        <span class="badge text-bg-light border">{{ st.analysed }} analysées</span>
+        <span class="badge text-bg-success">{{ st.auto_approved }} publiées</span>
+        <span class="badge text-bg-warning">{{ st.auto_review }} mises de côté</span>
+        <span class="badge text-bg-danger">{{ st.auto_rejected }} supprimées</span>
+      </div>
+      <div>Images « à vérifier » : <strong>{{ st.review_approved }}</strong> approuvées par toi (fausses alertes),
+        <strong>{{ st.review_deleted }}</strong> supprimées (alertes justifiées){% if st.false_alarm_pct is not none %} → {{ st.false_alarm_pct }} % de fausses alertes{% endif %}.</div>
+      {% if st.advice %}<div class="mt-1">💡 {{ st.advice }}</div>{% elif st.review_decided < 10 %}<div class="text-muted mt-1">Conseil de réglage après 10 décisions sur des images à vérifier.</div>{% endif %}
+      <form method="post" action="{{ url_for('admin.admin_nsfw_stats_reset') }}" class="mt-2" onsubmit="return confirm('Remettre les statistiques à zéro ?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="btn btn-outline-secondary btn-sm" type="submit">Remettre à zéro</button>
+      </form>
+      <div class="text-muted mt-1">Remises à zéro à chaque déploiement (pas de disque persistant).</div>
     </div>
 
     <form method="post" action="{{ url_for('admin.admin_nsfw_settings') }}" class="row g-3">
@@ -210,7 +221,7 @@
           <option value="1" {% if nsfw.enabled %}selected{% endif %}>Active</option>
           <option value="0" {% if not nsfw.enabled %}selected{% endif %}>Désactivée</option>
         </select>
-        <div class="form-text">Désactivée : les nouvelles images restent privées en attente, rien n'est publié sans analyse.</div>
+        <div class="form-text">Désactivée : les nouvelles images sont publiées sans analyse, et celles en attente sont publiées.</div>
       </div>
 
       <div class="col-12 col-md-6">

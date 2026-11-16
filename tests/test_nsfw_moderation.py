@@ -1,4 +1,5 @@
 """NudeNet intégré au site : décision automatique des images en attente (faux détecteur par couleur)."""
+import importlib.machinery
 import io
 import sys
 import types
@@ -36,6 +37,7 @@ class FakeDetector:
 @pytest.fixture(autouse=True)
 def fake_nudenet(monkeypatch):
     module = types.ModuleType("nudenet")
+    module.__spec__ = importlib.machinery.ModuleSpec("nudenet", None)  # vu comme « installé »
     module.NudeDetector = FakeDetector
     monkeypatch.setitem(sys.modules, "nudenet", module)
     monkeypatch.setattr(nsfw_service, "_detector", None)
@@ -125,20 +127,20 @@ def test_other_formats_are_analysed_too(moderated, name, fmt):
     assert FakeDetector.calls == 1
 
 
-def test_without_nudenet_images_stay_pending(moderated, monkeypatch):
+def test_without_nudenet_images_are_published(moderated, monkeypatch):
     app, client = moderated
     monkeypatch.setitem(sys.modules, "nudenet", None)  # import impossible
     upload(client, "a.png", image_bytes("PNG", [GREEN]))
     _id, meta = only_record(app)
-    assert meta["status"] == "pending" and meta["moderation_decision"] == "pending"
+    assert meta["status"] == "active" and meta["moderation_decision"] == "not_required"
 
 
-def test_disabled_by_config_leaves_images_pending(make_app):
+def test_disabled_by_config_publishes_images(make_app):
     app = make_app(MODERATION_PENDING_IMAGES=True, NSFW_AUTO_MODERATION=False)
     client = app.test_client()
     upload(client, "a.png", image_bytes("PNG", [GREEN]))
     _id, meta = only_record(app)
-    assert meta["status"] == "pending"
+    assert meta["status"] == "active"
     assert FakeDetector.calls == 0
 
 

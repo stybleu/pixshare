@@ -16,7 +16,9 @@ from pixshare.services.file_service import (
     list_all_thumbnails,
 )
 from pixshare.services.json_services import (
+    block_ip,
     load_blocked,
+    load_blocked_info,
     load_contacts,
     load_db,
     save_blocked,
@@ -47,6 +49,8 @@ from pixshare.services.settings_service import (
     load_settings,
     save_settings,
 )
+from pixshare.services.abuse_service import auto_block_settings
+from pixshare.services.nsfw_stats_service import bump as bump_stat, load_stats as load_nsfw_stats, reset_stats as reset_nsfw_stats
 from pixshare.services.mail_service import mail_configured, send_mail_now
 from pixshare.services.request_service import ip_source
 from pixshare.services.system_service import get_system_stats
@@ -117,13 +121,10 @@ def admin_block_message_ip():
         flash("Tu ne peux pas bloquer ta propre IP.", "warning")
         return redirect(url_for("admin.admin_messages"))
 
-    blocked = load_blocked()
-    if ip in blocked:
-        flash(f"IP déjà bloquée : {ip}", "info")
-    else:
-        blocked.append(ip)
-        save_blocked(blocked)
+    if block_ip(ip, "Message de contact"):
         flash(f"IP bloquée ✅ : {ip}", "success")
+    else:
+        flash(f"IP déjà bloquée : {ip}", "info")
     return redirect(url_for("admin.admin_messages"))
 
 
@@ -164,6 +165,8 @@ def admin_blocked_ips():
     return render_template(
         "admin_blocked_ips.html",
         blocked_ips=blocked,
+        blocked_info=load_blocked_info(),
+        auto_block=auto_block_settings(),
         version=current_app.config["APP_VERSION"],
     )
 
@@ -180,13 +183,15 @@ def admin_add_blocked_ip():
         flash("IP invalide. Exemples : 82.64.12.34 ou 2001:db8::1", "warning")
         return redirect(url_for("admin.admin_blocked_ips"))
 
-    blocked = load_blocked()
-    if ip in blocked:
-        flash(f"IP déjà bloquée : {ip}", "info")
-    else:
-        blocked.append(ip)
-        save_blocked(blocked)
+    try:
+        hours = float(request.form.get("hours") or 0)
+    except ValueError:
+        hours = 0
+    reason = (request.form.get("reason") or "").strip() or "Manuel"
+    if block_ip(ip, reason, hours if hours > 0 else None):
         flash(f"IP bloquée ✅ : {ip}", "success")
+    else:
+        flash(f"IP déjà bloquée : {ip}", "info")
     return redirect(url_for("admin.admin_blocked_ips"))
 
 
@@ -297,14 +302,6 @@ def admin_set_expiration():
         flash("Impossible de modifier l’expiration d’un fichier déjà supprimé ou expiré.", "warning")
         return redirect(url_for("admin.admin_panel"))
 
-    if expiration_value in {"permanent", "none", "keep"}:
-        meta["permanent"] = True
-        meta["expires_at"] = ""
-        db[file_id] = meta
-        save_db(db)
-        flash("Expiration mise à jour : fichier permanent ✅", "success")
-        return redirect(url_for("admin.admin_panel"))
-
     try:
         minutes = int(expiration_value)
     except (TypeError, ValueError):
@@ -381,10 +378,7 @@ def admin_block_thumbnail_ip():
         flash("Aucune IP à bloquer.", "warning")
         return redirect(url_for("admin.admin_thumbnails"))
 
-    blocked = load_blocked()
-    if ip not in blocked:
-        blocked.append(ip)
-        save_blocked(blocked)
+    if block_ip(ip, "Depuis les miniatures"):
         flash(f"IP {ip} bloquée avec succès.", "success")
     else:
         flash(f"IP {ip} est déjà bloquée.", "info")
@@ -482,7 +476,17 @@ def _nsfw_context() -> dict:
     values.update(nsfw_queue_status())
     values["installed"] = nudenet_installed()
     values["class_groups"] = NSFW_CLASS_GROUPS
+    values["stats"] = load_nsfw_stats()
     return values
+
+
+@admin_bp.route("/admin/moderation/stats/reset", methods=["POST"], endpoint="admin_nsfw_stats_reset")
+@admin_required
+def admin_nsfw_stats_reset():
+    validate_csrf()
+    reset_nsfw_stats()
+    flash("Statistiques NudeNet remises à zéro.", "success")
+    return redirect(url_for("admin.admin_settings") + "#nudenet")
 
 
 @admin_bp.route("/admin/settings/support", methods=["POST"], endpoint="admin_support_settings")
@@ -609,6 +613,8 @@ def admin_review_approve():
         flash("Cette image n'est plus en revue manuelle.", "warning")
         return redirect(url_for("admin.admin_panel"))
     approve_image(db, file_id, meta, "admin", meta.get("moderation_score"))
+    if meta.get("moderation_label") != "analyse_impossible":
+        bump_stat("review_approved")  # fausse alerte de NudeNet
     flash("Image approuvée et publiée ✅", "success")
     return redirect(url_for("admin.admin_panel"))
 
@@ -631,7 +637,10 @@ def admin_delete():
         flash("Fichier introuvable.", "warning")
         return redirect(url_for("admin.admin_panel"))
 
+    was_in_review = is_manual_review(meta) and meta.get("moderation_label") != "analyse_impossible"
     ok = delete_by_id(file_id, reason=reason)
+    if ok and was_in_review:
+        bump_stat("review_deleted")  # alerte justifiée de NudeNet
     notice_created = False
     if ok and notify_uploader:
         notice_created = create_moderation_notice(meta, file_id=file_id, reason=reason)
@@ -655,10 +664,7 @@ def admin_block_ip():
         flash("IP manquante.", "warning")
         return redirect(url_for("admin.admin_panel"))
 
-    blocked = load_blocked()
-    if ip not in blocked:
-        blocked.append(ip)
-        save_blocked(blocked)
+    if block_ip(ip, "Depuis les fichiers"):
         flash(f"IP bloquée ✅ : {ip}", "success")
     else:
         flash(f"IP déjà bloquée : {ip}", "info")

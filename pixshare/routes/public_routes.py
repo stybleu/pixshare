@@ -472,9 +472,7 @@ def image_page(file_id):
         )
     )
 
-    if not bool(meta.get("permanent")):
-        response.headers["X-Robots-Tag"] = "noindex, noimageindex"
-
+    response.headers["X-Robots-Tag"] = "noindex, noimageindex"  # les images des utilisateurs restent privées
     return response
 
 

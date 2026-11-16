@@ -2,21 +2,7 @@
 
 {% block title %}{{ original_name }} – PixShare{% endblock %}
 {% block meta_description %}<meta name="description" content="Aperçu d'une image hébergée sur PixShare.">{% endblock %}
-{% block robots %}{% if meta.get("permanent") %}<meta name="robots" content="index, follow, imageindex">{% else %}<meta name="robots" content="noindex, noimageindex, nofollow">{% endif %}{% endblock %}
-{% block social %}{% if meta.get("permanent") %}
-{% set _img = file_url if file_url.startswith('http') else request.url_root.rstrip('/') ~ file_url %}
-<meta property="og:site_name" content="PixShare">
-<meta property="og:title" content="{{ original_name }} – PixShare">
-<meta property="og:description" content="Aperçu d'une image hébergée sur PixShare.">
-<meta property="og:image" content="{{ _img }}">
-<meta property="og:url" content="{{ request.base_url }}">
-<meta property="og:type" content="website">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="{{ original_name }} – PixShare">
-<meta name="twitter:description" content="Aperçu d'une image hébergée sur PixShare.">
-<meta name="twitter:image" content="{{ _img }}">
-{% else %}{{ super() }}{% endif %}{% endblock %}
-
+{% block robots %}<meta name="robots" content="noindex, noimageindex, nofollow">{% endblock %}
 {% block head %}
 <style>
 .image-page-card {
@@ -95,7 +81,7 @@
     </div>
     <div class="meta-box">
       <div class="meta-label">Statut</div>
-      <div class="meta-value">{{ 'Permanent' if meta.get('permanent') else 'Temporaire' }}</div>
+      <div class="meta-value">Temporaire</div>
     </div>
     {% if meta.get('expires_at') %}
     <div class="meta-box">
@@ -111,10 +97,8 @@
     <a class="btn btn-outline-danger" href="{{ report_url }}">Signaler</a>
   </div>
 
-  {% if not meta.get('permanent') %}
   <div class="alert alert-warning mb-0">
     Cette page correspond à un fichier temporaire. Elle n'est pas destinée à être indexée par les moteurs de recherche.
   </div>
-  {% endif %}
 </div>
 {% endblock %}

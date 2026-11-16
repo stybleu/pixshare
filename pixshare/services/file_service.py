@@ -19,6 +19,7 @@ from .auth_service import is_admin
 from .json_services import load_db, save_db, load_views, save_views
 from .time_service import parse_dt, utcnow
 from .image_quality_service import (
+    HEIF_AVAILABLE,
     can_enhance_extension,
     enhance_image_bytes,
     get_output_extension,
@@ -317,6 +318,11 @@ def cleanup_expired() -> int:
         if status not in {"active", "pending"}:
             continue
         if meta.get("permanent") or not meta.get("expires_at"):
+            # Les fichiers permanents n'existent plus : les anciens expirent dans 7 jours.
+            meta["permanent"] = False
+            meta["expires_at"] = (now + timedelta(days=7)).isoformat(timespec="seconds")
+            db[file_id] = meta
+            changed = True
             continue
 
         exp = parse_dt(meta.get("expires_at", ""))
@@ -565,6 +571,35 @@ def can_keep_uploads() -> bool:
     )
 
 
+def _convert_heic_to_jpeg(dest: str, server_name: str, ext: str, original_name: str):
+    """Photo iPhone (HEIC/HEIF) -> JPEG : lisible dans tous les navigateurs, et nettoyable (GPS, appareil).
+
+    En cas d'échec, le fichier d'origine est gardé tel quel.
+    """
+    if ext not in {".heic", ".heif"} or not HEIF_AVAILABLE:
+        return server_name, dest, ext, original_name
+    new_server = os.path.splitext(server_name)[0] + ".jpg"
+    new_dest = os.path.join(os.path.dirname(dest), new_server)
+    if os.path.exists(new_dest):
+        return server_name, dest, ext, original_name
+    try:
+        with Image.open(dest) as im:
+            icc = im.info.get("icc_profile")
+            picture = ImageOps.exif_transpose(im).convert("RGB")
+        options = {"quality": 92, "optimize": True}
+        if icc:
+            options["icc_profile"] = icc
+        picture.save(new_dest, "JPEG", **options)
+        os.remove(dest)
+        return new_server, new_dest, ".jpg", os.path.splitext(original_name)[0] + ".jpg"
+    except Exception:
+        try:
+            os.remove(new_dest)
+        except OSError:
+            pass
+        return server_name, dest, ext, original_name
+
+
 def _prepare_file_destination(original_name: str) -> tuple[str, str, str, str]:
     ext = safe_ext(original_name)
 
@@ -635,6 +670,7 @@ def _register_saved_public_file(
         "expires_at": (expires_at.isoformat(timespec="seconds") if expires_at else ""),
         "permanent": bool(permanent),
         "ip": client_ip,
+        "by_admin": bool(is_admin()),
         "guest_token": guest_token,
         "views": 0,
         "status": initial_upload_status(server_name),
@@ -678,6 +714,7 @@ def save_saved_local_file(
 
     try:
         os.replace(local_path, dest)
+        server_name, dest, ext, original_name = _convert_heic_to_jpeg(dest, server_name, ext, original_name)
         strip_uploaded_image(dest)
 
         thumb_path = ""
@@ -763,7 +800,8 @@ def save_uploaded_file(
             pass
         raise FileTooLargeError("Fichier trop volumineux.")
 
-    # Retire GPS, appareil, date… des photos (sans toucher aux pixels).
+    # Photos iPhone -> JPEG, puis retire GPS, appareil, date… (sans toucher aux pixels).
+    server_name, dest, ext, original_name = _convert_heic_to_jpeg(dest, server_name, ext, original_name)
     strip_uploaded_image(dest)
 
     thumb_path = ""

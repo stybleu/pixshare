@@ -1,4 +1,3 @@
-from datetime import datetime
 
 from flask import Blueprint, request
 
@@ -38,24 +37,8 @@ def sitemap():
         {"loc": "/contact", "priority": "0.6", "changefreq": "yearly"},
     ]
 
-    for file_id, meta in load_db().items():
-        original_name = meta.get("original_name", "")
-        ext = ("." + original_name.rsplit(".", 1)[-1].lower()) if "." in original_name else ""
-        if ext not in IMAGE_EXTENSIONS:
-            continue
-        if not bool(meta.get("permanent")) or meta.get("password_hash"):
-            continue
-        _db, valid_meta, _server_name = get_file_record(file_id)
-        if not valid_meta:
-            continue
-        pages.append({
-            "loc": f"/image/{file_id}",
-            "priority": "0.6",
-            "changefreq": "weekly",
-            "lastmod": str(meta.get("uploaded_at") or "")[:10],
-        })
+    # Les images des utilisateurs ne sont jamais listées : elles sont privées et temporaires.
 
-    today = datetime.utcnow().date().isoformat()
     xml = ['<?xml version="1.0" encoding="UTF-8"?>']
     xml.append('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">')
     for page in pages:
