@@ -51,6 +51,7 @@ from pixshare.services.settings_service import (
 )
 from pixshare.services.url_import_service import UrlImportError, download_remote_image_to_temp
 from pixshare.services.moderation_service import pop_pending_notice
+from pixshare.services.embed_service import embed_codes
 from pixshare.services.report_service import REPORT_REASONS, report_file
 from pixshare.services.turnstile_service import turnstile_ok
 
@@ -494,6 +495,11 @@ def image_page(file_id):
             download_url=download_url,
             report_url=report_url,
             report_reasons=REPORT_REASONS,
+            embed_codes=embed_codes(
+                url_for("public.image_page", file_id=file_id, _external=True),
+                url_for("public.view_file", file_id=file_id, _external=True),
+                original_name,
+            ),
             original_name=original_name,
             meta=meta,
             version=current_app.config["APP_VERSION"],

@@ -97,6 +97,36 @@
     <a class="btn btn-outline-secondary" href="{{ file_url }}" target="_blank" rel="noopener">Ouvrir l'image brute</a>
   </div>
 
+  <div class="card mb-3" id="codes">
+    <div class="card-body">
+      <h2 class="h6 mb-1">Partager et intégrer</h2>
+      <p class="text-muted small mb-3">Codes prêts à coller. Ils ne marcheront plus quand l'image aura expiré{% if meta.get('remaining_time') %} (dans {{ meta.get('remaining_time') }}){% endif %}.</p>
+      <div class="d-grid gap-2">
+        {% for c in embed_codes %}
+          <div>
+            <label class="form-label small mb-1" for="code_{{ c.key }}"><strong>{{ c.label }}</strong> <span class="text-muted">— {{ c.hint }}</span></label>
+            <div class="input-group input-group-sm">
+              <input id="code_{{ c.key }}" class="form-control font-monospace" value="{{ c.code }}" readonly>
+              <button class="btn btn-outline-primary embed-copy" type="button" data-target="code_{{ c.key }}">Copier</button>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  <script>
+    document.querySelectorAll(".embed-copy").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var field = document.getElementById(btn.dataset.target);
+        field.select();
+        var done = function () { btn.textContent = "Copié ✅"; setTimeout(function () { btn.textContent = "Copier"; }, 1500); };
+        if (navigator.clipboard) { navigator.clipboard.writeText(field.value).then(done, function () { document.execCommand("copy"); done(); }); }
+        else { document.execCommand("copy"); done(); }
+      });
+    });
+    document.querySelectorAll("#codes input").forEach(function (f) { f.addEventListener("focus", function () { f.select(); }); });
+  </script>
+
   <details class="mb-3">
     <summary class="btn btn-outline-danger btn-sm">Signaler cette image</summary>
     <form method="post" action="{{ url_for('public.report_file', file_id=file_id) }}" class="d-flex flex-wrap gap-2 mt-2">
