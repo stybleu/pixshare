@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block sr_h1 %}{% endblock %}
 
 {% block title %}{{ original_name }} – PixShare{% endblock %}
 {% block meta_description %}<meta name="description" content="Aperçu d'une image hébergée sur PixShare.">{% endblock %}
@@ -60,7 +61,7 @@
 {% block content %}
 <div class="image-page-card">
   <div class="mb-3">
-    <h2 class="h4 mb-1">{{ original_name }}</h2>
+    <h1 class="h4 mb-1">{{ original_name }}</h1>
     <p class="text-muted mb-0">Aperçu public de l'image</p>
   </div>
 

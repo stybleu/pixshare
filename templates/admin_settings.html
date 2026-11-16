@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block sr_h1 %}{% endblock %}
 {% set title = "Admin - Paramètres" %}
 
 {% block robots %}<meta name="robots" content="noindex, nofollow, noarchive">{% endblock %}
@@ -26,7 +27,7 @@
       <div class="col-12">
         <div class="border rounded p-3 {% if settings.upload_service_enabled %}bg-light{% else %}bg-warning-subtle{% endif %}">
           <label class="form-label fw-semibold">Service d'upload</label>
-          <select name="upload_service_enabled" class="form-select">
+          <select aria-label="Service d'upload" name="upload_service_enabled" class="form-select">
             <option value="1" {% if settings.upload_service_enabled %}selected{% endif %}>Actif</option>
             <option value="0" {% if not settings.upload_service_enabled %}selected{% endif %}>Suspendu</option>
           </select>
@@ -36,7 +37,7 @@
 
       <div class="col-12 col-md-6">
         <label class="form-label fw-semibold">Taille maximale des fichiers (Mo)</label>
-        <input
+        <input aria-label="Taille maximale des fichiers (Mo)"
           type="number"
           name="max_upload_size_mb"
           class="form-control"
@@ -50,7 +51,7 @@
 
       <div class="col-12 col-md-6">
         <label class="form-label fw-semibold">Temps d'expiration par défaut</label>
-        <select name="default_lifetime_minutes" class="form-select">
+        <select aria-label="Temps d'expiration par défaut" name="default_lifetime_minutes" class="form-select">
           {% for minutes, label_key in lifetime_choices %}
           <option value="{{ minutes }}" {% if settings.default_lifetime_minutes == minutes %}selected{% endif %}>{{ _(label_key) }}</option>
           {% endfor %}
@@ -76,7 +77,7 @@
 
       <div class="col-12 col-md-6">
         <label class="form-label fw-semibold">Garder les miniatures de modération</label>
-        <select name="keep_thumbnails" class="form-select">
+        <select aria-label="Garder les miniatures de modération" name="keep_thumbnails" class="form-select">
           <option value="1" {% if settings.keep_thumbnails %}selected{% endif %}>Oui</option>
           <option value="0" {% if not settings.keep_thumbnails %}selected{% endif %}>Non</option>
         </select>
@@ -85,7 +86,7 @@
 
       <div class="col-12 col-md-6">
         <label class="form-label fw-semibold">Conservation des miniatures de modération</label>
-        <select name="thumbnail_retention_hours" class="form-select">
+        <select aria-label="Conservation des miniatures de modération" name="thumbnail_retention_hours" class="form-select">
           <option value="0" {% if settings.thumbnail_retention_hours == 0 %}selected{% endif %}>Désactivée</option>
           <option value="1" {% if settings.thumbnail_retention_hours == 1 %}selected{% endif %}>1 heure</option>
           <option value="6" {% if settings.thumbnail_retention_hours == 6 %}selected{% endif %}>6 heures</option>
@@ -217,7 +218,7 @@
 
       <div class="col-12 col-md-6">
         <label class="form-label fw-semibold">Analyse automatique</label>
-        <select name="nsfw_auto_moderation" class="form-select">
+        <select aria-label="Analyse automatique" name="nsfw_auto_moderation" class="form-select">
           <option value="1" {% if nsfw.enabled %}selected{% endif %}>Active</option>
           <option value="0" {% if not nsfw.enabled %}selected{% endif %}>Désactivée</option>
         </select>
@@ -226,7 +227,7 @@
 
       <div class="col-12 col-md-6">
         <label class="form-label fw-semibold">Découpage des grandes images</label>
-        <select name="nsfw_tiling" class="form-select">
+        <select aria-label="Découpage des grandes images" name="nsfw_tiling" class="form-select">
           <option value="1" {% if nsfw.tiling %}selected{% endif %}>Oui (plus précis, plus lent)</option>
           <option value="0" {% if not nsfw.tiling %}selected{% endif %}>Non (vue d'ensemble seulement)</option>
         </select>
@@ -235,13 +236,13 @@
 
       <div class="col-12 col-md-6">
         <label class="form-label fw-semibold">Seuil de revue manuelle</label>
-        <input type="number" name="nsfw_review_threshold" class="form-control" min="0.05" max="1" step="0.01" value="{{ '%.2f'|format(nsfw.review_threshold) }}" required>
+        <input aria-label="Seuil de revue manuelle" type="number" name="nsfw_review_threshold" class="form-control" min="0.05" max="1" step="0.01" value="{{ '%.2f'|format(nsfw.review_threshold) }}" required>
         <div class="form-text">À partir de ce score, l'image reste privée et attend ta décision. Plus bas = plus d'images à vérifier.</div>
       </div>
 
       <div class="col-12 col-md-6">
         <label class="form-label fw-semibold">Seuil de suppression automatique</label>
-        <input type="number" name="nsfw_block_threshold" class="form-control" min="0.05" max="1" step="0.01" value="{{ '%.2f'|format(nsfw.block_threshold) }}" required>
+        <input aria-label="Seuil de suppression automatique" type="number" name="nsfw_block_threshold" class="form-control" min="0.05" max="1" step="0.01" value="{{ '%.2f'|format(nsfw.block_threshold) }}" required>
         <div class="form-text">À partir de ce score, l'image est supprimée et l'auteur averti. Doit être supérieur ou égal au seuil de revue.</div>
       </div>
 
@@ -275,6 +276,39 @@
       <button class="btn btn-outline-secondary btn-sm" type="submit" {% if not nsfw.waiting %}disabled{% endif %}>Analyser maintenant les images en attente</button>
       <span class="form-text ms-2">10 images maximum à la fois.</span>
     </form>
+  </div>
+</div>
+
+<div class="card shadow-sm mt-4" id="sauvegarde">
+  <div class="card-body">
+    <h2 class="h5">Garder mes réglages après un déploiement</h2>
+    {% if settings_export_saved %}
+      <div class="mb-2"><span class="badge text-bg-success">Réglages actuels déjà sauvegardés dans Render ✅</span></div>
+    {% else %}
+      <div class="mb-2"><span class="badge text-bg-warning">Réglages pas encore sauvegardés : ils seront perdus au prochain déploiement</span></div>
+    {% endif %}
+    <ol class="small text-muted ps-3 mb-2">
+      <li>Copie le texte ci-dessous.</li>
+      <li>Sur Render : ton service → <strong>Environment</strong> → variable <code>PIXSHARE_SETTINGS</code> (crée-la ou remplace sa valeur) → colle → enregistre.</li>
+      <li>À refaire après chaque changement de réglage. Les identifiants (mail, admin) n'y sont jamais.</li>
+    </ol>
+    <label class="form-label small fw-semibold" for="settingsExport">Valeur de PIXSHARE_SETTINGS</label>
+    <textarea id="settingsExport" class="form-control font-monospace small" rows="4" readonly>{{ settings_export }}</textarea>
+    <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="copySettingsBtn">Copier</button>
+    <span class="small text-success ms-2" id="copySettingsDone" role="status" aria-live="polite"></span>
+    <script>
+      (function () {
+        var btn = document.getElementById("copySettingsBtn");
+        var box = document.getElementById("settingsExport");
+        var done = document.getElementById("copySettingsDone");
+        btn.addEventListener("click", function () {
+          box.select();
+          var ok = function () { done.textContent = "Copié ✅"; };
+          if (navigator.clipboard) { navigator.clipboard.writeText(box.value).then(ok, function () { document.execCommand("copy"); ok(); }); }
+          else { document.execCommand("copy"); ok(); }
+        });
+      })();
+    </script>
   </div>
 </div>
 

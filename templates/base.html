@@ -342,7 +342,7 @@ footer {
 <main>
   <div class="container-shell">
     <header class="site-header">
-      <h1 class="visually-hidden">Partager une image ou un fichier avec PixShare</h1>
+      {% block sr_h1 %}<h1 class="visually-hidden">Partager une image ou un fichier avec PixShare</h1>{% endblock %}
 
       <div class="topbar">
         {{ sky_window(sky_on) }}
@@ -383,7 +383,7 @@ footer {
       {% for cat,msg in messages %}
       <div class="alert alert-{{ cat }} alert-dismissible fade show" role="alert">
         {{ msg }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
       </div>
       {% endfor %}
       {% endif %}

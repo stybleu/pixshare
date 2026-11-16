@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block sr_h1 %}{% endblock %}
 {% set title = "IP bloquées - Admin" %}
 
 {% block content %}
@@ -44,17 +45,17 @@
 
         <div class="col-12 col-md-4">
           <label class="form-label">IP</label>
-          <input class="form-control" name="ip" placeholder="ex: 82.64.12.34" inputmode="text" autocomplete="off" required>
+          <input aria-label="IP" class="form-control" name="ip" placeholder="ex: 82.64.12.34" inputmode="text" autocomplete="off" required>
         </div>
 
         <div class="col-12 col-md-3">
           <label class="form-label">Motif</label>
-          <input class="form-control" name="reason" maxlength="120" placeholder="ex: spam">
+          <input aria-label="Motif" class="form-control" name="reason" maxlength="120" placeholder="ex: spam">
         </div>
 
         <div class="col-6 col-md-3">
           <label class="form-label">Durée</label>
-          <select class="form-select" name="hours">
+          <select aria-label="Durée" class="form-select" name="hours">
             <option value="24">24 heures</option>
             <option value="168">7 jours</option>
             <option value="720">30 jours</option>

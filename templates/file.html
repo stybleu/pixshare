@@ -49,7 +49,7 @@
 
       <!-- 🔗 Copier lien -->
       <div class="input-group mt-2">
-        <input type="text" class="form-control" value="{{ request.url }}" id="shareLink" readonly>
+        <input type="text" class="form-control" value="{{ request.url }}" id="shareLink" aria-label="Lien de partage" readonly>
         <button class="btn btn-outline-secondary" onclick="copyLink()">
           Copier
         </button>

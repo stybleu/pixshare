@@ -46,6 +46,8 @@ from pixshare.services.settings_service import (
     get_valid_nsfw_classes,
     get_valid_nsfw_threshold,
     get_valid_thumbnail_retention_hours,
+    export_matches_env,
+    export_settings,
     load_settings,
     save_settings,
 )
@@ -461,6 +463,8 @@ def admin_settings():
         support_saved=settings.get("support_url") or "",
         support_now=get_support_url(),
         mail_ready=mail_configured(),
+        settings_export=export_settings(),
+        settings_export_saved=export_matches_env(),
         nsfw=_nsfw_context(),
         theme_choices=THEME_CHOICES,
         theme_saved=settings.get("season_theme") or "",

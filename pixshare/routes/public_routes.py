@@ -52,6 +52,7 @@ from pixshare.services.settings_service import (
 from pixshare.services.url_import_service import UrlImportError, download_remote_image_to_temp
 from pixshare.services.moderation_service import pop_pending_notice
 from pixshare.services.report_service import REPORT_REASONS, report_file
+from pixshare.services.turnstile_service import turnstile_ok
 
 from pixshare.services.time_service import get_remaining_time_label, format_duration_minutes
 from pixshare.services.usage_tracking_service import record_usage_event
@@ -183,6 +184,10 @@ def index():
 
         if not uploads_enabled:
             flash("Le service d'upload est actuellement suspendu. Réessaie plus tard.", "warning")
+            return attach_guest_cookie(redirect(url_for("public.index")))
+
+        if not turnstile_ok(request.form, ip):
+            flash("Vérification anti-robot échouée : coche la case puis réessaie.", "warning")
             return attach_guest_cookie(redirect(url_for("public.index")))
 
         f = request.files.get("file")
@@ -346,6 +351,10 @@ def contact():
 
     if request.method == "POST":
         validate_csrf()
+
+        if not turnstile_ok(request.form, ip):
+            flash("Vérification anti-robot échouée : coche la case puis réessaie.", "warning")
+            return redirect(url_for("public.contact"))
 
         msg_type = (request.form.get("type") or "contact").strip()
         name = (request.form.get("name") or "").strip()

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block sr_h1 %}{% endblock %}
 {% set title = _("contact") %}
 {% block content %}
 
@@ -18,7 +19,7 @@
 
         <div class="col-12">
           <label class="form-label">{{ _("contact_type_message") }}</label>
-          <select name="type" class="form-select">
+          <select aria-label="{{ _("contact_type_message") }}" name="type" class="form-select">
             <option value="contact" {% if prefill_type == "contact" %}selected{% endif %}>{{ _("contact") }}</option>
             <option value="report" {% if prefill_type == "report" %}selected{% endif %}>{{ _("contact_report") }}</option>
           </select>
@@ -26,24 +27,24 @@
 
         <div class="col-md-6">
           <label class="form-label">{{ _("name_optional") }}</label>
-          <input type="text" name="name" class="form-control" maxlength="200">
+          <input aria-label="{{ _("name_optional") }}" type="text" name="name" class="form-control" maxlength="200">
         </div>
 
         <div class="col-md-6">
           <label class="form-label">{{ _("email_optional") }}</label>
-          <input type="email" name="email" class="form-control" maxlength="200">
+          <input aria-label="{{ _("email_optional") }}" type="email" name="email" class="form-control" maxlength="200">
         </div>
 
         {% if prefill_file_url %}
         <div class="col-12">
           <label class="form-label">URL concernée</label>
-          <input type="text" class="form-control" value="{{ prefill_file_url }}" readonly>
+          <input aria-label="URL concernée" type="text" class="form-control" value="{{ prefill_file_url }}" readonly>
         </div>
         {% endif %}
 
         <div class="col-12">
           <label class="form-label">Sujet</label>
-          <input
+          <input aria-label="Sujet"
             type="text"
             name="subject"
             class="form-control"
@@ -53,7 +54,7 @@
 
         <div class="col-12">
           <label class="form-label">{{ _("message") }}</label>
-          <textarea
+          <textarea aria-label="{{ _("message") }}"
             maxlength="5000"
             name="message"
             class="form-control"
@@ -63,6 +64,10 @@
         </div>
 
         <div class="col-12">
+          {% if turnstile_site_key %}
+            <div class="cf-turnstile mb-2" data-sitekey="{{ turnstile_site_key }}" data-language="{{ current_lang or 'fr' }}" data-theme="auto"></div>
+            <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+            {% endif %}
           <button type="submit" class="btn btn-primary">
             {{ _("send") }}
           </button>

@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import json
+import logging
+import os
+
 from pixshare.services.json_services import json_exists, load_json, save_json
 from pixshare.services.theme_service import clean_choice
 
@@ -76,9 +80,42 @@ ALLOWED_LIFETIMES = {minutes for minutes, _key in LIFETIME_CHOICES}
 MAX_LIFETIME_CHOICES = tuple(minutes for minutes, _key in LIFETIME_CHOICES if minutes >= 60)
 
 
+ENV_SETTINGS = "PIXSHARE_SETTINGS"
+# Réglages exportés vers Render (allow_permanent_files : option retirée).
+EXPORTED_KEYS = tuple(key for key in DEFAULT_SETTINGS if key != "allow_permanent_files")
+
+
+def env_settings() -> dict:
+    """Réglages enregistrés dans la variable Render PIXSHARE_SETTINGS (JSON), {} si absente ou invalide."""
+    raw = (os.environ.get(ENV_SETTINGS) or "").strip()
+    if not raw:
+        return {}
+    try:
+        data = json.loads(raw)
+    except ValueError:
+        logging.getLogger(__name__).warning("Variable %s invalide (JSON attendu) : ignorée.", ENV_SETTINGS)
+        return {}
+    return {key: value for key, value in data.items() if key in EXPORTED_KEYS} if isinstance(data, dict) else {}
+
+
 def ensure_settings_file() -> None:
+    # Après un déploiement (aucun disque persistant), on repart des réglages sauvegardés dans Render.
     if not json_exists(SETTINGS_FILENAME):
-        save_json(SETTINGS_FILENAME, DEFAULT_SETTINGS)
+        initial = DEFAULT_SETTINGS.copy()
+        initial.update(env_settings())
+        save_json(SETTINGS_FILENAME, initial)
+
+
+def export_settings() -> str:
+    """Valeur à copier dans la variable Render PIXSHARE_SETTINGS."""
+    current = load_settings()
+    data = {key: current.get(key) for key in EXPORTED_KEYS}
+    return json.dumps(data, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+
+
+def export_matches_env() -> bool:
+    """La variable Render contient-elle exactement les réglages actuels ?"""
+    return env_settings() == json.loads(export_settings())
 
 
 def load_settings() -> dict:

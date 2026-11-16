@@ -8,6 +8,25 @@ seo_bp = Blueprint("seo", __name__)
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
 
 
+@seo_bp.route("/healthz", endpoint="healthz")
+def healthz():
+    """Contrôle de santé pour Render : l'appli répond et peut écrire ses données."""
+    import os
+    import tempfile
+
+    from flask import current_app
+
+    from pixshare.services.json_services import _get_data_dir
+
+    try:
+        for folder in (_get_data_dir(), current_app.config["UPLOAD_FOLDER"]):
+            with tempfile.NamedTemporaryFile(dir=folder, prefix=".health-"):
+                pass
+    except Exception:
+        return "stockage indisponible", 503, {"Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store"}
+    return "ok", 200, {"Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex"}
+
+
 @seo_bp.route("/robots.txt", endpoint="robots")
 def robots():
     base = request.url_root.rstrip("/")

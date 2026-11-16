@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block sr_h1 %}{% endblock %}
 {% set title = _("index_meta_title") %}
 
 {% block content %}
@@ -136,10 +137,10 @@
               <div id="dz-file" class="mt-2 small text-muted"></div>
             </div>
 
-            <input id="fileInput" class="form-control mt-2" type="file" name="file" {% if not uploads_enabled %}disabled{% endif %}>
+            <input id="fileInput" aria-label="{{ _('dropzone_title') }}" class="form-control mt-2" type="file" name="file" {% if not uploads_enabled %}disabled{% endif %}>
 
             <div class="mt-3">
-              <label class="form-label">{{ _("import_url_label") }}</label>
+              <label class="form-label" for="imageUrlInput">{{ _("import_url_label") }}</label>
               <input id="imageUrlInput" class="form-control" type="url" name="image_url" placeholder="{{ _('import_url_placeholder') }}" inputmode="url" autocomplete="off" {% if not uploads_enabled %}disabled{% endif %}>
               <div class="form-text">{{ _("import_url_help") }}</div>
             </div>
@@ -159,12 +160,12 @@
 
               <div class="row g-2">
                 <div class="col-6">
-                  <label class="form-label mb-1">{{ _("width_px") }}</label>
+                  <label class="form-label mb-1" for="resizeWidth">{{ _("width_px") }}</label>
                   <input id="resizeWidth" type="number" min="1" step="1" class="form-control" placeholder="{{ _('placeholder_width') }}">
                 </div>
 
                 <div class="col-6">
-                  <label class="form-label mb-1">{{ _("height_px") }}</label>
+                  <label class="form-label mb-1" for="resizeHeight">{{ _("height_px") }}</label>
                   <input id="resizeHeight" type="number" min="1" step="1" class="form-control" placeholder="{{ _('placeholder_height') }}">
                 </div>
 
@@ -224,7 +225,7 @@
               </div>
 
                 <div class="col-12">
-                  <label class="form-label">{{ _("file_lifetime_default_10") }}</label>
+                  <label class="form-label" for="lifetimeSelect">{{ _("file_lifetime_default_10") }}</label>
 
                   <select id="lifetimeSelect" name="lifetime" class="form-select">
                     {% for minutes, label_key in lifetime_choices %}
@@ -298,6 +299,10 @@
             <div class="alert alert-secondary small mb-3" role="note">
               {{ _("technical_cookie_notice") }}
             </div>
+            {% if turnstile_site_key %}
+            <div class="cf-turnstile mb-2" data-sitekey="{{ turnstile_site_key }}" data-language="{{ current_lang or 'fr' }}" data-theme="auto"></div>
+            <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+            {% endif %}
             <button id="submitBtn" class="btn btn-primary w-100" type="submit" {% if not uploads_enabled %}disabled{% endif %}>
               {% if uploads_enabled %}{{ _("upload") }}{% else %}Upload suspendu{% endif %}
             </button>
@@ -421,6 +426,7 @@
                   <div class="input-group">
                     <input
                       id="publicLink_{{ f.id }}"
+                      aria-label="{{ _('public_share_link') }}"
                       class="form-control"
                       value="{{ f.public_url }}"
                       readonly
@@ -443,6 +449,7 @@
                   <div class="input-group">
                     <input
                       id="viewLink_{{ f.id }}"
+                      aria-label="{{ _('view_link_label') }}"
                       class="form-control"
                       value="{{ f.raw_url }}"
                       readonly
