@@ -400,6 +400,22 @@ def view_file(file_id):
             abort(404)
         return send_from_directory(current_app.config["UPLOAD_FOLDER"], server_name, as_attachment=False)
 
+    # Lien /view/ ouvert directement dans le navigateur : petite page avec l'image et un bouton « Signaler ».
+    # Intégrée ailleurs (<img>, forums, aperçus WhatsApp/Discord), l'image reste servie telle quelle.
+    if (request.headers.get("Sec-Fetch-Dest") == "document" and request.args.get("raw") != "1"
+            and is_image_filename(meta.get("original_name", ""))):
+        response = make_response(render_template(
+            "view_image.html",
+            file_id=file_id,
+            original_name=meta.get("original_name", ""),
+            raw_url=url_for("public.view_file", file_id=file_id, raw=1),
+            report_reasons=REPORT_REASONS,
+        ))
+        response.headers["X-Robots-Tag"] = "noindex, noimageindex"
+        response.headers["Cache-Control"] = "private, no-cache"
+        response.headers["Vary"] = "Sec-Fetch-Dest"
+        return response
+
     visitor_token, must_set_cookie = get_or_create_visitor_token()
 
     if register_unique_view(file_id, visitor_token):
@@ -417,6 +433,7 @@ def view_file(file_id):
         as_attachment=False,
     ))
     response.headers["Cache-Control"] = "private, max-age=600"
+    response.headers["Vary"] = "Sec-Fetch-Dest"  # même adresse : page (navigateur) ou image (intégration)
 
     if must_set_cookie:
         response.set_cookie(
@@ -495,6 +512,8 @@ def report_file_route(file_id):
         flash("Tu as déjà signalé cette image. Merci !", "info")
     else:
         flash("Merci, ton signalement a bien été envoyé.", "success")
+    if request.form.get("back") == "view":
+        return redirect(url_for("public.view_file", file_id=file_id))
     return redirect(url_for("public.image_page", file_id=file_id))
 
 
