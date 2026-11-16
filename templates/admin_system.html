@@ -18,6 +18,7 @@
     <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_panel') }}">Fichiers</a>
     <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_thumbnails') }}">Miniatures</a>
     <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_messages') }}">Messages</a>
+    <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_stats') }}">Statistiques</a>
     <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_blocked_ips') }}">IP bloquées</a>
     <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('admin.admin_settings') }}">Paramètres</a>
   </div>
@@ -55,7 +56,7 @@
     <div class="card shadow-sm">
       <div class="card-body">
 
-        <h2 class="h6 mb-3">RAM application (PixShare)</h2>
+        <h2 class="h6 mb-3">RAM de ce processus (un worker)</h2>
 
         {% if stats is defined and stats.process_ram is defined and stats.process_ram.ok %}
           {% set p = stats.process_ram.percent or 0 %}
@@ -63,7 +64,7 @@
           <div class="mb-2">
             <strong>{{ stats.process_ram.rss_mb }} MB</strong>
             {% if stats.process_ram.percent is not none %}
-              <span class="text-muted">({{ stats.process_ram.percent }}%)</span>
+              <span class="text-muted">({{ stats.process_ram.percent }} % de ta formule)</span>
             {% endif %}
           </div>
 
@@ -93,47 +94,31 @@
     </div>
   </div>
 
-  <!-- RAM SYSTEME -->
+  <!-- RAM DU SERVICE (limite de la formule Render) -->
   <div class="col-12 col-lg-6">
     <div class="card shadow-sm">
       <div class="card-body">
-
-        <h2 class="h6 mb-3">RAM système</h2>
-
-        {% if stats is defined and stats.system_ram is defined and stats.system_ram.ok %}
-          {% set s = stats.system_ram.percent or 0 %}
-
+        <h2 class="h6 mb-3">RAM du service</h2>
+        {% set c = stats.container_ram if stats is defined else none %}
+        {% if c and c.ok %}
+          {% set s = c.percent or 0 %}
           <div class="mb-2">
-            <strong>{{ stats.system_ram.used_mb }} / {{ stats.system_ram.total_mb }} MB</strong>
-            {% if stats.system_ram.percent is not none %}
-              <span class="text-muted">({{ stats.system_ram.percent }}%)</span>
-            {% endif %}
+            <strong>{{ c.used_mb }} / {{ c.limit_mb }} Mo</strong>
+            <span class="text-muted">({{ c.percent }} % de ta formule)</span>
           </div>
-
-          <div class="progress mb-2" style="height: 12px;">
-            <div class="progress-bar 
-              {% if s >= 80 %}bg-danger
-              {% elif s >= 60 %}bg-warning text-dark
-              {% else %}bg-success{% endif %}"
-              style="width: {{ s }}%;">
-            </div>
+          <div class="progress mb-2" style="height: 12px;" role="progressbar" aria-label="RAM utilisée" aria-valuenow="{{ s }}" aria-valuemin="0" aria-valuemax="100">
+            <div class="progress-bar {% if s >= 90 %}bg-danger{% elif s >= 75 %}bg-warning text-dark{% else %}bg-success{% endif %}" style="width: {{ s if s <= 100 else 100 }}%;"></div>
           </div>
-
-          {% if stats.system_ram.available_mb is not none %}
-            <div class="small text-muted">
-              Disponible : {{ stats.system_ram.available_mb }} MB
-            </div>
+          {% if s >= 75 %}
+            <div class="alert alert-warning small py-2 mb-2">Mémoire presque pleine : au-delà de {{ c.limit_mb }} Mo, Render redémarre le site. Si ça arrive souvent, mets « Découpage des grandes images » sur Non (Paramètres → NudeNet).</div>
           {% endif %}
-
+          <div class="small text-muted">Disponible : {{ c.available_mb }} Mo. NudeNet en consomme beaucoup pendant une analyse.</div>
+          {% if stats.system_ram and stats.system_ram.ok %}
+            <div class="small text-muted mt-1">Machine Render entière (partagée) : {{ (stats.system_ram.total_mb / 1024)|round(1) }} Go — pas utilisable au-delà de ta formule.</div>
+          {% endif %}
         {% else %}
-          <div class="text-muted">
-            Indisponible
-            {% if stats is defined and stats.system_ram.error %}
-              : {{ stats.system_ram.error }}
-            {% endif %}
-          </div>
+          <div class="text-muted">Indisponible</div>
         {% endif %}
-
       </div>
     </div>
   </div>

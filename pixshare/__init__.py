@@ -11,6 +11,8 @@ from .routes.public_routes import public_bp
 from .routes.admin_routes import admin_bp
 from .routes.seo_routes import seo_bp
 from .services.turnstile_service import site_key, turnstile_required
+from .services.visitor_stats_service import record_page_view, should_count
+from .services.auth_service import is_admin
 from .services.translation_service import apply_requested_language, build_lang_url, get_current_language, translate
 from .services.auth_service import check_admin_config
 from .services.nsfw_service import run_after_response
@@ -103,6 +105,16 @@ def create_app(config_overrides: dict | None = None) -> Flask:
         ):
             response.call_on_close(lambda: run_after_response(app))
         return response
+
+    @app.after_request
+    def count_visit(resp):
+        # Statistiques de l'admin : pages vues et visiteurs uniques du jour (sans stocker d'IP).
+        try:
+            if should_count(resp) and not is_admin():
+                record_page_view(get_client_ip())
+        except Exception:
+            pass
+        return resp
 
     @app.after_request
     def add_robots_headers(resp):

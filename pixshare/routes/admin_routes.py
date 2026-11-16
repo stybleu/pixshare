@@ -713,6 +713,13 @@ def admin_block_ip():
 
 
 
+@admin_bp.route("/admin/stats", methods=["GET"], endpoint="admin_stats")
+@admin_required
+def admin_stats():
+    from pixshare.services.visitor_stats_service import summary
+    return render_template("admin_stats.html", st=summary(30), version=current_app.config["APP_VERSION"])
+
+
 @admin_bp.route("/admin/system", methods=["GET"], endpoint="admin_system")
 @admin_required
 def admin_system():

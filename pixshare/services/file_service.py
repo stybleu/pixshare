@@ -702,6 +702,11 @@ def _register_saved_public_file(
     if thumb_path:
         db[file_id]["thumb_delete_at"] = get_expected_thumb_delete_at(db[file_id])
     save_db(db)
+    try:  # statistiques de l'admin (envois par jour)
+        from .visitor_stats_service import record_upload
+        record_upload()
+    except Exception:
+        pass
 
     return file_id, lifetime, permanent
 

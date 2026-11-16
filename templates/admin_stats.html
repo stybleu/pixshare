@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block sr_h1 %}{% endblock %}
+{% set title = "Admin - Statistiques" %}
+
+{% block robots %}<meta name="robots" content="noindex, nofollow, noarchive">{% endblock %}
+{% block head %}
+<style>
+.stat-num { font-size: 1.6rem; font-weight: 700; line-height: 1.1; }
+.chart { display: flex; align-items: flex-end; gap: 3px; height: 160px; padding-top: 6px; }
+.chart .bar { flex: 1 1 0; background: #6f5ce6; border-radius: 3px 3px 0 0; min-height: 2px; position: relative; }
+.chart .bar.today { background: #2e9e5b; }
+.chart .bar.empty { background: #d9d6f5; }
+.chart-labels { display: flex; gap: 3px; font-size: .7rem; color: #6c757d; }
+.chart-labels span { flex: 1 1 0; text-align: center; overflow: hidden; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap gap-2 align-items-center justify-content-between mb-3">
+  <div>
+    <h1 class="h4 mb-0">Statistiques de visite</h1>
+    <div class="text-muted small">Visiteurs uniques par jour, sans robots ni admin. Aucune adresse IP n'est stockée.</div>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_panel') }}">Fichiers</a>
+    <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_messages') }}">Messages</a>
+    <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_system') }}">Système</a>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('admin.admin_settings') }}">Paramètres</a>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  {% for label, item, hint in [("Aujourd'hui", st.today, ""), ("Hier", st.yesterday, ""), ("7 derniers jours", st.week, "visiteurs-jours"), ("30 derniers jours", st.month, "visiteurs-jours")] %}
+  <div class="col-6 col-lg-3">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <h2 class="h6 text-muted mb-2">{{ label }}</h2>
+        <div class="stat-num">{{ item.visitors or 0 }}</div>
+        <div class="small text-muted mb-2">visiteur{{ "s" if (item.visitors or 0) > 1 }}{% if hint %} <span title="Un même visiteur venu 3 jours compte 3 fois">({{ hint }})</span>{% endif %}</div>
+        <div class="small">{{ item.views or 0 }} pages vues · {{ item.uploads or 0 }} envoi{{ "s" if (item.uploads or 0) > 1 }}</div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="card shadow-sm mb-3">
+  <div class="card-body">
+    <h2 class="h6 mb-1">Visiteurs par jour (30 jours)</h2>
+    {% if st.peak %}<div class="small text-muted mb-2">Record : {{ st.peak.visitors }} visiteurs le {{ st.peak.label }}.</div>{% endif %}
+    <div class="chart" role="img" aria-label="Graphique des visiteurs par jour sur 30 jours">
+      {% for d in st.series %}
+        <div class="bar {% if loop.last %}today{% elif not d.visitors %}empty{% endif %}"
+             style="height: {{ (100 * d.visitors / st.max_visitors)|round|int if d.visitors else 1 }}%;"
+             title="{{ d.label }} : {{ d.visitors }} visiteurs, {{ d.views }} pages vues, {{ d.uploads }} envois"></div>
+      {% endfor %}
+    </div>
+    <div class="chart-labels" aria-hidden="true">
+      {% for d in st.series %}<span>{% if loop.index0 % 5 == 0 or loop.last %}{{ d.label }}{% endif %}</span>{% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <h2 class="h6 mb-2">Détail jour par jour</h2>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0">
+        <thead><tr><th>Jour</th><th class="text-end">Visiteurs</th><th class="text-end">Pages vues</th><th class="text-end">Envois</th></tr></thead>
+        <tbody>
+          {% for d in st.series|reverse %}
+            {% if d.visitors or d.views or d.uploads or loop.first %}
+            <tr><td>{{ d.label }}{% if loop.first %} <span class="badge text-bg-success">aujourd'hui</span>{% endif %}</td>
+              <td class="text-end">{{ d.visitors }}</td><td class="text-end">{{ d.views }}</td><td class="text-end">{{ d.uploads }}</td></tr>
+            {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="small text-muted mt-2">
+      Comptage depuis {{ st.since[8:10] ~ "/" ~ st.since[5:7] if st.since else "aujourd'hui" }}. Jours à l'heure de Paris.
+      {% if not config.PERSISTENT_DIR %}Sans disque persistant, ces chiffres repartent de zéro à chaque déploiement.{% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
