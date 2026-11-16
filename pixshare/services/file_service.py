@@ -1,10 +1,11 @@
 import os
 import secrets
+import time
 from datetime import datetime, timedelta
 
 from flask import current_app, g, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
-from PIL import Image
+from PIL import Image, ImageOps
 
 try:
     from pillow_heif import register_heif_opener
@@ -332,6 +333,7 @@ def cleanup_expired() -> int:
         except Exception:
             pass
 
+        remove_medium(file_id)
         meta["status"] = "expired"
         meta["deleted_at"] = now.isoformat(timespec="seconds")
         meta["delete_reason"] = "expired"
@@ -346,6 +348,73 @@ def cleanup_expired() -> int:
         save_db(db)
 
     return removed_public_files
+
+
+_last_cleanup = 0.0
+
+
+def cleanup_expired_soon(interval: float = 60.0) -> int:
+    """Nettoyage des fichiers expirés au plus une fois par minute (par worker) au lieu d'à chaque image."""
+    global _last_cleanup
+    now = time.monotonic()
+    if now - _last_cleanup < interval:
+        return 0
+    _last_cleanup = now
+    return cleanup_expired()
+
+
+def is_expired(meta: dict) -> bool:
+    if meta.get("permanent") or not meta.get("expires_at"):
+        return False
+    try:
+        return parse_dt(meta.get("expires_at", "")) <= utcnow()
+    except Exception:
+        return False
+
+
+# Version « moyenne » (WebP, 1280 px max) affichée sur la page de l'image, comme ImgBB.
+MEDIUM_MAX = 1280
+MEDIUM_EXTENSIONS = {".jpg", ".jpeg", ".jfif", ".jpe", ".png", ".webp", ".bmp", ".tif", ".tiff", ".heic", ".heif"}
+
+
+def medium_path(file_id: str) -> str:
+    return os.path.join(current_app.config["UPLOAD_FOLDER"], f"{os.path.basename(file_id)}_m.webp")
+
+
+def remove_medium(file_id: str) -> None:
+    try:
+        os.remove(medium_path(file_id))
+    except OSError:
+        pass
+
+
+def create_medium(src: str, file_id: str) -> str:
+    """Crée la version moyenne si elle est vraiment plus légère. Ne casse jamais un envoi."""
+    if os.path.splitext(src)[1].lower() not in MEDIUM_EXTENSIONS:
+        return ""
+    out = medium_path(file_id)
+    try:
+        size = os.path.getsize(src)
+        with Image.open(src) as im:
+            w, h = im.size
+            if getattr(im, "is_animated", False) or w * h > 40_000_000:
+                return ""
+            if max(w, h) <= MEDIUM_MAX and size <= 400_000:
+                return ""
+            if im.format == "JPEG":
+                im.draft("RGB", (MEDIUM_MAX, MEDIUM_MAX))
+            pic = ImageOps.exif_transpose(im)
+            alpha = pic.mode in ("RGBA", "LA", "PA") or (pic.mode == "P" and "transparency" in pic.info)
+            pic = pic.convert("RGBA" if alpha else "RGB")
+            pic.thumbnail((MEDIUM_MAX, MEDIUM_MAX), Image.LANCZOS)
+            pic.save(out, "WEBP", quality=82, method=4)
+        if os.path.getsize(out) >= size:
+            remove_medium(file_id)
+            return ""
+        return out
+    except Exception:
+        remove_medium(file_id)
+        return ""
 
 
 def file_meta(file_id: str, db: dict | None = None):
@@ -617,6 +686,7 @@ def save_saved_local_file(
                 thumb_path = create_thumbnail(dest, file_id)
             except Exception:
                 thumb_path = ""
+            create_medium(dest, file_id)
 
         return _register_saved_public_file(
             file_id=file_id,
@@ -702,6 +772,7 @@ def save_uploaded_file(
             thumb_path = create_thumbnail(dest, file_id)
         except Exception:
             thumb_path = ""
+        create_medium(dest, file_id)
 
     lifetime, permanent = _resolve_web_lifetime(keep_requested)
 
@@ -721,11 +792,14 @@ def save_uploaded_file(
 
 
 def get_file_record(file_id: str):
-    cleanup_expired()
+    cleanup_expired_soon()
     db = load_db()
     meta = db.get(file_id)
 
     if not meta:
+        return None, None, None
+
+    if is_expired(meta):  # expiré mais pas encore nettoyé : on ne le sert plus
         return None, None, None
 
     if (meta.get("status") or "active").lower() != "active":
@@ -798,6 +872,7 @@ def delete_by_id(file_id: str, reason: str = "deleted") -> bool:
             deleted_anything = True
     except Exception:
         pass
+    remove_medium(file_id)
 
     if not deleted_anything and (meta.get("status") or "active").lower() != "active":
         return True

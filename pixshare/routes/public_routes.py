@@ -19,6 +19,7 @@ from pixshare.services.file_service import (
     delete_by_id,
     file_password_ok,
     get_file_record,
+    medium_path,
     attach_guest_cookie,
     get_existing_guest_token,
     get_guest_token,
@@ -386,7 +387,6 @@ def contact():
 
 @public_bp.route("/view/<file_id>", endpoint="view_file")
 def view_file(file_id):
-    cleanup_expired()
     db, meta, server_name = get_file_record(file_id)
     if not meta:
         abort(404)
@@ -406,11 +406,16 @@ def view_file(file_id):
         db[file_id] = meta
         save_db(db)
 
+    served_name = server_name
+    if request.args.get("m") == "1" and os.path.isfile(medium_path(file_id)):
+        served_name = os.path.basename(medium_path(file_id))
+
     response = make_response(send_from_directory(
         current_app.config["UPLOAD_FOLDER"],
-        server_name,
+        served_name,
         as_attachment=False,
     ))
+    response.headers["Cache-Control"] = "private, max-age=600"
 
     if must_set_cookie:
         response.set_cookie(
@@ -427,8 +432,6 @@ def view_file(file_id):
 
 @public_bp.route("/image/<file_id>", endpoint="image_page")
 def image_page(file_id):
-    cleanup_expired()
-
     _db, meta, _server_name = get_file_record(file_id)
     if not meta:
         abort(404)

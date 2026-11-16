@@ -80,7 +80,7 @@
 
   <div class="text-center mb-4">
     <div class="image-preview-wrap">
-      <img src="{{ file_url }}" alt="{{ original_name }}" loading="lazy">
+      <a href="{{ file_url }}" title="Voir en taille réelle"><img src="{{ file_url }}?m=1" alt="{{ original_name }}" fetchpriority="high" decoding="async"></a>
     </div>
   </div>
 
