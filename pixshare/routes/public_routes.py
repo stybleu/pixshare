@@ -51,6 +51,7 @@ from pixshare.services.settings_service import (
 )
 from pixshare.services.url_import_service import UrlImportError, download_remote_image_to_temp
 from pixshare.services.moderation_service import pop_pending_notice
+from pixshare.services.report_service import REPORT_REASONS, report_file
 
 from pixshare.services.time_service import get_remaining_time_label, format_duration_minutes
 from pixshare.services.usage_tracking_service import record_usage_event
@@ -466,6 +467,7 @@ def image_page(file_id):
             file_url=file_url,
             download_url=download_url,
             report_url=report_url,
+            report_reasons=REPORT_REASONS,
             original_name=original_name,
             meta=meta,
             version=current_app.config["APP_VERSION"],
@@ -474,6 +476,26 @@ def image_page(file_id):
 
     response.headers["X-Robots-Tag"] = "noindex, noimageindex"  # les images des utilisateurs restent privées
     return response
+
+
+@public_bp.route("/report/<file_id>", methods=["POST"], endpoint="report_file")
+def report_file_route(file_id):
+    """Signalement en un clic depuis la page d'une image."""
+    validate_csrf()
+    ip = get_client_ip()
+    if ip and ip in load_blocked():
+        return redirect(url_for("public.index"))
+    outcome = report_file(file_id, ip, (request.form.get("reason") or "").strip())
+    if outcome == "hidden":
+        flash("Merci : l'image est masquée en attendant la vérification de l'administrateur.", "success")
+        return redirect(url_for("public.index"))
+    if outcome == "missing":
+        abort(404)
+    if outcome == "already":
+        flash("Tu as déjà signalé cette image. Merci !", "info")
+    else:
+        flash("Merci, ton signalement a bien été envoyé.", "success")
+    return redirect(url_for("public.image_page", file_id=file_id))
 
 
 @public_bp.route("/download/<file_id>", endpoint="download")

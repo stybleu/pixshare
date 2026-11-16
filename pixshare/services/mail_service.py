@@ -97,7 +97,7 @@ def _build_summary(app) -> tuple[str, str] | None:
     lines = []
     for file_id, meta in waiting[:MAX_LISTED]:
         raw_label = str(meta.get("moderation_label") or "")
-        label = "analyse impossible" if raw_label == "analyse_impossible" else (nsfw_class_label(raw_label) or "—")
+        label = nsfw_class_label(raw_label) or "—"
         score = meta.get("moderation_score")
         score_txt = f" · score {float(score):.2f}" if isinstance(score, (int, float)) else ""
         name = str(meta.get("original_name") or file_id).replace("\n", " ")[:80]
@@ -108,7 +108,7 @@ def _build_summary(app) -> tuple[str, str] | None:
     site = _cfg()["site"]
     subject = f"PixShare : {count} image{'s' if count > 1 else ''} à vérifier"
     body = (
-        "NudeNet a mis de côté "
+        "NudeNet ou les signalements des visiteurs ont mis de côté "
         + ("des images qui attendent" if count > 1 else "une image qui attend")
         + " ta décision (elles restent privées en attendant) :\n\n"
         + "\n".join(lines)

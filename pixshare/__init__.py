@@ -80,9 +80,9 @@ def create_app(config_overrides: dict | None = None) -> Flask:
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
             "img-src 'self' data: https:; "
-            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
-            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
-            "font-src 'self' data: https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "font-src 'self' data:; "
             "object-src 'none'; "
             "base-uri 'self'; "
             "frame-ancestors 'none';"

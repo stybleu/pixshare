@@ -499,6 +499,8 @@ def file_meta(file_id: str, db: dict | None = None):
         "moderation_score": meta.get("moderation_score"),
         "moderation_label": str(meta.get("moderation_label") or ""),
         "moderation_label_fr": nsfw_class_label(meta.get("moderation_label")),
+        "reports_count": len(meta.get("reports") or []),
+        "reports_summary": _reports_summary(meta),
         "protected": bool(meta.get("password_hash")),
         "review_url": (
             url_for("admin.admin_review_preview", file_id=file_id)
@@ -598,6 +600,11 @@ def _convert_heic_to_jpeg(dest: str, server_name: str, ext: str, original_name: 
         except OSError:
             pass
         return server_name, dest, ext, original_name
+
+
+def _reports_summary(meta: dict) -> str:
+    from .report_service import reasons_summary
+    return reasons_summary(meta)
 
 
 def _prepare_file_destination(original_name: str) -> tuple[str, str, str, str]:

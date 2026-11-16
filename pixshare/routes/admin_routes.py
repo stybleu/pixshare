@@ -612,8 +612,12 @@ def admin_review_approve():
     if not is_manual_review(meta):
         flash("Cette image n'est plus en revue manuelle.", "warning")
         return redirect(url_for("admin.admin_panel"))
+    label = meta.get("moderation_label")
+    if label == "signalement":
+        meta["reports"] = []  # image jugée correcte : il faudra de nouveaux signalements pour la masquer
+        meta["report_reasons"] = {}
     approve_image(db, file_id, meta, "admin", meta.get("moderation_score"))
-    if meta.get("moderation_label") != "analyse_impossible":
+    if label not in ("analyse_impossible", "signalement"):
         bump_stat("review_approved")  # fausse alerte de NudeNet
     flash("Image approuvée et publiée ✅", "success")
     return redirect(url_for("admin.admin_panel"))
@@ -637,7 +641,7 @@ def admin_delete():
         flash("Fichier introuvable.", "warning")
         return redirect(url_for("admin.admin_panel"))
 
-    was_in_review = is_manual_review(meta) and meta.get("moderation_label") != "analyse_impossible"
+    was_in_review = is_manual_review(meta) and meta.get("moderation_label") not in ("analyse_impossible", "signalement")
     ok = delete_by_id(file_id, reason=reason)
     if ok and was_in_review:
         bump_stat("review_deleted")  # alerte justifiée de NudeNet
