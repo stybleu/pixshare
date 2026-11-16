@@ -105,6 +105,8 @@ def create_app(config_overrides: dict | None = None) -> Flask:
     def add_robots_headers(resp):
         if request.path.startswith("/admin"):
             resp.headers["X-Robots-Tag"] = "noindex, nofollow, noarchive"
+        elif request.path.startswith("/static/") and resp.status_code == 200:
+            resp.headers["Cache-Control"] = "public, max-age=604800"  # 7 jours (logo, favicon…)
         return resp
 
     app.register_blueprint(seo_bp)

@@ -52,6 +52,7 @@ def sitemap():
             "loc": f"/image/{file_id}",
             "priority": "0.6",
             "changefreq": "weekly",
+            "lastmod": str(meta.get("uploaded_at") or "")[:10],
         })
 
     today = datetime.utcnow().date().isoformat()
@@ -60,7 +61,8 @@ def sitemap():
     for page in pages:
         xml.append("<url>")
         xml.append(f"<loc>{base}{page['loc']}</loc>")
-        xml.append(f"<lastmod>{today}</lastmod>")
+        if page.get("lastmod"):  # vraie date seulement : une date toujours « aujourd'hui » est ignorée par Google
+            xml.append(f"<lastmod>{page['lastmod']}</lastmod>")
         xml.append(f"<changefreq>{page['changefreq']}</changefreq>")
         xml.append(f"<priority>{page['priority']}</priority>")
         xml.append("</url>")

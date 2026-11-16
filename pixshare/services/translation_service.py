@@ -68,8 +68,9 @@ def get_current_language() -> str:
     if lang in SUPPORTED_LANGS:
         return lang
 
-    header = request.accept_languages.best_match(SUPPORTED_LANGS)
-    return normalize_lang(header)
+    # Sans choix explicite (?lang=en), toujours la langue par défaut : une même adresse
+    # doit toujours montrer la même langue, sinon Google peut indexer la mauvaise.
+    return DEFAULT_LANG
 
 
 def translate(key: str) -> str:
