@@ -35,9 +35,17 @@
     </div>
     <div id="liveMap" role="img" aria-label="Carte des visiteurs actifs"></div>
     <div class="small text-muted mt-2" id="liveGeoHint" hidden>
-      Pas de position reçue : sur Cloudflare, active <strong>Rules → Settings → Managed Transforms → « Add visitor location headers »</strong>.
+      Pas de position pour l'instant : la base de géolocalisation n'est pas encore prête.
     </div>
-    <div class="small text-muted mt-1">Position approximative déduite de l'IP (souvent la grande ville la plus proche, surtout sur mobile). Fond de carte © OpenStreetMap.</div>
+    <div class="small mt-2">
+      Géolocalisation :
+      {% if not geo.enabled %}<span class="badge text-bg-secondary">désactivée (GEOIP=0)</span>
+      {% elif geo.state == "ok" %}<span class="badge text-bg-success">base installée</span> <span class="text-muted">{{ geo.size_mb }} Mo, mise à jour le {{ geo.updated }}</span>
+      {% elif geo.state == "downloading" %}<span class="badge text-bg-info">téléchargement en cours…</span> <span class="text-muted">quelques minutes après le démarrage</span>
+      {% else %}<span class="badge text-bg-warning">indisponible</span> <span class="text-muted">{{ geo.detail }}</span>{% endif %}
+    </div>
+    <div class="small text-muted mt-1">Position approximative déduite de l'IP (souvent la grande ville la plus proche, surtout sur mobile).
+      {{ geo_attribution|safe }} · Fond de carte © OpenStreetMap.</div>
   </div>
 </div>
 

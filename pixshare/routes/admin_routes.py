@@ -773,7 +773,9 @@ def admin_block_ip():
 @admin_bp.route("/admin/live", methods=["GET"], endpoint="admin_live")
 @admin_required
 def admin_live():
-    return render_template("admin_live.html", version=current_app.config["APP_VERSION"])
+    from pixshare.services.geoip_service import ATTRIBUTION_HTML, status
+    return render_template("admin_live.html", geo=status(), geo_attribution=ATTRIBUTION_HTML,
+                           version=current_app.config["APP_VERSION"])
 
 
 @admin_bp.route("/admin/live.json", methods=["GET"], endpoint="admin_live_data")

@@ -127,6 +127,9 @@ def create_app(config_overrides: dict | None = None) -> Flask:
             resp.headers["Cache-Control"] = "public, max-age=604800"  # 7 jours (logo, favicon…)
         return resp
 
+    from .services.geoip_service import start_background_update
+    start_background_update(app)  # base de géolocalisation DB-IP (téléchargée sur le disque, mise à jour mensuelle)
+
     app.register_blueprint(seo_bp)
     app.register_blueprint(public_bp)
     app.register_blueprint(admin_bp)

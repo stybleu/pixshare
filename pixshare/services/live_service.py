@@ -108,6 +108,15 @@ def record(ip: str) -> None:
     region = (h.get("cf-region") or "").strip()[:60]
     country = (h.get("cf-ipcountry") or "").strip().upper()[:2]
     lat, lon = _float(h.get("cf-iplatitude")), _float(h.get("cf-iplongitude"))
+    if lat is None or lon is None or not city:
+        # Pas d'en-têtes Cloudflare (domaine hors de ton compte Cloudflare) : base DB-IP sur le serveur.
+        from pixshare.services.geoip_service import locate
+        geo = locate(ip) or {}
+        city = city or geo.get("city", "")
+        region = region or geo.get("region", "")
+        country = country or geo.get("country", "")
+        lat = lat if lat is not None else _float(geo.get("lat"))
+        lon = lon if lon is not None else _float(geo.get("lon"))
 
     def update():
         data = _prune(_read(), now)
