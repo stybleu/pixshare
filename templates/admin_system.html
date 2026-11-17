@@ -52,6 +52,41 @@
     </div>
   </div>
 
+  <!-- VARIABLES RENDER -->
+  <div class="col-12" id="variables">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h2 class="h6 mb-1">Variables d'environnement (Render)</h2>
+        <div class="small text-muted mb-2">Celles qui sont définies sur Render. Les mots de passe et clés ne sont jamais affichés.</div>
+        {% for level, message in env_check.problems %}
+          <div class="alert alert-{{ level }} small py-2 mb-2">{{ message }}</div>
+        {% else %}
+          <div class="alert alert-success small py-2 mb-2">Aucun problème détecté ✅</div>
+        {% endfor %}
+        {% for g in env_check.groups %}
+          <details class="border rounded p-2 mb-2">
+            <summary class="d-flex justify-content-between gap-2" style="cursor:pointer">
+              <strong class="small">{{ g.title }}</strong>
+              <span class="small text-muted text-nowrap">{{ g.set_count }}/{{ g.rows|length }} définie(s)</span>
+            </summary>
+            <table class="table table-sm small mb-0 mt-2">
+              <caption class="visually-hidden">{{ g.title }}</caption>
+              <tbody>
+                {% for r in g.rows %}
+                  <tr>
+                    <td style="width:1.5rem">{% if r.set %}<span title="définie">✅</span>{% else %}<span title="absente" class="text-muted">—</span>{% endif %}</td>
+                    <td><code>{{ r.name }}</code><div class="text-muted">{{ r.role }}</div></td>
+                    <td class="text-break">{% if r.set %}{{ r.shown }}{% else %}<span class="text-muted">absente (valeur par défaut)</span>{% endif %}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </details>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
   <!-- CONTENU DU DISQUE -->
   <div class="col-12">
     <div class="card shadow-sm">

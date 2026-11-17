@@ -524,6 +524,14 @@ def admin_settings():
     )
 
 
+def _env_check() -> dict:
+    try:
+        from pixshare.services.env_check_service import check
+        return check()
+    except Exception:
+        return {"groups": [], "problems": [("warning", "Vérification des variables impossible.")]}
+
+
 def _mail_alert_status() -> dict:
     try:
         from pixshare.services.mail_service import alert_status
@@ -824,6 +832,7 @@ def admin_system():
         "admin_system.html",
         stats=stats,
         disk=get_disk_contents(),
+        env_check=_env_check(),
         ip_check=ip_check,
         version=current_app.config["APP_VERSION"],
     )
