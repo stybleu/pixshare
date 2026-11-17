@@ -45,12 +45,54 @@ def _forget_geolocation() -> None:
         pass
 
 
+_ERRORS = {
+    400: ("Requête invalide", "La demande n'a pas pu être traitée. Rechargez la page et réessayez."),
+    403: ("Accès refusé", "Vous n'avez pas accès à cette page."),
+    404: ("Page introuvable", "Cette page n'existe pas, ou le fichier a expiré ou été supprimé."),
+    413: ("Fichier trop volumineux", "Le fichier dépasse la taille maximale indiquée sur l'accueil."),
+    429: ("Trop de demandes", "Vous avez fait trop de demandes en peu de temps. Patientez un peu puis réessayez."),
+    500: ("Erreur du serveur", "Un problème est survenu de notre côté. Réessayez dans quelques instants."),
+}
+
+
+def _register_error_pages(app: Flask) -> None:
+    """Pages d'erreur en français, dans le style du site (au lieu du texte anglais par défaut)."""
+    from flask import render_template, request as _req
+    from werkzeug.exceptions import HTTPException
+
+    def handler(error):
+        code = error.code if isinstance(error, HTTPException) else 500
+        title, text = _ERRORS.get(code, ("Erreur", "Une erreur est survenue."))
+        if not _req.accept_mimetypes.accept_html or _req.path.startswith(("/view/", "/file/", "/download/", "/static/")):
+            return f"{code} {title}", code, {"Content-Type": "text/plain; charset=utf-8"}
+        try:
+            return render_template("error.html", code=code, error_title=title, error_text=text), code
+        except Exception:
+            return f"{code} {title}", code, {"Content-Type": "text/plain; charset=utf-8"}
+
+    for code in _ERRORS:
+        app.register_error_handler(code, handler)
+
+
 def create_app(config_overrides: dict | None = None) -> Flask:
     app = Flask(__name__, template_folder="../templates", static_folder="../static")
     app.config.from_object(Config)
     if config_overrides:
         app.config.update(config_overrides)
     app.config["UPLOAD_FOLDER"] = project_path(app, app.config["UPLOAD_FOLDER"])
+
+    @app.template_filter("date_fr")
+    def date_fr(value: str) -> str:
+        """« 17/11/2026 à 17:00 » (heure de Paris) à partir d'une date ISO enregistrée en UTC."""
+        from zoneinfo import ZoneInfo
+
+        from .services.time_service import parse_dt
+        try:
+            return parse_dt(value or "").astimezone(ZoneInfo("Europe/Paris")).strftime("%d/%m/%Y à %H:%M")
+        except Exception:
+            return value or ""
+
+    _register_error_pages(app)
 
     init_storage(app)
     with app.app_context():

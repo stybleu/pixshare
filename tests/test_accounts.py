@@ -123,7 +123,7 @@ def test_guest_and_member_limits(make_app, mails):
     html = guest.get("/").get_data(as_text=True)
     values = [int(v) for v in re.findall(r'<option value="(\d+)"', html.split('id="lifetimeSelect"')[1].split("</select>")[0])]
     assert values[0] == 2 and max(values) == 120  # 2 min à 2 h sans compte
-    assert "Crée un compte gratuit" in html
+    assert "Créez un compte gratuit" in html
 
     user = member(app.test_client(), mails)
     html = user.get("/").get_data(as_text=True)
@@ -172,7 +172,7 @@ def test_my_images_on_every_device_with_private_preview(make_app, mails):
     pc = app.test_client()
     form_post(pc, "/connexion", email="alice@example.com", password=PASSWORD)
     html = pc.get("/").get_data(as_text=True)
-    assert "avant.png" in html and "apres.png" in html and "tous tes appareils" in html
+    assert "avant.png" in html and "apres.png" in html and "tous vos appareils" in html
     file_id = next(fid for fid, m in records(app).items() if m["original_name"] == "apres.png")
     preview = re.search(r'src="(/mes-images/' + file_id + r'/apercu[^"]*)"', html).group(1)
     assert pc.get(preview).status_code == 200

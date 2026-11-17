@@ -87,7 +87,7 @@
     {% if meta.get('expires_at') %}
     <div class="meta-box">
       <div class="meta-label">Expiration</div>
-      <div class="meta-value">{{ meta.get('expires_at') }}</div>
+      <div class="meta-value">{{ meta.get('expires_at')|date_fr }}</div>
     </div>
     {% endif %}
   </div>

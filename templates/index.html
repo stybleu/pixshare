@@ -125,8 +125,8 @@
         {% elif not admin and accounts_open %}
           <div class="alert alert-info small py-2 mb-3">
             Sans compte : jusqu'à {{ limits.guest.life }} et {{ limits.guest.mb }} Mo par fichier.
-            <a href="{{ url_for('account.signup') }}">Crée un compte gratuit</a> pour garder tes images jusqu'à
-            {{ limits.member.life }}, envoyer jusqu'à {{ limits.member.mb }} Mo, les retrouver sur tous tes appareils
+            <a href="{{ url_for('account.signup') }}">Créez un compte gratuit</a> pour garder vos images jusqu'à
+            {{ limits.member.life }}, envoyer jusqu'à {{ limits.member.mb }} Mo, les retrouver sur tous vos appareils
             et les remplacer sans changer le lien.
             <a href="{{ url_for('account.login') }}">Connexion</a>
           </div>
@@ -282,8 +282,8 @@
                       <button class="btn btn-outline-secondary" type="button" id="filePasswordToggle" aria-label="Afficher le mot de passe">👁</button>
                     </div>
                     <div class="form-text">
-                      Il faudra ce mot de passe pour voir ou télécharger le fichier. Toi, tu le vois sans mot de passe depuis ton historique.
-                      Il ne peut pas être récupéré : note-le.
+                      Il faudra ce mot de passe pour voir ou télécharger le fichier. Vous, vous le voyez sans mot de passe depuis votre historique.
+                      Il ne peut pas être récupéré : notez-le.
                     </div>
                   </div>
                   <script>
@@ -334,7 +334,7 @@
       <div class="card-body">
 
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2" id="mes-fichiers">
-          <h2 class="h6 mb-0">{{ _("history_title") }}{% if account %} <span class="small text-muted fw-normal">· tous tes appareils</span>{% endif %}</h2>
+          <h2 class="h6 mb-0">{{ _("history_title") }}{% if account %} <span class="small text-muted fw-normal">· tous vos appareils</span>{% endif %}</h2>
 
           {% if guest_files and guest_files|length > 0 %}
           <span class="badge text-bg-success">{{ guest_files|length }} {{ _("active_count_suffix") }}</span>
@@ -552,8 +552,11 @@
     <li>{{ _("feature_configurable_expiration") }}</li>
     <li>{{ _("feature_preview_before_upload") }}</li>
     <li>{{ _("feature_resize_before_upload") }}</li>
+    <li>{{ _("feature_password_views") }}</li>
+    <li>{{ _("feature_metadata_removed") }}</li>
     <li>{{ _("feature_local_history") }}</li>
     <li>{{ _("feature_api_available") }}</li>
+    <li>{{ _("feature_free_account") }}</li>
   </ul>
 </section>
 

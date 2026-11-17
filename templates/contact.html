@@ -4,7 +4,7 @@
 {% block content %}
 
 <div class="container py-4" style="max-width: 760px;">
-  <h1 class="h4 mb-3">{{ _("contact_report") }}</h1>
+  <h1 class="h4 mb-3">{{ _("contact") }}</h1>
 
   <div class="card shadow-sm">
     <div class="card-body">
@@ -22,6 +22,7 @@
           <select aria-label="{{ _("contact_type_message") }}" name="type" class="form-select">
             <option value="contact" {% if prefill_type == "contact" %}selected{% endif %}>{{ _("contact") }}</option>
             <option value="report" {% if prefill_type == "report" %}selected{% endif %}>{{ _("contact_report") }}</option>
+            <option value="appeal" {% if prefill_type == "appeal" %}selected{% endif %}>{{ _("contact_appeal") }}</option>
           </select>
         </div>
 

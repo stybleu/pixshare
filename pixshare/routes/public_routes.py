@@ -385,6 +385,8 @@ def contact():
             return redirect(url_for("public.contact"))
 
         msg_type = (request.form.get("type") or "contact").strip()
+        if msg_type not in ("contact", "report", "appeal"):
+            msg_type = "contact"
         name = (request.form.get("name") or "").strip()
         email = (request.form.get("email") or "").strip()
         subject = (request.form.get("subject") or "").strip()

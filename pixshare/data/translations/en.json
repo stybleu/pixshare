@@ -85,7 +85,7 @@
   "legal_contact_help": "For any request, use the",
   "legal_intro_service": "PixShare is a temporary file hosting service.",
   "legal_temp_storage": "Files uploaded to PixShare are stored temporarily.",
-  "legal_no_account": "PixShare does not require users to create an account.",
+  "legal_no_account": "Creating an account is optional: the site can be used without one.",
   "legal_not_permanent_storage": "The service is intended for quick file sharing and not for permanent storage.",
   "service_operation_retention": "Service operation and retention period",
   "retention_user_can_choose": "The user may choose a retention period when uploading.",
@@ -152,7 +152,11 @@
   "feature_configurable_expiration": "Configurable file expiration",
   "feature_preview_before_upload": "Image preview before upload",
   "feature_resize_before_upload": "Optional resizing before upload",
-  "feature_local_history": "Local history for uploaded files",
-  "feature_api_available": "API available for automation",
+  "feature_local_history": "History of your files, on all your devices with a free account",
+  "feature_api_available": "Ready-to-paste codes for forums, websites, Discord and Markdown",
+  "feature_password_views": "Optional password and view limit",
+  "feature_metadata_removed": "GPS location and device details automatically removed from photos",
+  "feature_free_account": "Optional free account: keep files longer and replace them without changing the link",
+  "contact_appeal": "Appeal a moderation decision",
   "option_image": "This option applies to images only."
 }
