@@ -11,7 +11,7 @@ from .routes.public_routes import public_bp
 from .routes.admin_routes import admin_bp
 from .routes.seo_routes import seo_bp
 from .services.turnstile_service import site_key, turnstile_required
-from .services.visitor_stats_service import record_page_view, should_count
+from .services.visitor_stats_service import record_image_display, record_page_view, should_count, should_count_display
 from .services.live_service import record as record_live
 from .services.auth_service import is_admin
 from .services.translation_service import apply_requested_language, build_lang_url, get_current_language, translate
@@ -26,6 +26,21 @@ for _ext, _mime in {
     ".bmp": "image/bmp", ".jfif": "image/jpeg", ".jpe": "image/jpeg", ".apng": "image/apng",
 }.items():
     mimetypes.add_type(_mime, _ext)
+
+
+def _forget_geolocation() -> None:
+    """La géolocalisation des visiteurs a été retirée : on efface la base DB-IP téléchargée
+    et les pays/villes déjà comptés dans les statistiques."""
+    import shutil
+
+    from .services.json_services import _get_data_dir
+    from .services.visitor_stats_service import forget_locations
+
+    try:
+        shutil.rmtree(os.path.join(_get_data_dir(), "geoip"), ignore_errors=True)
+        forget_locations()
+    except Exception:
+        pass
 
 
 def create_app(config_overrides: dict | None = None) -> Flask:
@@ -109,12 +124,15 @@ def create_app(config_overrides: dict | None = None) -> Flask:
 
     @app.after_request
     def count_visit(resp):
-        # Statistiques de l'admin : pages vues et visiteurs uniques du jour (sans stocker d'IP).
+        # Statistiques de l'admin : pages vues, visiteurs uniques du jour (sans stocker d'IP)
+        # et sites où les images sont affichées. Aucune localisation, aucun profil de visiteur.
         try:
             if should_count(resp) and not is_admin():
                 ip = get_client_ip()
                 record_page_view(ip)
                 record_live(ip)
+            elif should_count_display(resp) and not is_admin():
+                record_image_display()
         except Exception:
             pass
         return resp
@@ -127,8 +145,7 @@ def create_app(config_overrides: dict | None = None) -> Flask:
             resp.headers["Cache-Control"] = "public, max-age=604800"  # 7 jours (logo, favicon…)
         return resp
 
-    from .services.geoip_service import start_background_update
-    start_background_update(app)  # base de géolocalisation DB-IP (téléchargée sur le disque, mise à jour mensuelle)
+    _forget_geolocation()  # ancienne base de géolocalisation : effacée du disque (fonction retirée)
 
     app.register_blueprint(seo_bp)
     app.register_blueprint(public_bp)

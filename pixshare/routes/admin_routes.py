@@ -773,9 +773,7 @@ def admin_block_ip():
 @admin_bp.route("/admin/live", methods=["GET"], endpoint="admin_live")
 @admin_required
 def admin_live():
-    from pixshare.services.geoip_service import ATTRIBUTION_HTML, status
-    return render_template("admin_live.html", geo=status(), geo_attribution=ATTRIBUTION_HTML,
-                           version=current_app.config["APP_VERSION"])
+    return render_template("admin_live.html", version=current_app.config["APP_VERSION"])
 
 
 @admin_bp.route("/admin/live.json", methods=["GET"], endpoint="admin_live_data")
@@ -786,8 +784,7 @@ def admin_live_data():
     blocked = set(load_blocked())
     for row in rows:
         row["blocked"] = row.get("ip") in blocked
-    located = sum(1 for row in rows if row.get("lat") is not None and row.get("lon") is not None)
-    response = jsonify({"visitors": rows, "count": len(rows), "located": located})
+    response = jsonify({"visitors": rows, "count": len(rows)})
     response.headers["Cache-Control"] = "no-store"
     return response
 

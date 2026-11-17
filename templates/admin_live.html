@@ -4,9 +4,7 @@
 
 {% block robots %}<meta name="robots" content="noindex, nofollow, noarchive">{% endblock %}
 {% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='vendor/leaflet-1.9.4.css') }}">
 <style>
-#liveMap { height: 380px; border-radius: 10px; background: #e9ecef; }
 .live-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #2e9e5b; margin-right: 6px; animation: pulse 1.6s infinite; }
 @keyframes pulse { 0% { opacity: 1; } 50% { opacity: .35; } 100% { opacity: 1; } }
 .ip-toggle { border: 0; background: none; padding: 0; color: inherit; text-decoration: underline dotted; cursor: pointer; font-family: monospace; }
@@ -33,19 +31,7 @@
       <div><span class="fs-4 fw-bold" id="liveCount">…</span> <span class="text-muted">visiteur(s) en ce moment</span></div>
       <div class="small text-muted" id="liveUpdated" role="status" aria-live="polite"></div>
     </div>
-    <div id="liveMap" role="img" aria-label="Carte des visiteurs actifs"></div>
-    <div class="small text-muted mt-2" id="liveGeoHint" hidden>
-      Pas de position pour l'instant : la base de géolocalisation n'est pas encore prête.
-    </div>
-    <div class="small mt-2">
-      Géolocalisation :
-      {% if not geo.enabled %}<span class="badge text-bg-secondary">désactivée (GEOIP=0)</span>
-      {% elif geo.state == "ok" %}<span class="badge text-bg-success">base installée</span> <span class="text-muted">{{ geo.size_mb }} Mo, mise à jour le {{ geo.updated }}</span>
-      {% elif geo.state == "downloading" %}<span class="badge text-bg-info">téléchargement en cours…</span> <span class="text-muted">quelques minutes après le démarrage</span>
-      {% else %}<span class="badge text-bg-warning">indisponible</span> <span class="text-muted">{{ geo.detail }}</span>{% endif %}
-    </div>
-    <div class="small text-muted mt-1">Position approximative déduite de l'IP (souvent la grande ville la plus proche, surtout sur mobile).
-      {{ geo_attribution|safe }} · Fond de carte © OpenStreetMap.</div>
+    <div class="small text-muted">Aucune localisation : seulement la page consultée, et l'IP masquée pour pouvoir bloquer un abus.</div>
   </div>
 </div>
 
@@ -54,8 +40,8 @@
     <h2 class="h6 mb-2">Visiteurs</h2>
     <div class="table-responsive">
       <table class="table table-sm align-middle mb-0">
-        <thead><tr><th>Lieu</th><th>IP</th><th>Page</th><th>Appareil</th><th>Sur le site</th><th>Action</th></tr></thead>
-        <tbody id="liveRows"><tr><td colspan="6" class="text-muted">Chargement…</td></tr></tbody>
+        <thead><tr><th>IP</th><th>Page</th><th>Sur le site</th><th>Action</th></tr></thead>
+        <tbody id="liveRows"><tr><td colspan="4" class="text-muted">Chargement…</td></tr></tbody>
       </table>
     </div>
     <div class="small text-muted mt-2">Touche une IP masquée pour l'afficher en entier. Rien n'est gardé : la liste se vide d'elle-même après 5 minutes sans activité.</div>
@@ -69,55 +55,28 @@
   <input type="hidden" name="hours" id="blockHours">
 </form>
 
-<script src="{{ url_for('static', filename='vendor/leaflet-1.9.4.js') }}"></script>
 <script>
 (function () {
   var DATA_URL = "{{ url_for('admin.admin_live_data') }}";
-  var map = null, layer = null, firstFit = true;
-  if (window.L) {
-    map = L.map("liveMap", { worldCopyJump: true }).setView([46.6, 2.4], 5);
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 18, attribution: "© OpenStreetMap"
-    }).addTo(map);
-    layer = L.layerGroup().addTo(map);
-  } else {
-    document.getElementById("liveMap").textContent = "Carte indisponible (fichiers Leaflet absents).";
-  }
 
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
     return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   function dur(s) { return s < 60 ? s + " s" : s < 3600 ? Math.round(s / 60) + " min" : Math.round(s / 3600) + " h"; }
-  function place(v) { return [v.city, v.country].filter(Boolean).join(", ") || "Inconnu"; }
 
   function render(data) {
     document.getElementById("liveCount").textContent = data.count;
     document.getElementById("liveUpdated").textContent = "Mis à jour à " + new Date().toLocaleTimeString("fr-FR");
-    document.getElementById("liveGeoHint").hidden = !(data.count && !data.located);
     var rows = data.visitors.map(function (v) {
       var action = v.blocked ? '<span class="badge text-bg-secondary">Bloquée</span>' :
         '<div class="d-flex gap-1"><select class="form-select form-select-sm w-auto" aria-label="Durée du blocage" id="h_' + esc(v.id) + '">' +
         {% for h, label in block_durations %}'<option value="{{ h }}"{% if h == default_block_hours %} selected{% endif %}>{{ label }}</option>' + {% endfor %}
         '</select><button class="btn btn-warning btn-sm" data-block="' + esc(v.ip) + '" data-sel="h_' + esc(v.id) + '">Bloquer</button></div>';
-      return "<tr><td>" + esc(place(v)) + (v.region ? '<div class="small text-muted">' + esc(v.region) + "</div>" : "") + "</td>" +
-        '<td><button class="ip-toggle" data-full="' + esc(v.ip) + '" data-masked="' + esc(v.masked) + '">' + esc(v.masked) + "</button></td>" +
+      return '<tr><td><button class="ip-toggle" data-full="' + esc(v.ip) + '" data-masked="' + esc(v.masked) + '">' + esc(v.masked) + "</button></td>" +
         "<td><code>" + esc(v.path) + "</code><div class=\"small text-muted\">" + v.pages + " page(s)</div></td>" +
-        "<td class=\"small\">" + esc(v.device) + "</td>" +
         "<td class=\"small\">" + dur(v.on_site) + '<div class="text-muted">vu il y a ' + dur(v.seen_ago) + "</div></td>" +
         "<td>" + action + "</td></tr>";
     });
-    document.getElementById("liveRows").innerHTML = rows.join("") || '<tr><td colspan="6" class="text-muted">Personne pour le moment.</td></tr>';
-    if (layer) {
-      layer.clearLayers();
-      var pts = [];
-      data.visitors.forEach(function (v) {
-        if (v.lat == null || v.lon == null) return;
-        pts.push([v.lat, v.lon]);
-        L.circleMarker([v.lat, v.lon], { radius: 8, color: "#5b45d6", fillColor: "#7b68ee", fillOpacity: .7 })
-          .bindPopup("<strong>" + esc(place(v)) + "</strong><br>" + esc(v.path) + "<br>" + esc(v.device))
-          .addTo(layer);
-      });
-      if (pts.length && firstFit) { map.fitBounds(pts, { maxZoom: 8, padding: [30, 30] }); firstFit = false; }
-    }
+    document.getElementById("liveRows").innerHTML = rows.join("") || '<tr><td colspan="4" class="text-muted">Personne pour le moment.</td></tr>';
   }
 
   function refresh() {

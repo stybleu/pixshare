@@ -1,4 +1,4 @@
-"""Page « En direct » : visiteurs actifs, position Cloudflare, IP masquée, blocage, oubli après 5 minutes."""
+"""Page « En direct » : visiteurs actifs, sans localisation, IP masquée, blocage, oubli après 5 minutes."""
 import json
 import os
 
@@ -21,15 +21,14 @@ def data(admin):
     return json.loads(admin.get("/admin/live.json").get_data(as_text=True))
 
 
-def test_visitor_appears_with_location_and_masked_ip(make_app):
+def test_visitor_appears_without_location_and_with_masked_ip(make_app):
     app = make_app()
     app.test_client().get("/contact", headers=PARIS, environ_overrides={"REMOTE_ADDR": "86.218.162.249"})
     admin = login(app.test_client())
     d = data(admin)
     v = next(x for x in d["visitors"] if x["path"] == "/contact")
-    assert (v["city"], v["country"], v["lat"], v["lon"]) == ("Chartres", "FR", 48.4469, 1.489)
-    assert v["masked"] == "86.218.x.x" and v["ip"] == "86.218.162.249" and v["device"] == "Mobile · Chrome"
-    assert d["located"] >= 1
+    assert not {"city", "country", "region", "lat", "lon", "device"} & set(v)  # même si Cloudflare envoie la ville
+    assert v["masked"] == "86.218.x.x" and v["ip"] == "86.218.162.249"
 
 
 def test_page_and_json_are_admin_only(make_app):
@@ -38,7 +37,7 @@ def test_page_and_json_are_admin_only(make_app):
     assert anon.get("/admin/live").status_code in (302, 401, 403)
     assert anon.get("/admin/live.json").status_code in (302, 401, 403)
     page = login(app.test_client()).get("/admin/live").get_data(as_text=True)
-    assert "En direct" in page and "leaflet-1.9.4.js" in page
+    assert "En direct" in page and "leaflet" not in page and "openstreetmap" not in page
 
 
 def test_bots_and_admin_not_listed_and_old_visitors_forgotten(make_app, monkeypatch):

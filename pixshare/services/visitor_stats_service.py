@@ -120,24 +120,19 @@ def _page_label(path: str) -> str:
     return path[:40] or "/"
 
 
-def _visitor_profile(ip: str) -> dict:
-    """Pays, ville, appareil, navigateur : uniquement pour des totaux, rien n'est gardé par visiteur."""
-    from pixshare.services.geoip_service import locate
-    from pixshare.services.live_service import _device
-
-    h = request.headers
-    country = (h.get("cf-ipcountry") or "").strip().upper()[:2]
-    city = (h.get("cf-ipcity") or "").strip()[:60]
-    if not country or not city:
-        geo = locate(ip) or {}
-        country = country or geo.get("country", "")
-        city = city or geo.get("city", "")
-    if country in ("XX", "T1"):
-        country = ""
-    device = _device(h.get("User-Agent", ""))
-    kind, _sep, browser = device.partition(" · ")
-    return {"country": country or "??", "city": f"{city}, {country}" if city and country else "",
-            "device": kind, "browser": browser or "Autre"}
+def forget_locations() -> None:
+    """Efface les pays, villes, appareils et navigateurs comptés par les anciennes versions :
+    les statistiques ne disent plus rien sur les visiteurs eux-mêmes."""
+    with _json_lock:
+        data = _load()
+        changed = False
+        for entry in data["days"].values():
+            if isinstance(entry, dict):
+                for old in ("countries", "cities", "devices", "browsers"):
+                    if entry.pop(old, None) is not None:
+                        changed = True
+        if changed:
+            save_json(STATS_FILE, data)
 
 
 def record_page_view(ip: str) -> None:
@@ -161,16 +156,35 @@ def record_page_view(ip: str) -> None:
             if key not in keys:
                 keys.append(key)
                 entry["visitors"] += 1
-                profile = _visitor_profile(ip)  # une fois par visiteur et par jour
-                _bump(entry.setdefault("countries", {}), profile["country"])
-                if profile["city"]:
-                    _bump(entry.setdefault("cities", {}), profile["city"])
-                _bump(entry.setdefault("devices", {}), profile["device"])
-                _bump(entry.setdefault("browsers", {}), profile["browser"])
             _prune(data, today)
             save_json(STATS_FILE, data)
     except Exception:
         _log.exception("Compteur de visites non mis à jour")
+
+
+def should_count_display(response) -> bool:
+    """Image affichée ou téléchargée par son lien (/view/…, /file/…), y compris intégrée sur un autre site."""
+    return (request.method == "GET" and response.status_code == 200
+            and request.path.startswith(("/view/", "/file/", "/download/")))
+
+
+def record_image_display() -> None:
+    """Compte sur quel site une image PixShare est affichée (jamais qui la regarde)."""
+    try:
+        site = _referrer_label()
+        if not site:
+            return  # affichée sur PixShare lui-même
+        if site == "Accès direct":
+            site = "Lien ouvert directement ou dans une appli"
+        today = _today()
+        with _json_lock:
+            data = _load()
+            entry = _day_entry(data, today)
+            entry["displays"] = int(entry.get("displays", 0)) + 1
+            _bump(entry.setdefault("shared_on", {}), site)
+            save_json(STATS_FILE, data)
+    except Exception:
+        _log.exception("Compteur d'affichages non mis à jour")
 
 
 def record_upload() -> None:
@@ -182,31 +196,6 @@ def record_upload() -> None:
             save_json(STATS_FILE, data)
     except Exception:
         _log.exception("Compteur d'envois non mis à jour")
-
-
-_COUNTRIES = {
-    "FR": "France", "BE": "Belgique", "CH": "Suisse", "CA": "Canada", "LU": "Luxembourg", "MC": "Monaco",
-    "DE": "Allemagne", "ES": "Espagne", "IT": "Italie", "PT": "Portugal", "GB": "Royaume-Uni", "IE": "Irlande",
-    "NL": "Pays-Bas", "AT": "Autriche", "PL": "Pologne", "RO": "Roumanie", "SE": "Suède", "NO": "Norvège",
-    "DK": "Danemark", "FI": "Finlande", "CZ": "Tchéquie", "GR": "Grèce", "HU": "Hongrie", "UA": "Ukraine",
-    "RU": "Russie", "TR": "Turquie", "US": "États-Unis", "MX": "Mexique", "BR": "Brésil", "AR": "Argentine",
-    "MA": "Maroc", "DZ": "Algérie", "TN": "Tunisie", "SN": "Sénégal", "CI": "Côte d'Ivoire", "CM": "Cameroun",
-    "CD": "RD Congo", "MG": "Madagascar", "RE": "La Réunion", "GP": "Guadeloupe", "MQ": "Martinique",
-    "GF": "Guyane", "NC": "Nouvelle-Calédonie", "PF": "Polynésie française", "IN": "Inde", "CN": "Chine",
-    "JP": "Japon", "KR": "Corée du Sud", "VN": "Viêt Nam", "SG": "Singapour", "AU": "Australie", "IL": "Israël",
-    "AE": "Émirats arabes unis", "SA": "Arabie saoudite", "EG": "Égypte", "ZA": "Afrique du Sud", "NG": "Nigeria",
-    "??": "Inconnu",
-}
-
-
-def country_name(code: str) -> str:
-    return _COUNTRIES.get(code, code)
-
-
-def flag(code: str) -> str:
-    if len(code) != 2 or not code.isalpha() or code == "??":
-        return "🌐"
-    return "".join(chr(0x1F1E6 + ord(c) - ord("A")) for c in code.upper())
 
 
 def summary(days: int = 30) -> dict:
@@ -254,10 +243,8 @@ def summary(days: int = 30) -> dict:
         "week": {key: total(7, key) for key in ("visitors", "views", "uploads")},
         "month": {key: total(30, key) for key in ("visitors", "views", "uploads")},
         "peak": peak if peak and peak["visitors"] else None,
-        "countries": [dict(r, name=country_name(r["key"]), flag=flag(r["key"])) for r in top("countries", limit=15)],
-        "cities": top("cities"),
-        "devices": top("devices", limit=5),
-        "browsers": top("browsers", limit=6),
+        "shared_on": top("shared_on"),
+        "displays": sum(int((data["days"].get((today - timedelta(days=o)).isoformat()) or {}).get("displays", 0)) for o in range(days)),
         "referrers": top("referrers"),
         "pages": top("pages", limit=8),
         "hours": hours,

@@ -80,14 +80,10 @@
     </div>
   </div>
 {% endmacro %}
-{% macro country_label(r) %}{{ r.flag }} {{ r.name }}{% endmacro %}
 
-<h2 class="h5 mt-4 mb-2">Qui utilise PixShare ? <span class="small text-muted fw-normal">(30 derniers jours, visiteurs uniques par jour)</span></h2>
+<h2 class="h5 mt-4 mb-2">Comment PixShare est utilisé <span class="small text-muted fw-normal">(30 derniers jours, sans rien savoir des visiteurs)</span></h2>
 <div class="row g-3 mb-3">
-  {{ ranking("Pays", st.countries, "Position déduite de l'IP (approximative).", country_label) }}
-  {{ ranking("Villes", st.cities) }}
-  {{ ranking("Appareils", st.devices) }}
-  {{ ranking("Navigateurs", st.browsers) }}
+  {{ ranking("Où les images sont partagées", st.shared_on, "Site sur lequel une image PixShare a été affichée ou téléchargée (" ~ st.displays ~ " fois en 30 jours).") }}
   {{ ranking("Comment ils arrivent", st.referrers, "Site d'où vient le visiteur (« Accès direct » = lien tapé, favori ou appli).") }}
   {{ ranking("Pages les plus vues", st.pages, "En pages vues.") }}
 </div>
@@ -108,7 +104,7 @@
 <div class="card shadow-sm mb-3" id="rentabilite">
   <div class="card-body">
     <h2 class="h6 mb-1">La publicité couvrirait-elle les frais ?</h2>
-    <div class="small text-muted mb-2">Estimation à partir de tes vraies pages vues des 30 derniers jours. Le revenu pour 1 000 pages vues (RPM) dépend beaucoup du pays des visiteurs, du sujet du site et des bloqueurs de pub : mets le chiffre que la régie t'annonce.</div>
+    <div class="small text-muted mb-2">Estimation à partir de tes vraies pages vues des 30 derniers jours. Le revenu pour 1 000 pages vues (RPM) dépend beaucoup du public, du sujet du site et des bloqueurs de pub : mets le chiffre que la régie t'annonce.</div>
     <div class="row g-2 align-items-end">
       <div class="col-6 col-md-3">
         <label class="form-label small mb-1" for="rpm">Revenu pour 1 000 pages (€)</label>

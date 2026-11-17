@@ -6,7 +6,7 @@ import os
 from PIL import Image
 
 from conftest import csrf, login
-from pixshare.services import visitor_stats_service
+from pixshare.services import json_services, visitor_stats_service
 
 FIREFOX = "Mozilla/5.0 (Android 14; Mobile; rv:130.0) Gecko/130.0 Firefox/130.0"
 
@@ -66,23 +66,57 @@ def test_uploads_counted_and_admin_page(make_app):
     assert "Statistiques de visite" in page and "Visiteurs par jour" in page and "1 envoi" in page
 
 
-def test_audience_breakdown(make_app, monkeypatch):
-    from pixshare.services import geoip_service
-
-    monkeypatch.setattr(geoip_service, "locate", lambda ip: {"country": "BE", "city": "Liège"} if ip.endswith(".2") else {"country": "FR", "city": "Chartres"})
+def test_usage_without_knowing_visitors(make_app):
     app = make_app()
     client = app.test_client()
     visit(client, "198.51.100.1")
-    client.get("/contact", headers={"User-Agent": FIREFOX, "Referer": "https://www.google.fr/search?q=pixshare"},
+    client.get("/contact", headers={"User-Agent": FIREFOX, "Referer": "https://www.google.fr/search?q=pixshare",
+                                    "cf-ipcountry": "FR", "cf-ipcity": "Chartres"},
                environ_overrides={"REMOTE_ADDR": "198.51.100.1"})
     client.get("/", headers={"User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) Mobile Safari/604.1",
                              "Referer": "https://discord.com/channels/1/2"}, environ_overrides={"REMOTE_ADDR": "198.51.100.2"})
     with app.app_context():
         st = visitor_stats_service.summary(30)
-    countries = {r["key"]: r["count"] for r in st["countries"]}
-    assert countries == {"FR": 1, "BE": 1}
-    assert {r["key"] for r in st["cities"]} == {"Chartres, FR", "Liège, BE"}
+        raw = json_services.load_json(visitor_stats_service.STATS_FILE, {})
     assert {r["key"]: r["count"] for r in st["referrers"]} == {"Accès direct": 1, "Google": 1, "Discord": 1}
-    assert sum(st["hours"]) == 3 and {r["key"]: r["count"] for r in st["devices"]} == {"Mobile": 2} and {r["key"] for r in st["browsers"]} == {"Firefox", "Safari"}
+    assert sum(st["hours"]) == 3
+    text = str(raw)
+    for personal in ("countries", "cities", "devices", "browsers", "Chartres", "FR", "Firefox", "iPhone", "198.51"):
+        assert personal not in text, personal
     page = login(app.test_client()).get("/admin/stats").get_data(as_text=True)
-    assert "🇫🇷 France" in page and "Belgique" in page and "La publicité couvrirait-elle les frais" in page
+    assert "Pays" not in page and "Villes" not in page and "Appareils" not in page
+    assert "La publicité couvrirait-elle les frais" in page
+
+
+def test_sites_where_images_are_shared(make_app):
+    app = make_app()
+    client = app.test_client()
+    buf = io.BytesIO()
+    Image.new("RGB", (9, 9)).save(buf, "PNG")
+    client.post("/", data={"csrf_token": csrf(client), "file": (io.BytesIO(buf.getvalue()), "a.png")},
+                content_type="multipart/form-data")
+    with app.app_context():
+        file_id = next(iter(json_services.load_db()))
+    viewer = app.test_client()
+    for ref in ("https://forum.exemple.fr/topic/12", "https://forum.exemple.fr/topic/13", "https://www.reddit.com/r/x"):
+        assert viewer.get(f"/view/{file_id}", headers={"Referer": ref, "Sec-Fetch-Dest": "image"}).status_code == 200
+    viewer.get(f"/view/{file_id}", headers={"Sec-Fetch-Dest": "image"})
+    with app.app_context():
+        st = visitor_stats_service.summary(30)
+    assert {r["key"]: r["count"] for r in st["shared_on"]} == {
+        "forum.exemple.fr": 2, "Reddit": 1, "Lien ouvert directement ou dans une appli": 1}
+    assert st["displays"] == 4
+    page = login(app.test_client()).get("/admin/stats").get_data(as_text=True)
+    assert "Où les images sont partagées" in page and "forum.exemple.fr" in page
+
+
+def test_old_location_counters_are_erased(make_app):
+    app = make_app()
+    with app.app_context():
+        day = visitor_stats_service._today().isoformat()
+        json_services.save_json(visitor_stats_service.STATS_FILE, {"days": {day: {
+            "visitors": 1, "views": 1, "uploads": 0, "countries": {"FR": 1}, "cities": {"Chartres, FR": 1},
+            "devices": {"Mobile": 1}, "browsers": {"Firefox": 1}}}})
+        visitor_stats_service.forget_locations()
+        entry = json_services.load_json(visitor_stats_service.STATS_FILE, {})["days"][day]
+    assert entry == {"visitors": 1, "views": 1, "uploads": 0}

@@ -1,7 +1,7 @@
 """Visiteurs « en direct » pour l'admin : qui est sur le site depuis les 5 dernières minutes.
 
-Position approximative fournie par Cloudflare (option « Add visitor location headers ») :
-ville, pays, latitude/longitude déduites de l'IP. Rien n'est écrit sur le disque persistant :
+Aucune localisation ni profil : seulement l'IP (pour pouvoir bloquer un abus) et la page consultée.
+Rien n'est écrit sur le disque persistant :
 un petit fichier dans le dossier temporaire du serveur (partagé entre les workers), vidé au fil
 de l'eau (5 minutes) et effacé à chaque redémarrage.
 """
@@ -10,7 +10,6 @@ from __future__ import annotations
 import ipaddress
 import json
 import os
-import re
 import tempfile
 import threading
 import time
@@ -41,24 +40,6 @@ def mask_ip(ip: str) -> str:
         return f"{parts[0]}.{parts[1]}.x.x"
     groups = addr.exploded.split(":")
     return f"{groups[0].lstrip('0') or '0'}:{groups[1].lstrip('0') or '0'}:x:x"
-
-
-def _device(ua: str) -> str:
-    ua = ua or ""
-    kind = "Tablette" if re.search(r"iPad|Tablet", ua) else "Mobile" if re.search(r"Mobi|Android|iPhone", ua) else "Ordinateur"
-    for name, pattern in (("Edge", r"Edg/"), ("Opera", r"OPR/"), ("Samsung", r"SamsungBrowser"),
-                          ("Firefox", r"Firefox/"), ("Chrome", r"Chrome/"), ("Safari", r"Safari/")):
-        if re.search(pattern, ua):
-            return f"{kind} · {name}"
-    return kind
-
-
-def _float(value):
-    try:
-        number = float(value)
-    except (TypeError, ValueError):
-        return None
-    return number if -180.0 <= number <= 180.0 else None
 
 
 def _read() -> dict:
@@ -104,28 +85,14 @@ def record(ip: str) -> None:
     ua = h.get("User-Agent", "")
     now = time.time()
     key = _visitor_key(ip or "?", ua, _today())
-    city = (h.get("cf-ipcity") or "").strip()[:60]
-    region = (h.get("cf-region") or "").strip()[:60]
-    country = (h.get("cf-ipcountry") or "").strip().upper()[:2]
-    lat, lon = _float(h.get("cf-iplatitude")), _float(h.get("cf-iplongitude"))
-    if lat is None or lon is None or not city:
-        # Pas d'en-têtes Cloudflare (domaine hors de ton compte Cloudflare) : base DB-IP sur le serveur.
-        from pixshare.services.geoip_service import locate
-        geo = locate(ip) or {}
-        city = city or geo.get("city", "")
-        region = region or geo.get("region", "")
-        country = country or geo.get("country", "")
-        lat = lat if lat is not None else _float(geo.get("lat"))
-        lon = lon if lon is not None else _float(geo.get("lon"))
-
     def update():
         data = _prune(_read(), now)
         entry = data.get(key) or {"first": now, "pages": 0}
         entry.update({
             "ip": ip or "", "masked": mask_ip(ip or ""), "last": now, "path": request.path[:120],
-            "device": _device(ua), "city": city, "region": region, "country": country,
-            "lat": lat, "lon": lon,
         })
+        for old in ("city", "region", "country", "lat", "lon", "device"):
+            entry.pop(old, None)
         entry["pages"] = int(entry.get("pages", 0)) + 1
         data[key] = entry
         _write(data)
