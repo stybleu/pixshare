@@ -74,8 +74,8 @@ OBSOLETE = {
     "PERMANENT_UPLOADS_ADMIN_ONLY": "fichiers permanents retirés",
 }
 # Préfixes qui ressemblent à des variables de PixShare : un nom inconnu est sans doute une faute de frappe.
-_PREFIXES = ("MAIL_", "ACCOUNT_", "NSFW_", "TURNSTILE_", "PIXSHARE_", "ADMIN_", "UPLOAD_", "MAX_", "GEOIP",
-             "SUPPORT_", "SEASON_", "SKY_", "REPORT_", "BANNED_", "DISK_", "RAM_", "MODERATION_", "SMTP_")
+_PREFIXES = ("MAIL_", "ACCOUNT_MAIL", "NSFW_", "TURNSTILE_", "PIXSHARE_", "ADMIN_", "UPLOAD_", "MAX_LIFETIME", "GEOIP",
+             "SUPPORT_URL", "SEASON_", "SKY_THEME", "REPORT_HIDE", "BANNED_", "DISK_RESERVE", "RAM_LIMIT", "MODERATION_")
 
 
 def _shown(name: str, value: str, secret: bool) -> str:

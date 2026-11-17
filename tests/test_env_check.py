@@ -31,3 +31,10 @@ def test_account_mail_checks(monkeypatch):
     messages = " ".join(m for _lvl, m in env_check_service.check()["problems"])
     assert "il manque ACCOUNT_MAIL_SMTP_PASS" in messages
     assert "Gmail refuse un expéditeur différent" in messages
+
+
+def test_unrelated_variables_are_not_reported(monkeypatch):
+    monkeypatch.setenv("MAX_THINKING_TOKENS", "1")
+    monkeypatch.setenv("WEB_CONCURRENCY", "2")
+    messages = " ".join(m for _lvl, m in env_check_service.check()["problems"])
+    assert "MAX_THINKING_TOKENS" not in messages and "WEB_CONCURRENCY" not in messages
