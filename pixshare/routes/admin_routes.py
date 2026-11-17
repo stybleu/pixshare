@@ -511,6 +511,7 @@ def admin_settings():
         support_saved=settings.get("support_url") or "",
         support_now=get_support_url(),
         mail_ready=mail_configured(),
+        mail_alert=_mail_alert_status(),
         settings_export=export_settings(),
         settings_export_saved=export_matches_env(),
         nsfw=_nsfw_context(),
@@ -521,6 +522,14 @@ def admin_settings():
         sky_on_setting=sky_enabled(settings.get("sky_enabled")),
         version=current_app.config["APP_VERSION"],
     )
+
+
+def _mail_alert_status() -> dict:
+    try:
+        from pixshare.services.mail_service import alert_status
+        return alert_status()
+    except Exception:
+        return {}
 
 
 def _nsfw_context() -> dict:

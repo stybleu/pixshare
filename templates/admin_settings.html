@@ -321,6 +321,11 @@
     <div class="text-muted small mb-3">Tu reçois un mail quand NudeNet met une image de côté « à vérifier » : 1 mail au plus toutes les 5 minutes, avec la liste des images en attente.</div>
     {% if mail_ready %}
       <div class="mb-2"><span class="badge text-bg-success">Configuré</span></div>
+      <div class="small mb-2">
+        Dernière alerte envoyée : <strong>{{ mail_alert.last_sent_at|date_fr if mail_alert.last_sent_at else "jamais" }}</strong>
+        {% if mail_alert.unsent %}· <span class="badge text-bg-warning">{{ mail_alert.unsent }} image(s) à vérifier pas encore annoncée(s)</span>{% endif %}
+        {% if mail_alert.last_error %}<div class="text-danger mt-1">Dernier échec : {{ mail_alert.last_error }}</div>{% endif %}
+      </div>
       <form method="post" action="{{ url_for('admin.admin_mail_test') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <button class="btn btn-outline-primary btn-sm" type="submit">Envoyer un mail de test</button>

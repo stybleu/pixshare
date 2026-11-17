@@ -201,6 +201,10 @@ def create_app(config_overrides: dict | None = None) -> Flask:
 
     _forget_geolocation()  # ancienne base de géolocalisation : effacée du disque (fonction retirée)
 
+    if not app.config.get("TESTING"):
+        from .services.mail_service import resume_pending_alert
+        resume_pending_alert(app)  # mail d'alerte perdu lors d'un redémarrage : renvoyé
+
     app.register_blueprint(seo_bp)
     app.register_blueprint(public_bp)
     app.register_blueprint(admin_bp)

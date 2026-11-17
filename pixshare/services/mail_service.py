@@ -21,7 +21,7 @@ from email.message import EmailMessage
 
 from flask import current_app
 
-from pixshare.services.json_services import load_db
+from pixshare.services.json_services import _json_lock, load_db, load_json, save_json
 from pixshare.services.settings_service import nsfw_class_label
 
 _log = logging.getLogger(__name__)
@@ -33,6 +33,40 @@ MAX_LISTED = 10      # images listées dans un mail
 _lock = threading.Lock()
 _last_sent = None
 _timer = None
+ALERT_FILE = "mail_alert.json"  # date du dernier mail réussi, sur le disque (partagée entre workers, survit aux déploiements)
+RETRY_DELAY = 600    # secondes avant de réessayer après un échec d'envoi
+
+
+def _last_alert_at() -> str:
+    data = load_json(ALERT_FILE, {})
+    return str(data.get("last_sent_at") or "") if isinstance(data, dict) else ""
+
+
+def _remember_alert(status: str, detail: str = "") -> None:
+    from pixshare.services.time_service import utcnow
+
+    with _json_lock:
+        data = load_json(ALERT_FILE, {})
+        data = data if isinstance(data, dict) else {}
+        now = utcnow().isoformat(timespec="seconds")
+        if status == "ok":
+            data["last_sent_at"] = now
+            data["last_error"] = ""
+        else:
+            data["last_error"] = f"{now} : {detail}"[:300]
+        save_json(ALERT_FILE, data)
+
+
+def _unsent_reviews() -> int:
+    """Images « à vérifier » arrivées depuis le dernier mail réussi."""
+    since = _last_alert_at()
+    count = 0
+    for meta in load_db().values():
+        if (isinstance(meta, dict) and str(meta.get("status") or "").lower() == "pending"
+                and str(meta.get("moderation_decision") or "").lower() == "manual_review"
+                and str(meta.get("moderated_at") or "") > since):
+            count += 1
+    return count
 
 
 def _cfg(prefix: str = "MAIL_") -> dict:
@@ -168,18 +202,55 @@ def _build_summary(app):
     return subject, body, html, images
 
 
-def _flush(app) -> None:
+def _flush(app, attempt: int = 1) -> None:
     global _last_sent, _timer
     with _lock:
         _timer = None
         _last_sent = time.monotonic()
     try:
+        with app.app_context():
+            if not _unsent_reviews():
+                return  # déjà annoncé (par un autre worker, ou avant un redémarrage)
         mail = _build_summary(app)
-        if mail:
-            subject, body, html, images = mail
-            send_mail_now(subject, body, html=html, images=images)
+        if not mail:
+            return
+        subject, body, html, images = mail
+        ok, detail = send_mail_now(subject, body, html=html, images=images)
+        with app.app_context():
+            _remember_alert("ok" if ok else "error", detail)
+        if not ok and attempt < 3:
+            _log.warning("Alerte mail non envoyée (%s), nouvel essai dans %s s", detail, RETRY_DELAY)
+            _schedule(app, RETRY_DELAY, attempt + 1)
     except Exception:
         _log.exception("Alerte mail interrompue")
+
+
+def _schedule(app, delay: float, attempt: int = 1) -> None:
+    global _timer
+    with _lock:
+        if _timer is not None:
+            return
+        _timer = threading.Timer(delay, _flush, args=(app, attempt))
+        _timer.daemon = True
+        _timer.start()
+
+
+def resume_pending_alert(app) -> None:
+    """Au démarrage (après un déploiement) : si des images à vérifier n'ont pas encore été annoncées
+    — le mail prévu a pu être perdu au redémarrage —, on le reprogramme."""
+    try:
+        with app.app_context():
+            if mail_configured() and _unsent_reviews():
+                _schedule(app, DELAY)
+    except Exception:
+        _log.exception("Reprise de l'alerte mail impossible")
+
+
+def alert_status() -> dict:
+    data = load_json(ALERT_FILE, {})
+    data = data if isinstance(data, dict) else {}
+    return {"last_sent_at": data.get("last_sent_at", ""), "last_error": data.get("last_error", ""),
+            "unsent": _unsent_reviews()}
 
 
 def notify_review() -> None:
@@ -193,6 +264,4 @@ def notify_review() -> None:
             return  # un mail est déjà prévu : il listera aussi cette image
         since = (time.monotonic() - _last_sent) if _last_sent is not None else MIN_INTERVAL
         delay = max(DELAY, MIN_INTERVAL - since)
-        _timer = threading.Timer(delay, _flush, args=(app,))
-        _timer.daemon = True
-        _timer.start()
+    _schedule(app, delay)
