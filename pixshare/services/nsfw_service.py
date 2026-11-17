@@ -413,6 +413,8 @@ def release_waiting_images() -> int:
     released = 0
     for file_id, meta in list(db.items()):
         if _is_waiting_image(meta):
+            from pixshare.services.moderation_service import start_lifetime_now
+            start_lifetime_now(meta)
             meta["status"] = "active"
             meta["moderated_at"] = _utc_now_iso()
             meta["moderation_decision"] = "not_required"

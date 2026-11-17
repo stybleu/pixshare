@@ -96,8 +96,32 @@ def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+def start_lifetime_now(meta: dict) -> None:
+    """Le délai de l'image ne compte qu'à partir de sa publication : le temps passé en vérification
+    (analyse automatique ou revue par l'admin) est rajouté à la date d'expiration."""
+    from datetime import timedelta
+
+    from pixshare.services.time_service import parse_dt, utcnow
+
+    if meta.get("permanent") or not meta.get("expires_at") or meta.get("lifetime_started_at"):
+        return
+    try:
+        start = parse_dt(meta.get("moderation_requested_at") or meta.get("uploaded_at") or "")
+        expires = parse_dt(meta["expires_at"])
+    except Exception:
+        return
+    now = utcnow()
+    paused = now - start
+    if start.year < 2000 or paused.total_seconds() <= 0:
+        return
+    meta["expires_at"] = (expires + paused).isoformat(timespec="seconds")
+    meta["lifetime_started_at"] = now.isoformat(timespec="seconds")
+    meta["paused_seconds"] = int(paused.total_seconds())
+
+
 def approve_image(database: dict, file_id: str, meta: dict, detector: str, score: float | None) -> None:
     """Publie une image en attente (utilisé par l'API de modération et par NudeNet intégré)."""
+    start_lifetime_now(meta)
     meta["status"] = "active"
     meta["moderated_at"] = _utc_now_iso()
     meta["moderation_decision"] = "approved"

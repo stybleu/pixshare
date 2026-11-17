@@ -208,6 +208,8 @@
                   <span class="badge text-bg-dark">Permanent</span>
                 {% elif f.status == "active" and f.remaining_h %}
                   <span class="badge text-bg-info">{{ f.remaining_h }}</span>
+                {% elif f.status == "pending" %}
+                  <span class="badge text-bg-light border">⏸ en pause jusqu'à la vérification</span>
                 {% else %}
                   <span>—</span>
                 {% endif %}
@@ -215,7 +217,9 @@
 
               <div>
                 Date d'expiration :
-                {% if f.expires_at %}
+                {% if f.status == "pending" %}
+                  <span>repoussée du temps de la vérification</span>
+                {% elif f.expires_at %}
                   <span>{{ f.expires_at|date_fr }}</span>
                 {% elif f.permanent %}
                   <span>Sans expiration</span>

@@ -361,9 +361,16 @@ def cleanup_expired() -> int:
             changed = True
             continue
 
-        exp = parse_dt(meta.get("expires_at", ""))
-        if exp > now:
-            continue
+        if status == "pending":
+            # En vérification : le délai est en pause (il démarre à la publication).
+            # Une image jamais vérifiée finit quand même par être effacée au bout de 30 jours.
+            waiting_since = parse_dt(meta.get("moderation_requested_at") or meta.get("uploaded_at") or "")
+            if waiting_since.year < 2000 or now - waiting_since < timedelta(days=PENDING_MAX_DAYS):
+                continue
+        else:
+            exp = parse_dt(meta.get("expires_at", ""))
+            if exp > now:
+                continue
 
         server_name = os.path.basename(meta.get("server_name", ""))
         path = os.path.join(current_app.config["UPLOAD_FOLDER"], server_name)
@@ -393,6 +400,9 @@ def cleanup_expired() -> int:
 
 
 _last_cleanup = 0.0
+
+
+PENDING_MAX_DAYS = 30
 
 
 def cleanup_expired_soon(interval: float = 60.0) -> int:

@@ -326,6 +326,8 @@ def index():
 
         if item.get("status") == "active":
             item["remaining_time"] = get_remaining_time_label(item.get("expires_at"))
+        elif item.get("status") == "pending":
+            item["remaining_time"] = "⏸ délai en pause pendant la vérification"
         else:
             item["remaining_time"] = ""
             
