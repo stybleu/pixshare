@@ -52,6 +52,65 @@
     </div>
   </div>
 
+  <!-- CONTENU DU DISQUE -->
+  <div class="col-12">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-1">
+          <h2 class="h6 mb-0">Contenu du disque</h2>
+          <a class="btn btn-primary btn-sm" href="{{ url_for('admin.admin_disk') }}">📂 Explorer le disque</a>
+        </div>
+        {% if disk.ok %}
+          <div class="small text-muted mb-2">
+            Dossier <code>{{ disk.root }}</code> : <strong>{{ disk.total_h }}</strong> au total.
+            Résumé par dossier ; l'explorateur montre chaque fichier.
+          </div>
+          {% for f in disk.folders %}
+            <details class="border rounded p-2 mb-2">
+              <summary class="d-flex flex-wrap justify-content-between gap-2" style="cursor:pointer">
+                <span>📁 <a href="{{ url_for('admin.admin_disk', chemin=f.name) }}"><strong>{{ f.name }}</strong></a>{% if f.desc %} <span class="small text-muted">· {{ f.desc }}</span>{% endif %}</span>
+                <span class="small">{{ f.size_h }} · {{ f.count }} fichier(s){% if f.partial %} (au moins){% endif %}</span>
+              </summary>
+              <div class="progress my-2" style="height: 6px;" aria-hidden="true"><div class="progress-bar" style="width: {{ f.pct }}%;"></div></div>
+              {% if f.kinds %}
+                <table class="table table-sm small mb-1">
+                  <caption class="visually-hidden">Types de fichiers dans {{ f.name }}</caption>
+                  <thead><tr><th scope="col">Type</th><th scope="col">Fichiers</th><th scope="col">Taille</th></tr></thead>
+                  <tbody>
+                    {% for k in f.kinds %}<tr><td>{{ k.name }}</td><td>{{ k.count }}</td><td>{{ k.size_h }}</td></tr>{% endfor %}
+                  </tbody>
+                </table>
+              {% else %}
+                <div class="small text-muted">Vide.</div>
+              {% endif %}
+              <div class="small text-muted">{% if f.subdirs %}{{ f.subdirs }} sous-dossier(s) · {% endif %}{% if f.newest %}dernier changement le {{ f.newest }}{% endif %}</div>
+            </details>
+          {% endfor %}
+          {% if disk.files %}
+            <details class="border rounded p-2">
+              <summary class="d-flex flex-wrap justify-content-between gap-2" style="cursor:pointer">
+                <span>🗂 <strong>Fichiers de données</strong> <span class="small text-muted">· réglages, listes, statistiques</span></span>
+                <span class="small">{{ disk.files_total_h }} · {{ disk.files|length }} fichier(s)</span>
+              </summary>
+              <table class="table table-sm small mb-0 mt-2">
+                <caption class="visually-hidden">Fichiers de données du disque</caption>
+                <thead><tr><th scope="col">Fichier</th><th scope="col">Taille</th><th scope="col">Modifié</th></tr></thead>
+                <tbody>
+                  {% for f in disk.files %}
+                    <tr><td><code>{{ f.name }}</code>{% if f.desc %}<div class="text-muted">{{ f.desc }}</div>{% endif %}</td><td>{{ f.size_h }}</td><td>{{ f.newest }}</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </details>
+          {% endif %}
+          {% if disk.partial %}<div class="small text-warning mt-2">Très nombreux fichiers : le comptage s'est arrêté avant la fin.</div>{% endif %}
+        {% else %}
+          <div class="text-muted">Indisponible : {{ disk.error }}</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
   <!-- RAM PROCESSUS -->
   <div class="col-12 col-lg-6">
     <div class="card shadow-sm">

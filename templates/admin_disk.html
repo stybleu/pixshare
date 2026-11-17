@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block sr_h1 %}{% endblock %}
+{% set title = "Admin - Disque" %}
+{% block robots %}<meta name="robots" content="noindex, nofollow, noarchive">{% endblock %}
+{% block head %}
+<style>
+.explorer a.row-link { text-decoration: none; color: inherit; display: block; }
+.explorer .entry { border-bottom: 1px solid var(--bs-border-color); padding: .45rem .25rem; }
+.explorer .entry:hover { background: var(--bs-tertiary-bg); }
+.explorer .name { overflow-wrap: anywhere; min-width: 0; }
+</style>
+{% endblock %}
+
+{% macro here(rel, tri=d.sort, page=none) -%}
+{{ url_for('admin.admin_disk', chemin=rel or none, tri=(tri if tri != 'nom' else none), page=page) }}
+{%- endmacro %}
+
+{% block content %}
+<div class="d-flex flex-wrap gap-2 align-items-center justify-content-between mb-3">
+  <div>
+    <h1 class="h4 mb-0">Disque</h1>
+    <div class="text-muted small">
+      {% if storage.ok %}{{ storage.used_mb }} Mo utilisés sur {{ storage.total_mb }} Mo ({{ storage.free_mb }} Mo libres) · {% endif %}lecture seule
+    </div>
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_system') }}">Système</a>
+    <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_panel') }}">Fichiers</a>
+  </div>
+</div>
+
+<div class="card shadow-sm explorer">
+  <div class="card-body">
+    <nav aria-label="Emplacement" class="mb-2">
+      <ol class="breadcrumb mb-0 small">
+        <li class="breadcrumb-item"><a href="{{ here('') }}">💾 {{ d.root }}</a></li>
+        {% for c in d.crumbs %}
+          {% if loop.last %}<li class="breadcrumb-item active" aria-current="page">{{ c.name }}</li>
+          {% else %}<li class="breadcrumb-item"><a href="{{ here(c.rel) }}">{{ c.name }}</a></li>{% endif %}
+        {% endfor %}
+      </ol>
+    </nav>
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 small mb-2">
+      <span class="text-muted">{{ d.dirs|length }} dossier(s), {{ d.file_count }} fichier(s) · {{ d.total_h }}</span>
+      <span>Trier :
+        {% for key, label in [("nom", "nom"), ("taille", "taille"), ("date", "date")] %}
+          {% if d.sort == key %}<strong>{{ label }}</strong>{% else %}<a href="{{ here(d.rel, key) }}">{{ label }}</a>{% endif %}{% if not loop.last %} · {% endif %}
+        {% endfor %}
+      </span>
+    </div>
+
+    {% if d.parent is not none %}
+      <div class="entry"><a class="row-link" href="{{ here(d.parent) }}">⬆️ <strong>..</strong> <span class="small text-muted">dossier parent</span></a></div>
+    {% endif %}
+
+    {% for f in d.dirs %}
+      <div class="entry">
+        <a class="row-link d-flex justify-content-between gap-2" href="{{ here(f.rel) }}">
+          <span class="name">📁 <strong>{{ f.name }}</strong>{% if f.desc %}<span class="small text-muted d-block">{{ f.desc }}</span>{% endif %}</span>
+          <span class="small text-muted text-end text-nowrap">{{ f.size_h }}<br>{{ f.count }} fichier(s){% if f.partial %}+{% endif %}</span>
+        </a>
+      </div>
+    {% endfor %}
+
+    {% for f in d.files %}
+      <div class="entry d-flex justify-content-between gap-2">
+        <div class="name">
+          {% if f.kind in (".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".jfif", ".jpe", "aperçus .webp", ".avif") %}🖼️{% elif f.kind in (".mp4", ".webm", ".mov", ".avi") %}🎞️{% elif f.kind == ".json" %}🧾{% else %}📄{% endif %}
+          <a href="{{ url_for('admin.admin_disk_open', chemin=f.rel) }}" target="_blank" rel="noopener">{{ f.name }}</a>
+          {% if f.desc %}<span class="small text-muted d-block">{{ f.desc }}</span>{% endif %}
+          {% if d.is_uploads %}
+            <span class="small d-block">
+              {% if f.orphan %}
+                <span class="badge text-bg-warning">orphelin</span> <span class="text-muted">aucune fiche dans la liste des fichiers</span>
+              {% else %}
+                {% if f.preview %}<span class="badge text-bg-light border">aperçu</span>{% endif %}
+                {% if f.status == "active" %}<span class="badge text-bg-success">en ligne</span>
+                {% elif f.status == "pending" %}<span class="badge text-bg-warning">en attente</span>
+                {% else %}<span class="badge text-bg-secondary">{{ f.status }}</span>{% endif %}
+                <span class="text-muted">« {{ f.original }} »{% if f.expires %} · expire le {{ f.expires }}{% endif %}</span>
+              {% endif %}
+            </span>
+          {% endif %}
+        </div>
+        <span class="small text-muted text-end text-nowrap">{{ f.size_h }}<br>{{ f.date }}</span>
+      </div>
+    {% endfor %}
+
+    {% if not d.dirs and not d.files %}<p class="text-muted small mb-0 mt-2">Dossier vide.</p>{% endif %}
+
+    {% if d.pages > 1 %}
+      <nav aria-label="Pages" class="mt-3">
+        <ul class="pagination pagination-sm flex-wrap mb-0">
+          {% for p in range(1, d.pages + 1) %}
+            <li class="page-item {% if p == d.page %}active{% endif %}"><a class="page-link" href="{{ here(d.rel, d.sort, p) }}">{{ p }}</a></li>
+          {% endfor %}
+        </ul>
+      </nav>
+    {% endif %}
+    {% if d.partial %}<div class="small text-warning mt-2">Très nombreux fichiers : certaines tailles de dossiers sont incomplètes.</div>{% endif %}
+    <p class="small text-muted mt-3 mb-0">Touche un fichier pour l'ouvrir (images et vidéos affichées, fichiers JSON en texte). Rien ne peut être modifié ni supprimé d'ici.</p>
+  </div>
+</div>
+{% endblock %}

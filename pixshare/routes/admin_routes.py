@@ -809,9 +809,55 @@ def admin_system():
         "remote": request.remote_addr or "",
     }
 
+    from pixshare.services.system_service import get_disk_contents
+
     return render_template(
         "admin_system.html",
         stats=stats,
+        disk=get_disk_contents(),
         ip_check=ip_check,
         version=current_app.config["APP_VERSION"],
     )
+
+@admin_bp.route("/admin/disque", methods=["GET"], endpoint="admin_disk")
+@admin_required
+def admin_disk():
+    """Explorateur du disque persistant (lecture seule)."""
+    from pixshare.services.system_service import get_storage_usage, list_disk_dir
+
+    try:
+        page = int(request.args.get("page") or 1)
+    except ValueError:
+        page = 1
+    listing = list_disk_dir(request.args.get("chemin", ""), request.args.get("tri", "nom"), page)
+    if listing is None:
+        abort(404)
+    return render_template("admin_disk.html", d=listing, storage=get_storage_usage(),
+                           version=current_app.config["APP_VERSION"])
+
+
+@admin_bp.route("/admin/disque/ouvrir", methods=["GET"], endpoint="admin_disk_open")
+@admin_required
+def admin_disk_open():
+    """Ouvre un fichier du disque : images et vidéos affichées, textes (JSON…) en texte brut, le reste téléchargé."""
+    import mimetypes
+
+    from pixshare.services.system_service import resolve_disk_path
+
+    path = resolve_disk_path(request.args.get("chemin", ""))
+    if not path or not os.path.isfile(path):
+        abort(404)
+    guessed = mimetypes.guess_type(path)[0] or "application/octet-stream"
+    ext = os.path.splitext(path)[1].lower()
+    if ext in (".json", ".txt", ".log", ".csv", ".md"):
+        mimetype, inline = "text/plain; charset=utf-8", True
+    elif guessed.startswith(("image/", "video/")) and ext not in (".svg", ".svgz"):
+        mimetype, inline = guessed, True
+    else:
+        mimetype, inline = "application/octet-stream", False
+    response = make_response(send_file(path, mimetype=mimetype, as_attachment=not inline,
+                                       download_name=os.path.basename(path)))
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Cache-Control"] = "private, no-store"
+    response.headers["Content-Security-Policy"] = "default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'"
+    return response
