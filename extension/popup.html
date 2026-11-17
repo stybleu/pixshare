@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>PixShare</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="popup">
+  <h1><img src="icons/icon-32.png" alt="">PixShare</h1>
+
+  <div id="noKey" hidden>
+    <p>Pour envoyer des images, ajoute la clé de ton compte PixShare.</p>
+    <button id="openOptions1" type="button">Ajouter ma clé</button>
+    <p class="hint">La clé se crée dans « Mon compte » sur pixshare.fr (compte gratuit).</p>
+  </div>
+
+  <div id="main" hidden>
+    <button id="capture" type="button">📸 Capturer cette page</button>
+    <button id="pick" class="secondary" type="button">📁 Envoyer un fichier</button>
+    <input id="file" type="file" hidden>
+    <p class="hint">Astuce : collez une image avec Ctrl+V ici, ou faites un clic droit sur une image d'un site.</p>
+    <label for="lifetime">Durée en ligne</label>
+    <select id="lifetime"></select>
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+    <div id="recent" hidden>
+      <label>Derniers envois</label>
+      <ul id="history"></ul>
+    </div>
+    <p class="hint"><a href="#" id="openOptions2">Réglages</a> · <a href="#" id="mySpace">Mes fichiers</a></p>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

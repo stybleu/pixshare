@@ -18,8 +18,8 @@
   display: block;
   width: 100%;
   height: 220px;
-  object-fit: cover;
-  background: #f8f9fa;
+  object-fit: contain;   /* image entière, sans la recadrer */
+  background: #eef0f3;
 }
 
 .file-preview-video{
@@ -32,7 +32,7 @@
 
 .file-placeholder{
   width: 100%;
-  height: 220px;
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -49,6 +49,24 @@
 
 .file-meta code{
   word-break: break-all;
+}
+
+.file-name{
+  min-width: 0;
+  flex: 1 1 10rem;
+  overflow-wrap: anywhere;   /* noms très longs sans espace : retour à la ligne */
+}
+
+.file-badges{
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem;
+  align-items: center;
+}
+
+@media (max-width: 576px){
+  .file-preview, .file-preview-video{ height: 160px; }
+  .file-card .p-3{ padding: .75rem !important; }
 }
 
 .public-link{
@@ -146,13 +164,13 @@
           {% endif %}
 
           <div class="p-3">
-            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
-              <div>
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+              <div class="file-name">
                 <div class="fw-semibold">{{ f.original }}</div>
                 <div class="text-muted small">ID : <code>{{ f.id }}</code></div>
               </div>
 
-              <div>
+              <div class="file-badges">
                 {% if f.status == "active" %}
                   <span class="badge text-bg-success">Actif</span>
                 {% elif f.status == "pending" and f.moderation_decision == "manual_review" %}
@@ -175,14 +193,14 @@
                   {% else %}
                     <span class="badge text-bg-secondary">motif inconnu</span>
                   {% endif %}
-                  {% if f.deleted_at %}<span class="small text-muted">le {{ f.deleted_at[:16]|replace("T", " ") }} UTC</span>{% endif %}
+                  {% if f.deleted_at %}<span class="small text-muted">le {{ f.deleted_at|date_fr }}</span>{% endif %}
                 {% endif %}
               </div>
             </div>
 
             <div class="file-meta text-muted small d-grid gap-1 mb-3">
               <div>Taille : {{ f.size_h }}</div>
-              <div>Date : {{ f.mtime_h }}</div>
+              <div>Envoyé le {{ (f.uploaded_at or f.mtime_h)|date_fr }}</div>
 
               <div>
                 Expiration :
@@ -198,7 +216,7 @@
               <div>
                 Date d'expiration :
                 {% if f.expires_at %}
-                  <code>{{ f.expires_at }}</code>
+                  <span>{{ f.expires_at|date_fr }}</span>
                 {% elif f.permanent %}
                   <span>Sans expiration</span>
                 {% else %}
@@ -230,7 +248,6 @@
                   <span class="badge text-bg-secondary">Total accès : {{ usage.total or 0 }}</span>
                   <span class="badge text-bg-info">Viewer : {{ usage.viewer or 0 }}</span>
                   <span class="badge text-bg-success">Raw : {{ usage.raw or 0 }}</span>
-                  <span class="badge text-bg-primary">API raw : {{ usage.api_raw or 0 }}</span>
                   <span class="badge text-bg-dark">Bots : {{ usage.bot_hits or 0 }}</span>
                   {% if usage.external_hits %}
                     <span class="badge text-bg-warning">Externes : {{ usage.external_hits }}</span>

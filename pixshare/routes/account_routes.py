@@ -265,17 +265,43 @@ def reset(token):
 
 # ------------------------------------------------------------------ mon compte
 
-@account_bp.route("/compte", methods=["GET"], endpoint="page")
-def page():
-    rec = accounts.current_account()
-    if not rec:
-        return redirect(url_for("account.login", next="/compte"))
+def _account_page(rec: dict, new_key: str = ""):
     files = [m for m in load_db().values()
              if isinstance(m, dict) and m.get("account_id") == rec["id"]
              and (m.get("status") or "active").lower() in ("active", "pending")]
     return _page("account_page.html", title="Mon compte", rec=rec, file_count=len(files),
                  pending_count=sum(1 for m in files if (m.get("status") or "").lower() == "pending"),
-                 limits=limits_table(), password_min=accounts.PASSWORD_MIN)
+                 limits=limits_table(), password_min=accounts.PASSWORD_MIN, new_key=new_key)
+
+
+@account_bp.route("/compte", methods=["GET"], endpoint="page")
+def page():
+    rec = accounts.current_account()
+    if not rec:
+        return redirect(url_for("account.login", next="/compte"))
+    return _account_page(rec)
+
+
+@account_bp.route("/compte/extension/cle", methods=["POST"], endpoint="extension_key")
+def extension_key():
+    """Crée (ou remplace) la clé de l'extension et l'affiche une seule fois, sans passer par un cookie."""
+    validate_csrf()
+    rec = accounts.current_account()
+    if not rec:
+        return redirect(url_for("account.login"))
+    key = accounts.create_extension_key(rec["id"])
+    return _account_page(accounts.get_account(rec["id"]), new_key=key)
+
+
+@account_bp.route("/compte/extension/supprimer", methods=["POST"], endpoint="extension_revoke")
+def extension_revoke():
+    validate_csrf()
+    rec = accounts.current_account()
+    if not rec:
+        return redirect(url_for("account.login"))
+    accounts.revoke_extension_key(rec["id"])
+    flash("Clé de l'extension supprimée : l'extension ne peut plus rien envoyer.", "success")
+    return redirect(url_for("account.page") + "#extension")
 
 
 @account_bp.route("/compte/mot-de-passe", methods=["POST"], endpoint="change_password")

@@ -18,7 +18,7 @@
   display: block;
   width: 100%;
   height: 220px;
-  object-fit: cover;
+  object-fit: contain;
   background: #f8f9fa;
 }
 
@@ -28,6 +28,9 @@
 
 .thumb-meta code{
   word-break: break-all;
+}
+@media (max-width: 576px){
+  .thumb-preview{ height: 160px; }
 }
 </style>
 {% endblock %}
@@ -79,8 +82,8 @@
         </a>
 
         <div class="p-3">
-          <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
-            <div>
+          <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+            <div style="min-width:0;flex:1 1 10rem;overflow-wrap:anywhere;">
               <div class="fw-semibold">{{ f.original }}</div>
               <div class="text-muted small">ID : <code>{{ f.id }}</code></div>
             </div>
@@ -115,9 +118,9 @@
           </div>
 
           <div class="thumb-meta text-muted small d-grid gap-1 mb-3">
-            <div>Date : {{ f.mtime_h }}</div>
+            <div>Envoyé le {{ (f.uploaded_at or f.mtime_h)|date_fr }}</div>
             {% if f.status not in ["active", "pending", "expired"] %}
-              <div>Supprimée le : {% if f.deleted_at %}{{ f.deleted_at[:16]|replace("T", " ") }} UTC{% else %}—{% endif %}</div>
+              <div>Supprimée le : {% if f.deleted_at %}{{ f.deleted_at|date_fr }}{% else %}—{% endif %}</div>
               {% if _r.startswith("auto:") %}
                 <div>Détection NudeNet :
                   {% if f.moderation_label_fr %}

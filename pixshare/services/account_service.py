@@ -11,6 +11,8 @@
 """
 from __future__ import annotations
 
+import hashlib
+import hmac
 import re
 import secrets
 from datetime import timedelta
@@ -194,7 +196,9 @@ def set_password(account_id: str, password: str) -> dict | None:
     if not rec:
         return None
     check_password_rules(password, rec.get("email", ""))
-    return _update(account_id, password_hash=generate_password_hash(password), pw_ver=int(rec.get("pw_ver") or 0) + 1)
+    # Nouveau mot de passe : la clé de l'extension est désactivée aussi (à recréer dans « Mon compte »).
+    return _update(account_id, password_hash=generate_password_hash(password), pw_ver=int(rec.get("pw_ver") or 0) + 1,
+                   ext_key_hash="", ext_key_created="", ext_key_last_used="")
 
 
 def set_status(account_id: str, status: str) -> dict | None:
@@ -286,6 +290,50 @@ def current_account_id() -> str:
 def is_member() -> bool:
     from pixshare.services.auth_service import is_admin
     return bool(is_admin() or current_account())
+
+
+# ------------------------------------------------------------------ clé de l'extension de navigateur
+
+EXT_KEY_PREFIX = "pxs_"
+
+
+def _key_hash(key: str) -> str:
+    return hashlib.sha256((key or "").encode("utf-8")).hexdigest()
+
+
+def create_extension_key(account_id: str) -> str:
+    """Nouvelle clé pour l'extension (l'ancienne ne marche plus). Affichée une seule fois :
+    seule son empreinte est gardée."""
+    key = EXT_KEY_PREFIX + secrets.token_urlsafe(32)
+    _update(account_id, ext_key_hash=_key_hash(key), ext_key_created=_now_iso(), ext_key_last_used="")
+    return key
+
+
+def revoke_extension_key(account_id: str) -> None:
+    _update(account_id, ext_key_hash="", ext_key_created="", ext_key_last_used="")
+
+
+def account_for_extension_key(key: str) -> dict | None:
+    """Compte actif et confirmé correspondant à la clé, sinon None."""
+    key = (key or "").strip()
+    if not key.startswith(EXT_KEY_PREFIX) or len(key) > 100:
+        return None
+    wanted = _key_hash(key)
+    for account_id, rec in all_accounts().items():
+        stored = (rec or {}).get("ext_key_hash") or ""
+        if stored and hmac.compare_digest(stored, wanted):
+            if rec.get("confirmed_at") and rec.get("status") == "active":
+                return dict(rec, id=account_id)
+            return None
+    return None
+
+
+def act_as(rec: dict) -> None:
+    """Pour cette requête seulement (extension) : le membre de la clé est le membre courant."""
+    g.pixshare_account = rec
+    now = _now_iso()
+    if rec.get("id") and (rec.get("ext_key_last_used") or "")[:15] != now[:15]:  # au plus une écriture toutes les 10 min
+        _update(rec["id"], ext_key_last_used=now)
 
 
 # ------------------------------------------------------------------ liens signés

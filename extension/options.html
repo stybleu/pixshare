@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Réglages PixShare</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="wrap">
+    <h1><img src="icons/icon-32.png" alt="">Réglages de l'extension PixShare</h1>
+    <ol class="hint">
+      <li>Connectez-vous sur <a href="https://pixshare.fr/compte" target="_blank" rel="noopener">pixshare.fr → Mon compte</a> (compte gratuit).</li>
+      <li>Dans « Extension de navigateur », cliquez sur « Créer ma clé » et copiez-la.</li>
+      <li>Collez-la ci-dessous puis enregistrez.</li>
+    </ol>
+    <label for="key">Clé PixShare</label>
+    <input id="key" type="password" placeholder="pxs_…" autocomplete="off" spellcheck="false">
+    <button id="save" type="button">Enregistrer et vérifier</button>
+    <button id="forget" class="secondary" type="button">Retirer la clé de ce navigateur</button>
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+    <p class="hint">
+      La clé reste dans ce navigateur et n'est envoyée qu'à PixShare. L'extension n'envoie rien tant que vous ne le demandez pas :
+      clic droit sur une image, capture de la page ou fichier choisi. Aucune page visitée n'est enregistrée.
+    </p>
+  </div>
+  <script src="options.js"></script>
+</body>
+</html>
