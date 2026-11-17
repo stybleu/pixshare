@@ -126,8 +126,8 @@
           <div class="alert alert-info small py-2 mb-3">
             Sans compte : jusqu'à {{ limits.guest.life }} et {{ limits.guest.mb }} Mo par fichier.
             <a href="{{ url_for('account.signup') }}">Créez un compte gratuit</a> pour garder vos images jusqu'à
-            {{ limits.member.life }}, envoyer jusqu'à {{ limits.member.mb }} Mo, les retrouver sur tous vos appareils
-            et les remplacer sans changer le lien.
+            {{ limits.member.life }}, envoyer jusqu'à {{ limits.member.mb }} Mo, les retrouver sur tous vos appareils,
+            améliorer vos photos, les protéger par un mot de passe ou un nombre de vues, et les remplacer sans changer le lien.
             <a href="{{ url_for('account.login') }}">Connexion</a>
           </div>
         {% endif %}
@@ -184,6 +184,7 @@
                   <input id="resizeHeight" type="number" min="1" step="1" class="form-control" placeholder="{{ _('placeholder_height') }}">
                 </div>
 
+                {% if account or admin %}
                 <div class="col-12">
                 <div class="form-check">
                   <input class="form-check-input" type="checkbox" name="enhance_quality" value="1" id="enhanceQuality">
@@ -238,6 +239,7 @@
                   {{ _("option_image") }}
                 </div>
               </div>
+                {% endif %}
 
                 <div class="col-12">
                   <label class="form-label" for="lifetimeSelect">{{ _("file_lifetime_default_10") }}</label>
@@ -253,6 +255,16 @@
                   </div>
                 </div>
 
+                {% set member_options = account or admin %}
+                {% if not member_options %}
+                <div class="col-12">
+                  <div class="border rounded p-3 bg-light small text-muted">
+                    🔒 <strong>Améliorer la photo</strong>, <strong>supprimer après un nombre de vues</strong> et
+                    <strong>protéger par un mot de passe</strong> : réservé aux comptes.
+                    {% if accounts_open %}<a href="{{ url_for('account.signup') }}">Créez un compte gratuit</a> ou <a href="{{ url_for('account.login') }}">connectez-vous</a>.{% endif %}
+                  </div>
+                </div>
+                {% else %}
                 <div class="col-12">
                   <div class="border rounded p-3 bg-light">
                     <div class="form-check">
@@ -298,6 +310,7 @@
                   })();
                   </script>
                 </div>
+                {% endif %}
               </div>
 
               <div class="form-text mt-2">

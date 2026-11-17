@@ -367,3 +367,38 @@ def test_account_pages_are_accessible(make_app, mails):
         for field in re.findall(r'<input[^>]+type="(?:email|password)"[^>]*>', html):
             field_id = re.search(r'id="([^"]+)"', field).group(1)
             assert f'for="{field_id}"' in html, (path, field_id)
+
+
+def test_password_and_view_limit_are_for_members_only(make_app, mails):
+    app = make_app()
+    guest = app.test_client()
+    html = guest.get("/").get_data(as_text=True)
+    assert 'name="file_password"' not in html and 'name="view_limit_enabled"' not in html
+    assert "réservé aux comptes" in html
+    upload(guest, "invite.png", file_password="secret123", view_limit_enabled="1", max_views="3")
+
+    user = member(app.test_client(), mails)
+    assert 'name="file_password"' in user.get("/").get_data(as_text=True)
+    upload(user, "membre.png", file_password="secret123", view_limit_enabled="1", max_views="3")
+
+    by_name = {m["original_name"]: m for m in records(app).values()}
+    guest_meta, member_meta = by_name["invite.png"], by_name["membre.png"]
+    assert not guest_meta.get("password_hash") and not guest_meta.get("view_limit_enabled")
+    assert member_meta.get("password_hash") and member_meta.get("view_limit_enabled") and member_meta.get("max_views") == 3
+
+
+def test_photo_enhancement_is_for_members_only(make_app, mails, monkeypatch):
+    from pixshare.services import file_service
+
+    calls = []
+    monkeypatch.setattr(file_service, "enhance_image_bytes", lambda data, ext, strength: (calls.append(strength) or data + b""))
+    app = make_app()
+    guest = app.test_client()
+    assert 'name="enhance_quality"' not in guest.get("/").get_data(as_text=True)
+    upload(guest, "invite.png", enhance_quality="1", enhance_strength="20")
+    assert calls == []  # ignoré sans compte
+
+    user = member(app.test_client(), mails)
+    assert 'name="enhance_quality"' in user.get("/").get_data(as_text=True)
+    upload(user, "membre.png", enhance_quality="1", enhance_strength="20")
+    assert calls == [20]

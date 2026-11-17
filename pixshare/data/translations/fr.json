@@ -154,7 +154,7 @@
   "feature_resize_before_upload": "Redimensionnement possible avant upload",
   "feature_local_history": "Historique de vos fichiers, sur tous vos appareils avec un compte gratuit",
   "feature_api_available": "Codes prêts à coller pour forums, sites, Discord et Markdown",
-  "feature_password_views": "Mot de passe et nombre de vues limité en option",
+  "feature_password_views": "Mot de passe et nombre de vues limité (avec un compte gratuit)",
   "feature_metadata_removed": "Position GPS et informations de l’appareil retirées automatiquement des photos",
   "feature_free_account": "Compte gratuit facultatif : fichiers gardés plus longtemps et remplaçables sans changer le lien",
   "contact_appeal": "Contester une décision de modération",

@@ -53,7 +53,7 @@ from pixshare.services.settings_service import (
     limits_table,
     upload_service_enabled,
 )
-from pixshare.services.account_service import current_account
+from pixshare.services.account_service import current_account, is_member
 from pixshare.services.url_import_service import UrlImportError, download_remote_image_to_temp
 from pixshare.services.moderation_service import pop_pending_notice
 from pixshare.services.embed_service import embed_codes
@@ -210,6 +210,9 @@ def index():
         keep = (request.form.get("keep", "") in {"1", "on", "true", "yes"})
         view_limit_enabled, max_views = _parse_view_limit_form()
         file_password, password_error = _read_file_password()
+        if not is_member():
+            # Limite de vues et mot de passe : réservés aux comptes (ignorés pour les visiteurs sans compte).
+            view_limit_enabled, file_password, password_error = False, "", ""
         if password_error and ((f and f.filename) or image_url):
             flash(password_error, "warning")
             return attach_guest_cookie(redirect(url_for("public.index")))

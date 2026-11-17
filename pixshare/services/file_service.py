@@ -160,6 +160,15 @@ def _account_id() -> str:
         return ""
 
 
+def _is_member() -> bool:
+    """Amélioration des photos : réservée aux comptes (et à l'admin)."""
+    try:
+        from .account_service import is_member
+        return is_member()
+    except Exception:
+        return False
+
+
 def is_owner(meta: dict) -> bool:
     """Le visiteur a-t-il envoyé ce fichier ? Même navigateur, ou même compte (sur n'importe quel appareil)."""
     if not isinstance(meta, dict):
@@ -861,7 +870,7 @@ def save_uploaded_file(
 ) -> tuple[str, int | None, bool]:
     file_id, server_name, dest, ext = _prepare_file_destination(original_name)
 
-    enhance_requested = request.form.get("enhance_quality") in {"1", "on", "true", "yes"}
+    enhance_requested = request.form.get("enhance_quality") in {"1", "on", "true", "yes"} and _is_member()
     enhance_strength = parse_strength(request.form.get("enhance_strength"))
 
     if enhance_requested and enhance_strength > 0 and can_enhance_extension(ext):
