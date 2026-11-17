@@ -4,10 +4,19 @@
 {% block robots %}<meta name="robots" content="noindex, nofollow, noarchive">{% endblock %}
 {% block head %}
 <style>
-.explorer a.row-link { text-decoration: none; color: inherit; display: block; }
-.explorer .entry { border-bottom: 1px solid var(--bs-border-color); padding: .45rem .25rem; }
+.explorer a.row-link { text-decoration: none; color: inherit; }
+.explorer .entry { display: flex; align-items: center; gap: .6rem; border-bottom: 1px solid var(--bs-border-color); padding: .45rem .25rem; }
 .explorer .entry:hover { background: var(--bs-tertiary-bg); }
-.explorer .name { overflow-wrap: anywhere; min-width: 0; }
+.explorer .entry.selected { background: rgba(13,110,253,.08); }
+.explorer .pick { width: 1.15rem; height: 1.15rem; flex: 0 0 auto; }
+.explorer .lock { width: 1.15rem; flex: 0 0 auto; text-align: center; font-size: .8rem; opacity: .6; }
+.explorer .thumb { width: 56px; height: 56px; flex: 0 0 56px; border-radius: 8px; background: #eef0f3;
+  display: flex; align-items: center; justify-content: center; font-size: 1.6rem; overflow: hidden; }
+.explorer .thumb img { width: 100%; height: 100%; object-fit: cover; }
+.explorer .name { overflow-wrap: anywhere; min-width: 0; flex: 1 1 auto; }
+.explorer .meta { font-size: .8rem; color: var(--bs-secondary-color); text-align: right; white-space: nowrap; }
+.disk-toolbar { position: sticky; bottom: 0; z-index: 5; background: var(--bs-body-bg); border-top: 1px solid var(--bs-border-color);
+  padding: .6rem; margin: .5rem -1rem -1rem; border-radius: 0 0 .5rem .5rem; box-shadow: 0 -4px 12px rgba(0,0,0,.06); }
 </style>
 {% endblock %}
 
@@ -15,12 +24,14 @@
 {{ url_for('admin.admin_disk', chemin=rel or none, tri=(tri if tri != 'nom' else none), page=page) }}
 {%- endmacro %}
 
+{% set image_kinds = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".jfif", ".jpe", "aperçus .webp", ".tif", ".tiff", ".heic", ".heif") %}
+
 {% block content %}
 <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between mb-3">
   <div>
     <h1 class="h4 mb-0">Disque</h1>
     <div class="text-muted small">
-      {% if storage.ok %}{{ storage.used_mb }} Mo utilisés sur {{ storage.total_mb }} Mo ({{ storage.free_mb }} Mo libres) · {% endif %}lecture seule
+      {% if storage.ok %}{{ storage.used_mb }} Mo utilisés sur {{ storage.total_mb }} Mo ({{ storage.free_mb }} Mo libres){% endif %}
     </div>
   </div>
   <div class="d-flex gap-2">
@@ -50,56 +61,130 @@
       </span>
     </div>
 
-    {% if d.parent is not none %}
-      <div class="entry"><a class="row-link" href="{{ here(d.parent) }}">⬆️ <strong>..</strong> <span class="small text-muted">dossier parent</span></a></div>
+    {% if d.can_mkdir %}
+    <details class="small mb-2">
+      <summary style="cursor:pointer">➕ Nouveau dossier ici</summary>
+      <form method="post" action="{{ url_for('admin.admin_disk_action') }}" class="d-flex gap-2 mt-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="chemin" value="{{ d.rel }}">
+        <input type="hidden" name="action" value="mkdir">
+        <label class="visually-hidden" for="newFolder">Nom du nouveau dossier</label>
+        <input id="newFolder" class="form-control form-control-sm" name="nom" maxlength="80" required placeholder="Nom du dossier">
+        <button class="btn btn-primary btn-sm" type="submit">Créer</button>
+      </form>
+    </details>
     {% endif %}
 
-    {% for f in d.dirs %}
-      <div class="entry">
-        <a class="row-link d-flex justify-content-between gap-2" href="{{ here(f.rel) }}">
-          <span class="name">📁 <strong>{{ f.name }}</strong>{% if f.desc %}<span class="small text-muted d-block">{{ f.desc }}</span>{% endif %}</span>
-          <span class="small text-muted text-end text-nowrap">{{ f.size_h }}<br>{{ f.count }} fichier(s){% if f.partial %}+{% endif %}</span>
-        </a>
-      </div>
-    {% endfor %}
+    <form method="post" action="{{ url_for('admin.admin_disk_action') }}" id="diskForm">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="chemin" value="{{ d.rel }}">
 
-    {% for f in d.files %}
-      <div class="entry d-flex justify-content-between gap-2">
-        <div class="name">
-          {% if f.kind in (".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".jfif", ".jpe", "aperçus .webp", ".avif") %}🖼️{% elif f.kind in (".mp4", ".webm", ".mov", ".avi") %}🎞️{% elif f.kind == ".json" %}🧾{% else %}📄{% endif %}
-          <a href="{{ url_for('admin.admin_disk_open', chemin=f.rel) }}" target="_blank" rel="noopener">{{ f.name }}</a>
-          {% if f.desc %}<span class="small text-muted d-block">{{ f.desc }}</span>{% endif %}
-          {% if d.is_uploads %}
-            <span class="small d-block">
-              {% if f.orphan %}
-                <span class="badge text-bg-warning">orphelin</span> <span class="text-muted">aucune fiche dans la liste des fichiers</span>
-              {% else %}
-                {% if f.preview %}<span class="badge text-bg-light border">aperçu</span>{% endif %}
-                {% if f.status == "active" %}<span class="badge text-bg-success">en ligne</span>
-                {% elif f.status == "pending" %}<span class="badge text-bg-warning">en attente</span>
-                {% else %}<span class="badge text-bg-secondary">{{ f.status }}</span>{% endif %}
-                <span class="text-muted">« {{ f.original }} »{% if f.expires %} · expire le {{ f.expires }}{% endif %}</span>
-              {% endif %}
-            </span>
-          {% endif %}
+      {% if d.parent is not none %}
+        <div class="entry"><span class="lock"></span><a class="row-link d-flex align-items-center gap-2 flex-grow-1" href="{{ here(d.parent) }}"><span class="thumb">⬆️</span><strong>..</strong> <span class="small text-muted">dossier parent</span></a></div>
+      {% endif %}
+
+      {% for f in d.dirs %}
+        <div class="entry">
+          {% if f.can_delete %}<input class="form-check-input pick" type="checkbox" name="selection" value="{{ f.rel }}" aria-label="Sélectionner {{ f.name }}">
+          {% else %}<span class="lock" title="Protégé : {{ f.why }}">🔒</span>{% endif %}
+          <a class="row-link d-flex align-items-center gap-2 flex-grow-1" style="min-width:0" href="{{ here(f.rel) }}">
+            <span class="thumb">📁</span>
+            <span class="name"><strong>{{ f.name }}</strong>{% if f.desc %}<span class="small text-muted d-block">{{ f.desc }}</span>{% endif %}</span>
+          </a>
+          <span class="meta">{{ f.size_h }}<br>{{ f.count }} fichier(s){% if f.partial %}+{% endif %}</span>
         </div>
-        <span class="small text-muted text-end text-nowrap">{{ f.size_h }}<br>{{ f.date }}</span>
+      {% endfor %}
+
+      {% for f in d.files %}
+        {% set open_url = url_for('admin.admin_disk_open', chemin=f.rel) %}
+        <div class="entry">
+          {% if f.can_delete %}<input class="form-check-input pick" type="checkbox" name="selection" value="{{ f.rel }}" aria-label="Sélectionner {{ f.name }}"
+                 {% if not f.can_move %}data-nomove="1"{% endif %}>
+          {% else %}<span class="lock" title="Protégé : {{ f.why }}">🔒</span>{% endif %}
+          <a class="thumb" href="{{ open_url }}" target="_blank" rel="noopener" aria-label="Ouvrir {{ f.name }}">
+            {% if f.kind in image_kinds %}
+              <img src="{{ url_for('admin.admin_disk_thumb', chemin=f.rel) }}" alt="" loading="lazy"
+                   onerror="this.replaceWith(document.createTextNode('🖼️'))">
+            {% elif f.kind in (".mp4", ".webm", ".mov", ".avi") %}🎞️{% elif f.kind == ".json" %}🧾{% else %}📄{% endif %}
+          </a>
+          <div class="name">
+            <a href="{{ open_url }}" target="_blank" rel="noopener">{{ f.name }}</a>
+            {% if f.desc %}<span class="small text-muted d-block">{{ f.desc }}</span>{% endif %}
+            {% if d.is_uploads %}
+              <span class="small d-block">
+                {% if f.orphan %}
+                  <span class="badge text-bg-warning">orphelin</span> <span class="text-muted">aucune fiche dans la liste des fichiers</span>
+                {% else %}
+                  {% if f.preview %}<span class="badge text-bg-light border">aperçu</span>{% endif %}
+                  {% if f.status == "active" %}<span class="badge text-bg-success">en ligne</span>
+                  {% elif f.status == "pending" %}<span class="badge text-bg-warning">en attente</span>
+                  {% else %}<span class="badge text-bg-secondary">{{ f.status }}</span>{% endif %}
+                  <span class="text-muted">« {{ f.original }} »{% if f.expires %} · expire le {{ f.expires }}{% endif %}</span>
+                {% endif %}
+              </span>
+            {% elif not f.can_delete %}
+              <span class="small text-muted d-block">🔒 {{ f.why }}</span>
+            {% endif %}
+          </div>
+          <span class="meta">{{ f.size_h }}<br>{{ f.date }}</span>
+        </div>
+      {% endfor %}
+
+      {% if not d.dirs and not d.files %}<p class="text-muted small mb-0 mt-2">Dossier vide.</p>{% endif %}
+
+      {% if d.pages > 1 %}
+        <nav aria-label="Pages" class="mt-3">
+          <ul class="pagination pagination-sm flex-wrap mb-0">
+            {% for p in range(1, d.pages + 1) %}
+              <li class="page-item {% if p == d.page %}active{% endif %}"><a class="page-link" href="{{ here(d.rel, d.sort, p) }}">{{ p }}</a></li>
+            {% endfor %}
+          </ul>
+        </nav>
+      {% endif %}
+      {% if d.partial %}<div class="small text-warning mt-2">Très nombreux fichiers : certaines tailles de dossiers sont incomplètes.</div>{% endif %}
+
+      <div class="disk-toolbar" id="diskToolbar" hidden>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          <strong class="small" id="selCount">0 sélectionné</strong>
+          <button class="btn btn-danger btn-sm" type="submit" name="action" value="delete"
+                  onclick="return confirm('Supprimer définitivement les éléments cochés ? Les fichiers en ligne seront supprimés comme depuis l\'admin.');">🗑 Supprimer</button>
+          <span class="d-flex gap-1 align-items-center" id="moveBox">
+            <label class="visually-hidden" for="destination">Déplacer vers</label>
+            <select class="form-select form-select-sm" id="destination" name="destination" style="width: auto; max-width: 12rem;">
+              {% for dest in d.destinations %}{% if dest.rel != d.rel %}<option value="{{ dest.rel }}">{{ dest.label }}</option>{% endif %}{% endfor %}
+            </select>
+            <button class="btn btn-outline-primary btn-sm text-nowrap" type="submit" name="action" value="move">📂 Déplacer</button>
+          </span>
+          <span class="d-flex gap-1 align-items-center" id="renameBox">
+            <label class="visually-hidden" for="renameTo">Nouveau nom</label>
+            <input class="form-control form-control-sm" id="renameTo" name="nom" maxlength="80" placeholder="Nouveau nom" style="width: 10rem;">
+            <button class="btn btn-outline-secondary btn-sm text-nowrap" type="submit" name="action" value="rename">✏️ Renommer</button>
+          </span>
+        </div>
+        <div class="small text-muted mt-1" id="moveHint" hidden>Les fichiers en ligne et les miniatures restent à leur place (sinon leur lien casserait) : ils peuvent seulement être supprimés.</div>
       </div>
-    {% endfor %}
-
-    {% if not d.dirs and not d.files %}<p class="text-muted small mb-0 mt-2">Dossier vide.</p>{% endif %}
-
-    {% if d.pages > 1 %}
-      <nav aria-label="Pages" class="mt-3">
-        <ul class="pagination pagination-sm flex-wrap mb-0">
-          {% for p in range(1, d.pages + 1) %}
-            <li class="page-item {% if p == d.page %}active{% endif %}"><a class="page-link" href="{{ here(d.rel, d.sort, p) }}">{{ p }}</a></li>
-          {% endfor %}
-        </ul>
-      </nav>
-    {% endif %}
-    {% if d.partial %}<div class="small text-warning mt-2">Très nombreux fichiers : certaines tailles de dossiers sont incomplètes.</div>{% endif %}
-    <p class="small text-muted mt-3 mb-0">Touche un fichier pour l'ouvrir (images et vidéos affichées, fichiers JSON en texte). Rien ne peut être modifié ni supprimé d'ici.</p>
+    </form>
+    <p class="small text-muted mt-3 mb-0">🔒 = utilisé par le site, protégé. Touchez une miniature pour ouvrir le fichier.</p>
   </div>
 </div>
+
+<script>
+(function () {
+  var boxes = Array.prototype.slice.call(document.querySelectorAll("#diskForm .pick"));
+  var bar = document.getElementById("diskToolbar");
+  function update() {
+    var picked = boxes.filter(function (b) { return b.checked; });
+    var noMove = picked.some(function (b) { return b.dataset.nomove; });
+    boxes.forEach(function (b) { b.closest(".entry").classList.toggle("selected", b.checked); });
+    bar.hidden = picked.length === 0;
+    document.getElementById("selCount").textContent = picked.length + (picked.length > 1 ? " sélectionnés" : " sélectionné");
+    document.getElementById("moveBox").classList.toggle("d-none", noMove);
+    document.getElementById("renameBox").classList.toggle("d-none", noMove || picked.length !== 1);
+    document.getElementById("moveHint").hidden = !noMove;
+    if (picked.length === 1) document.getElementById("renameTo").value = picked[0].value.split("/").pop();
+  }
+  boxes.forEach(function (b) { b.addEventListener("change", update); });
+  update();
+})();
+</script>
 {% endblock %}

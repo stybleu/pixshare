@@ -930,3 +930,94 @@ def admin_account_action():
     else:
         flash("Action inconnue.", "warning")
     return redirect(url_for("admin.admin_accounts"))
+
+
+@admin_bp.route("/admin/disque/action", methods=["POST"], endpoint="admin_disk_action")
+@admin_required
+def admin_disk_action():
+    """Supprimer, déplacer, renommer, créer un dossier. Les éléments utilisés par le site sont protégés."""
+    from pixshare.services.system_service import DiskError, disk_delete, disk_mkdir, disk_move, disk_rename
+
+    validate_csrf()
+    here = request.form.get("chemin", "")
+    back = redirect(url_for("admin.admin_disk", chemin=here or None))
+    action = request.form.get("action", "")
+    selected = [r for r in request.form.getlist("selection") if r][:500]
+    try:
+        if action == "mkdir":
+            name = disk_mkdir(here, request.form.get("nom", ""))
+            flash(f"Dossier « {name} » créé.", "success")
+            return back
+        if not selected:
+            flash("Coche d'abord un ou plusieurs éléments.", "warning")
+            return back
+        if action == "delete":
+            done, errors = disk_delete(selected)
+            if done:
+                flash(f"{done} élément(s) supprimé(s).", "success")
+        elif action == "move":
+            done, errors = disk_move(selected, request.form.get("destination", ""))
+            if done:
+                flash(f"{done} élément(s) déplacé(s).", "success")
+        elif action == "rename":
+            if len(selected) != 1:
+                flash("Pour renommer, coche un seul élément.", "warning")
+                return back
+            name = disk_rename(selected[0], request.form.get("nom", ""))
+            flash(f"Renommé en « {name} ».", "success")
+            errors = []
+        else:
+            flash("Action inconnue.", "warning")
+            return back
+    except DiskError as exc:
+        flash(str(exc), "danger")
+        return back
+    for err in errors[:10]:
+        flash(err, "warning")
+    if len(errors) > 10:
+        flash(f"… et {len(errors) - 10} autre(s) refus.", "warning")
+    return back
+
+
+@admin_bp.route("/admin/disque/apercu", methods=["GET"], endpoint="admin_disk_thumb")
+@admin_required
+def admin_disk_thumb():
+    """Petite miniature d'une image du disque pour l'explorateur (fabriquée une fois, gardée dans /tmp)."""
+    import hashlib
+    import tempfile
+
+    from PIL import Image, ImageOps
+
+    from pixshare.services.system_service import resolve_disk_path
+
+    path = resolve_disk_path(request.args.get("chemin", ""))
+    if not path or not os.path.isfile(path):
+        abort(404)
+    st = os.stat(path)
+    if st.st_size > 60 * 1024 * 1024:
+        abort(404)
+    cache_dir = os.path.join(tempfile.gettempdir(), "pixshare_disk_thumbs")
+    os.makedirs(cache_dir, exist_ok=True)
+    key = hashlib.sha256(f"{path}|{st.st_mtime_ns}|{st.st_size}".encode()).hexdigest()[:32]
+    cached = os.path.join(cache_dir, key + ".webp")
+    if not os.path.isfile(cached):
+        try:
+            try:
+                import pillow_heif  # photos HEIC, si disponible
+                pillow_heif.register_heif_opener()
+            except Exception:
+                pass
+            with Image.open(path) as im:
+                im.draft("RGB", (192, 192))  # JPEG : décodage réduit, beaucoup plus rapide
+                im = ImageOps.exif_transpose(im)
+                im.thumbnail((128, 128))
+                if im.mode not in ("RGB", "RGBA"):
+                    im = im.convert("RGBA")
+                im.save(cached + ".tmp", "WEBP", quality=70)
+            os.replace(cached + ".tmp", cached)
+        except Exception:
+            abort(404)
+    response = make_response(send_file(cached, mimetype="image/webp"))
+    response.headers["Cache-Control"] = "private, max-age=86400"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
