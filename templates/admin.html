@@ -89,6 +89,7 @@
     <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_system') }}">Système</a>
     <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_stats') }}">Statistiques</a>
     <a class="btn btn-outline-success btn-sm" href="{{ url_for('admin.admin_live') }}">● En direct</a>
+    <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_accounts') }}">Comptes</a>
     <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('admin.admin_settings') }}">Paramètres</a>
 
     <form method="post" action="{{ url_for('admin.admin_logout') }}" class="m-0">
@@ -212,6 +213,7 @@
 
               <div>
                 IP :
+                {% if f.account_id %}<span class="badge text-bg-primary" title="Envoyé par un membre">👤 compte</span>{% endif %}
                 {% if f.ip %}
                   <code>{{ f.ip }}</code>
                 {% else %}

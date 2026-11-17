@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block sr_h1 %}{% endblock %}
+{% block robots %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 480px;">
+  <h1 class="h4 mb-3">{{ heading }}</h1>
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <form method="post" action="{{ action }}" class="row g-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="col-12">
+          <label class="form-label" for="formEmail">Adresse e-mail du compte</label>
+          <input id="formEmail" class="form-control" type="email" name="email" maxlength="254" required autocomplete="email">
+        </div>
+        <div class="col-12">
+          {% include "_turnstile.html" %}
+          <button class="btn btn-primary w-100" type="submit">{{ button }}</button>
+        </div>
+      </form>
+      <p class="small mt-3 mb-0"><a href="{{ url_for('account.login') }}">Retour à la connexion</a></p>
+    </div>
+  </div>
+</div>
+{% endblock %}

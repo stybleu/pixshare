@@ -342,11 +342,21 @@ def _record_rejection(file_id: str, label: str | None, score: float) -> None:
     save_db(db)
 
 
+def member_classes(classes) -> list[str]:
+    """Images des membres : seule la nudité explicite compte (maillot, sous-vêtements, torse nu… tolérés)."""
+    wanted = EXPLICIT_CLASSES if classes is None else set(classes)
+    kept = sorted(set(wanted) & EXPLICIT_CLASSES)
+    return kept or sorted(EXPLICIT_CLASSES)
+
+
 def _process_one(file_id: str, review_threshold: float, block_threshold: float, stats: dict, tiling: bool = True, classes=None) -> None:
     db = load_db()
     meta = db.get(file_id)
     if not _is_waiting_image(meta):
         return
+    member = bool(meta.get("account_id"))
+    if member:
+        classes = member_classes(classes)
     path = os.path.join(current_app.config["UPLOAD_FOLDER"], os.path.basename(str(meta.get("server_name") or "")))
     try:
         with open(path, "rb") as handle:
@@ -367,6 +377,8 @@ def _process_one(file_id: str, review_threshold: float, block_threshold: float, 
         return
 
     decision = decide(label, score, review_threshold, block_threshold)
+    if member and decision == "reject":
+        decision = "review"  # membre : jamais de suppression automatique, l'admin décide
     if decision == "approve":
         approve_image(db, file_id, meta, DETECTOR_NAME, score)
         stats["approved"] += 1

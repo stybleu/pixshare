@@ -362,6 +362,11 @@ footer {
             <a href="{{ url_for('public.index') }}">Accueil</a>
             <a href="{{ url_for('public.contact') }}">Contact</a>
             <a href="{{ url_for('public.cgu') }}">CGU</a>
+            {% if member %}
+            <a href="{{ url_for('account.page') }}">Mon compte</a>
+            {% else %}
+            <a href="{{ url_for('account.login') }}">Connexion</a>
+            {% endif %}
           </nav>
 
           <div class="language-switcher" aria-label="Langue">

@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% from "_account_limits.html" import limits_card %}
+{% block sr_h1 %}{% endblock %}
+{% set title = "Admin - Comptes" %}
+{% block robots %}<meta name="robots" content="noindex, nofollow, noarchive">{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap gap-2 align-items-center justify-content-between mb-3">
+  <div>
+    <h1 class="h4 mb-0">Comptes</h1>
+    <div class="text-muted small">{{ rows|length }} compte(s). Les comptes jamais confirmés s'effacent au bout de 7 jours.</div>
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_panel') }}">Fichiers</a>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('admin.admin_settings') }}">Paramètres</a>
+  </div>
+</div>
+
+{% if not mail_ready %}
+<div class="alert alert-warning small" role="alert">
+  L'envoi de mails n'est pas configuré : personne ne peut s'inscrire (le lien de confirmation ne peut pas partir).
+  Règle les variables <code>MAIL_SMTP_HOST</code>… sur Render, ou une boîte dédiée avec <code>ACCOUNT_MAIL_SMTP_HOST</code>…
+</div>
+{% endif %}
+
+<div class="card shadow-sm mb-3" id="limites">
+  <div class="card-body">
+    <h2 class="h6">Limites sans compte et avec compte</h2>
+    <form method="post" action="{{ url_for('admin.admin_accounts_settings') }}" class="row g-2 align-items-end">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="col-12 col-md-4">
+        <label class="form-label small" for="accounts_enabled">Inscriptions</label>
+        <select class="form-select form-select-sm" id="accounts_enabled" name="accounts_enabled">
+          <option value="1" {% if settings.accounts_enabled %}selected{% endif %}>Ouvertes</option>
+          <option value="0" {% if not settings.accounts_enabled %}selected{% endif %}>Fermées (les membres peuvent toujours se connecter)</option>
+        </select>
+      </div>
+      <div class="col-6 col-md-4">
+        <label class="form-label small" for="guest_max_lifetime_minutes">Durée max sans compte</label>
+        <select class="form-select form-select-sm" id="guest_max_lifetime_minutes" name="guest_max_lifetime_minutes">
+          {% for minutes, key in guest_life_choices %}
+          <option value="{{ minutes }}" {% if settings.guest_max_lifetime_minutes == minutes %}selected{% endif %}>{{ _(key) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-4">
+        <label class="form-label small" for="guest_max_upload_size_mb">Taille max sans compte (Mo)</label>
+        <input class="form-control form-control-sm" type="number" min="1" max="500" id="guest_max_upload_size_mb" name="guest_max_upload_size_mb" value="{{ settings.guest_max_upload_size_mb }}">
+      </div>
+      <div class="col-6 col-md-4">
+        <label class="form-label small" for="guest_uploads_per_hour">Envois / heure sans compte</label>
+        <input class="form-control form-control-sm" type="number" min="0" max="10000" id="guest_uploads_per_hour" name="guest_uploads_per_hour" value="{{ settings.guest_uploads_per_hour }}">
+      </div>
+      <div class="col-6 col-md-4">
+        <label class="form-label small" for="member_uploads_per_hour">Envois / heure avec compte</label>
+        <input class="form-control form-control-sm" type="number" min="0" max="10000" id="member_uploads_per_hour" name="member_uploads_per_hour" value="{{ settings.member_uploads_per_hour }}">
+      </div>
+      <div class="col-12 col-md-4">
+        <button class="btn btn-primary btn-sm" type="submit">Enregistrer</button>
+      </div>
+      <div class="col-12 form-text">
+        0 envoi par heure = pas de limite. La durée et la taille maximales <strong>des membres</strong> se règlent dans
+        <a href="{{ url_for('admin.admin_settings') }}">Paramètres</a>. Avec 1 Go de disque, des fichiers lourds gardés 1 an peuvent le remplir :
+        surveille la page Système.
+      </div>
+    </form>
+    <hr>
+    {{ limits_card(limits) }}
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <h2 class="h6">Liste des comptes</h2>
+    {% if not rows %}
+      <p class="text-muted small mb-0">Aucun compte pour l'instant.</p>
+    {% endif %}
+    {% for r in rows %}
+    <div class="border rounded p-2 mb-2 small">
+      <div class="d-flex flex-wrap justify-content-between gap-2">
+        <div>
+          <strong class="text-break">{{ r.email }}</strong>
+          {% if not r.confirmed_at %}<span class="badge text-bg-secondary">non confirmé</span>{% endif %}
+          {% if r.status == "suspended" %}<span class="badge text-bg-danger">suspendu</span>{% endif %}
+          {% if r.strikes %}<span class="badge text-bg-warning">{{ r.strikes }}/{{ strikes_max }} image(s) refusée(s)</span>{% endif %}
+          <div class="text-muted">
+            Créé le {{ (r.created_at or "")[:16]|replace("T", " ") }} · dernière connexion
+            {{ (r.last_login_at or "jamais")[:16]|replace("T", " ") }} · {{ r.files }} fichier(s) en ligne
+          </div>
+        </div>
+        <form method="post" action="{{ url_for('admin.admin_account_action') }}" class="d-flex flex-wrap gap-1 m-0 align-items-start">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="account_id" value="{{ r.id }}">
+          {% if not r.confirmed_at %}<button class="btn btn-outline-success btn-sm" name="action" value="confirm">Confirmer</button>{% endif %}
+          {% if r.status == "suspended" %}
+            <button class="btn btn-outline-success btn-sm" name="action" value="activate">Réactiver</button>
+          {% else %}
+            <button class="btn btn-outline-warning btn-sm" name="action" value="suspend">Suspendre</button>
+          {% endif %}
+          <button class="btn btn-outline-danger btn-sm" name="action" value="delete"
+                  onclick="return confirm('Supprimer ce compte et tous ses fichiers ?');">Supprimer</button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

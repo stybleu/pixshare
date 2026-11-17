@@ -861,3 +861,72 @@ def admin_disk_open():
     response.headers["Cache-Control"] = "private, no-store"
     response.headers["Content-Security-Policy"] = "default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'"
     return response
+
+# ------------------------------------------------------------------ comptes
+
+@admin_bp.route("/admin/comptes", endpoint="admin_accounts")
+@admin_required
+def admin_accounts():
+    from pixshare.services import account_service as accounts
+    from pixshare.services.settings_service import GUEST_MAX_LIFETIME_CHOICES, limits_table
+
+    counts: dict = {}
+    for meta in load_db().values():
+        if isinstance(meta, dict) and meta.get("account_id") and (meta.get("status") or "active").lower() in ("active", "pending"):
+            counts[meta["account_id"]] = counts.get(meta["account_id"], 0) + 1
+    rows = [dict(rec, id=account_id, files=counts.get(account_id, 0)) for account_id, rec in accounts.all_accounts().items()]
+    rows.sort(key=lambda r: r.get("created_at") or "", reverse=True)
+    return render_template(
+        "admin_accounts.html",
+        rows=rows,
+        settings=load_settings(),
+        guest_life_choices=[c for c in LIFETIME_CHOICES if c[0] in GUEST_MAX_LIFETIME_CHOICES],
+        limits=limits_table(),
+        mail_ready=accounts.mail_ready(),
+        strikes_max=accounts.ACCOUNT_STRIKES,
+    )
+
+
+@admin_bp.route("/admin/comptes/reglages", methods=["POST"], endpoint="admin_accounts_settings")
+@admin_required
+def admin_accounts_settings():
+    validate_csrf()
+    current = load_settings()
+    current.update({
+        "accounts_enabled": request.form.get("accounts_enabled") == "1",
+        "guest_max_lifetime_minutes": request.form.get("guest_max_lifetime_minutes"),
+        "guest_max_upload_size_mb": request.form.get("guest_max_upload_size_mb"),
+        "guest_uploads_per_hour": request.form.get("guest_uploads_per_hour"),
+        "member_uploads_per_hour": request.form.get("member_uploads_per_hour"),
+    })
+    save_settings(current)
+    flash("Réglages des comptes enregistrés ✅ (pense à copier la sauvegarde des réglages dans Render)", "success")
+    return redirect(url_for("admin.admin_accounts"))
+
+
+@admin_bp.route("/admin/comptes/action", methods=["POST"], endpoint="admin_account_action")
+@admin_required
+def admin_account_action():
+    from pixshare.services import account_service as accounts
+
+    validate_csrf()
+    account_id = (request.form.get("account_id") or "").strip()
+    action = request.form.get("action") or ""
+    rec = accounts.get_account(account_id)
+    if not rec:
+        flash("Compte introuvable.", "warning")
+    elif action == "confirm":
+        accounts.confirm_account(account_id)
+        flash(f"Adresse de {rec['email']} confirmée.", "success")
+    elif action == "suspend":
+        accounts.set_status(account_id, "suspended")
+        flash(f"Compte {rec['email']} suspendu (déconnecté partout).", "success")
+    elif action == "activate":
+        accounts.set_status(account_id, "active")
+        flash(f"Compte {rec['email']} réactivé (avertissements remis à zéro).", "success")
+    elif action == "delete":
+        removed = accounts.delete_account(account_id)
+        flash(f"Compte {rec['email']} supprimé avec ses {removed} fichier(s).", "success")
+    else:
+        flash("Action inconnue.", "warning")
+    return redirect(url_for("admin.admin_accounts"))

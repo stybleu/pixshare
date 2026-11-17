@@ -24,6 +24,7 @@
   "placeholder_height": "e.g. 600",
   "resize_help": "Change only one dimension: the other will be calculated automatically to keep proportions.",
   "file_lifetime_default_10": "File lifetime",
+  "minutes_2": "2 minutes",
   "minutes_5": "5 minutes",
   "minutes_10": "10 minutes",
   "minutes_20": "20 minutes",

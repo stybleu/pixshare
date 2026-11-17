@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block sr_h1 %}{% endblock %}
+{% block robots %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 560px;">
+  <h1 class="h4 mb-3">{{ heading }}</h1>
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <p class="mb-3">{{ text }}</p>
+      <a class="btn btn-outline-primary btn-sm" href="{{ url_for('public.index') }}">Retour à l'accueil</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

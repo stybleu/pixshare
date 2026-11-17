@@ -1,0 +1,23 @@
+{% macro limits_card(limits, compact=false) %}
+<div class="table-responsive">
+  <table class="table table-sm align-middle mb-0 small">
+    <caption class="visually-hidden">Ce que permet un compte gratuit</caption>
+    <thead>
+      <tr><th scope="col"></th><th scope="col">Sans compte</th><th scope="col">Avec un compte</th></tr>
+    </thead>
+    <tbody>
+      <tr><th scope="row">Durée en ligne</th><td>2 min à {{ limits.guest.life }}</td><td class="fw-semibold">2 min à {{ limits.member.life }}</td></tr>
+      <tr><th scope="row">Taille par fichier</th><td>{{ limits.guest.mb }} Mo</td><td class="fw-semibold">{{ limits.member.mb }} Mo</td></tr>
+      <tr><th scope="row">Envois par heure</th>
+        <td>{{ limits.guest.per_hour if limits.guest.per_hour else "illimité" }}</td>
+        <td class="fw-semibold">{{ limits.member.per_hour if limits.member.per_hour else "illimité" }}</td></tr>
+      <tr><th scope="row">Mes images sur tous mes appareils</th><td>Ce navigateur seulement</td><td class="fw-semibold">✔ Partout, avec aperçu</td></tr>
+      <tr><th scope="row">Remplacer une image en gardant le lien</th><td>—</td><td class="fw-semibold">✔</td></tr>
+      {% if not compact %}
+      <tr><th scope="row">Photos en maillot de bain, sous-vêtements, torse nu</th><td>Peuvent être bloquées par le filtre</td><td class="fw-semibold">Acceptées (la nudité reste interdite)</td></tr>
+      <tr><th scope="row">Image jugée douteuse par le filtre</th><td>Supprimée automatiquement</td><td class="fw-semibold">Gardée en privé, vérifiée par une personne</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endmacro %}

@@ -152,6 +152,42 @@ def attach_guest_cookie(response):
     return response
 
 
+def _account_id() -> str:
+    try:
+        from .account_service import current_account_id
+        return current_account_id()
+    except Exception:
+        return ""
+
+
+def is_owner(meta: dict) -> bool:
+    """Le visiteur a-t-il envoyé ce fichier ? Même navigateur, ou même compte (sur n'importe quel appareil)."""
+    if not isinstance(meta, dict):
+        return False
+    owner = (meta.get("guest_token") or "").strip()
+    if owner and owner == (get_existing_guest_token() or ""):
+        return True
+    account = (meta.get("account_id") or "").strip()
+    return bool(account and account == _account_id())
+
+
+def claim_device_files(account_id: str) -> int:
+    """À la connexion : les fichiers envoyés depuis ce navigateur sans compte rejoignent le compte."""
+    token = get_existing_guest_token()
+    if not token or not account_id:
+        return 0
+    db = load_db()
+    claimed = 0
+    for meta in db.values():
+        if (isinstance(meta, dict) and meta.get("guest_token") == token and not meta.get("account_id")
+                and (meta.get("status") or "active").lower() in ("active", "pending")):
+            meta["account_id"] = account_id
+            claimed += 1
+    if claimed:
+        save_db(db)
+    return claimed
+
+
 def get_or_create_visitor_token() -> tuple[str, bool]:
     token = (request.cookies.get(current_app.config["VISITOR_COOKIE_NAME"]) or "").strip()
     if token:
@@ -511,6 +547,13 @@ def file_meta(file_id: str, db: dict | None = None):
         "delete_reason": meta.get("delete_reason", ""),
         "thumb_url": url_for("admin.admin_thumbnail", file_id=file_id, _external=False) if thumb_exists else "",
         "has_public_file": public_exists,
+        "account_id": meta.get("account_id", ""),
+        "owner_preview_url": (
+            url_for("account.owner_preview", file_id=file_id, v=meta.get("replace_count") or None)
+            if status in ("active", "pending") and public_exists and ext in IMAGE_EXTENSIONS
+            else ""
+        ),
+        "replaced_at": meta.get("replaced_at", ""),
         "has_thumb": thumb_exists,
         "thumb_delete_at": get_expected_thumb_delete_at(meta),
         "usage": build_usage_summary(file_id),
@@ -547,13 +590,15 @@ def list_all_thumbnails():
 
 
 def list_guest_files():
+    """Fichiers du visiteur : ceux de ce navigateur, plus ceux de son compte (tous appareils)."""
     cleanup_expired()
     db = load_db()
     guest_token = get_guest_token()
+    account_id = _account_id()
     items = []
 
     for file_id, meta in db.items():
-        if meta.get("guest_token") != guest_token:
+        if meta.get("guest_token") != guest_token and not (account_id and meta.get("account_id") == account_id):
             continue
 
         fm = file_meta(file_id, db=db)
@@ -701,6 +746,7 @@ def _register_saved_public_file(
         "ip": client_ip,
         "by_admin": bool(is_admin()),
         "guest_token": guest_token,
+        "account_id": _account_id(),
         "views": 0,
         "status": initial_upload_status(server_name),
         "moderation_requested_at": uploaded_at.isoformat(timespec="seconds") if requires_image_moderation(server_name) else "",
@@ -963,6 +1009,15 @@ def delete_by_id(file_id: str, reason: str = "deleted") -> bool:
     if not deleted_anything and (meta.get("status") or "active").lower() != "active":
         return True
 
+    if meta.get("account_id"):
+        try:  # image d'un membre refusée par la modération : un avertissement de plus pour le compte
+            from .image_ban_service import BAN_REASONS
+            if reason in BAN_REASONS and (meta.get("status") or "active").lower() in ("active", "pending"):
+                from .account_service import add_strike
+                add_strike(meta["account_id"])
+        except Exception:
+            pass
+
     meta["status"] = "deleted"
     meta["deleted_at"] = utcnow().isoformat(timespec="seconds")
     meta["delete_reason"] = reason or "deleted"
@@ -984,3 +1039,85 @@ def file_password_ok(meta: dict, password: str) -> bool:
         return check_password_hash(stored, password)
     except Exception:
         return False
+
+
+def replace_file(file_id: str, file_storage, original_name: str, client_ip: str, max_size_bytes: int) -> dict:
+    """Remplace le contenu d'un fichier en gardant son adresse (réservé aux membres).
+
+    La nouvelle image repasse par tout le circuit d'un envoi : taille, conversion HEIC, retrait des
+    métadonnées, images interdites, puis NudeNet (elle reste privée jusqu'à la décision).
+    La date d'expiration, les vues, le mot de passe et la limite de vues ne changent pas.
+    """
+    db = load_db()
+    meta = db.get(file_id)
+    if not isinstance(meta, dict) or (meta.get("status") or "active").lower() not in ("active", "pending"):
+        raise FileNotFoundError(file_id)
+
+    _tmp_id, tmp_name, tmp_dest, ext = _prepare_file_destination(original_name)
+    file_storage.save(tmp_dest)
+    try:
+        if max_size_bytes and os.path.getsize(tmp_dest) > int(max_size_bytes):
+            raise FileTooLargeError("Fichier trop volumineux.")
+        tmp_name, tmp_dest, ext, original_name = _convert_heic_to_jpeg(tmp_dest, tmp_name, ext, original_name)
+        strip_uploaded_image(tmp_dest)
+        banned = _check_banned(tmp_dest, client_ip)
+    except Exception:
+        if os.path.exists(tmp_dest):
+            try:
+                os.remove(tmp_dest)
+            except OSError:
+                pass
+        raise
+
+    folder = current_app.config["UPLOAD_FOLDER"]
+    old_name = os.path.basename(str(meta.get("server_name") or ""))
+    new_name = f"{file_id}{ext}"
+    if old_name and old_name != new_name:
+        try:
+            os.remove(os.path.join(folder, old_name))
+        except OSError:
+            pass
+    os.replace(tmp_dest, os.path.join(folder, new_name))
+    remove_medium(file_id)
+
+    old_thumb = (meta.get("thumb_path") or "").strip()
+    if old_thumb:
+        delete_thumbnail_file(old_thumb)
+    thumb_path = ""
+    if is_image_extension(ext):
+        try:
+            thumb_path = create_thumbnail(os.path.join(folder, new_name), file_id)
+        except Exception:
+            thumb_path = ""
+        create_medium(os.path.join(folder, new_name), file_id)
+
+    db = load_db()
+    meta = db.get(file_id) or meta
+    now = utcnow().isoformat(timespec="seconds")
+    needs_check = requires_image_moderation(new_name)
+    meta.update({
+        "original_name": original_name,
+        "server_name": new_name,
+        "status": initial_upload_status(new_name),
+        "moderation_requested_at": now if needs_check else "",
+        "moderated_at": "",
+        "moderation_decision": "pending" if needs_check else "not_required",
+        "moderation_detector": "",
+        "moderation_score": None,
+        "moderation_label": "",
+        "moderation_attempts": 0,
+        "reports": [],
+        "thumb_path": thumb_path,
+        "thumb_delete_at": "",
+        "replaced_at": now,
+        "replace_count": int(meta.get("replace_count") or 0) + 1,
+        "ip": client_ip,
+    })
+    if thumb_path:
+        meta["thumb_delete_at"] = get_expected_thumb_delete_at(meta)
+    db[file_id] = meta
+    if banned and banned[0] == "similar" and meta["status"] == "pending":
+        from .moderation_service import mark_image_for_review
+        mark_image_for_review(db, file_id, meta, "empreinte", None, "deja_refusee")
+    save_db(db)
+    return meta

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block sr_h1 %}{% endblock %}
+{% block robots %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 480px;">
+  <h1 class="h4 mb-3">Connexion</h1>
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <form method="post" class="row g-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="col-12">
+          <label class="form-label" for="loginEmail">Adresse e-mail</label>
+          <input id="loginEmail" class="form-control" type="email" name="email" value="{{ email }}" maxlength="254" required autocomplete="email">
+        </div>
+        <div class="col-12">
+          <label class="form-label" for="loginPassword">Mot de passe</label>
+          <input id="loginPassword" class="form-control" type="password" name="password" maxlength="128" required autocomplete="current-password">
+        </div>
+        <div class="col-12">
+          <button class="btn btn-primary w-100" type="submit">Se connecter</button>
+        </div>
+      </form>
+      <div class="small mt-3 d-flex flex-wrap justify-content-between gap-2">
+        <a href="{{ url_for('account.forgot') }}">Mot de passe oublié ?</a>
+        {% if accounts_on %}<a href="{{ url_for('account.signup') }}">Créer un compte gratuit</a>{% endif %}
+      </div>
+      <p class="small text-muted mt-3 mb-0">Tu restes connecté 30 jours sur cet appareil.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

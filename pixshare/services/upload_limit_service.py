@@ -74,13 +74,16 @@ def _prune(buckets: dict, now: float, window: int) -> None:
         buckets.clear()
 
 
-def check_upload_rate(ip: str, exempt: bool = False) -> RateInfo:
-    """Compte un envoi pour `ip` et dit s'il est autorisé.
+def check_upload_rate(ip: str, exempt: bool = False, limit: int | None = None) -> RateInfo:
+    """Compte un envoi pour `ip` (ou une clé « acct:… » pour un membre) et dit s'il est autorisé.
 
     `exempt` (administrateur) et une IP inconnue ne sont jamais limités : sans IP,
-    tous les visiteurs partageraient le même compteur.
+    tous les visiteurs partageraient le même compteur. `limit` remplace le nombre de la
+    variable UPLOAD_RATE_LIMIT (réglages des comptes) ; UPLOAD_RATE_LIMIT=0 coupe toujours la limite.
     """
-    limit, window = upload_limit_settings()
+    env_limit, window = upload_limit_settings()
+    if limit is None or env_limit <= 0:
+        limit = env_limit
     if exempt or limit <= 0 or not ip:
         return RateInfo(True, 0, window, 0, 0)
 
@@ -124,8 +127,10 @@ def format_window(seconds: int) -> str:
     return f"{seconds} secondes"
 
 
-def limit_message(info: RateInfo) -> str:
+def limit_message(info: RateInfo, member: bool = False) -> str:
+    who = "pour ton compte" if member else "depuis ton adresse"
+    tip = "" if member else " Avec un compte gratuit, la limite est bien plus haute."
     return (
-        f"Trop d'envois depuis ton adresse (maximum {info.limit} par {format_window(info.window)}). "
-        f"Réessaie dans {format_wait(info.retry_after)}."
+        f"Trop d'envois {who} (maximum {info.limit} par {format_window(info.window)}). "
+        f"Réessaie dans {format_wait(info.retry_after)}.{tip}"
     )

@@ -10,6 +10,8 @@ from .services.request_service import get_client_ip
 from .routes.public_routes import public_bp
 from .routes.admin_routes import admin_bp
 from .routes.seo_routes import seo_bp
+from .routes.account_routes import account_bp
+from .services.account_service import current_account
 from .services.turnstile_service import site_key, turnstile_required
 from .services.visitor_stats_service import record_image_display, record_page_view, should_count, should_count_display
 from .services.live_service import record as record_live
@@ -76,6 +78,7 @@ def create_app(config_overrides: dict | None = None) -> Flask:
             "current_lang": get_current_language(),
             "switch_lang_url": build_lang_url,
             "turnstile_site_key": site_key() if turnstile_required() else "",
+            "member": current_account(),
         })
         return data
 
@@ -116,7 +119,7 @@ def create_app(config_overrides: dict | None = None) -> Flask:
         # les images en attente. Seuls les envois de fichiers déclenchent l'analyse.
         if (
             request.method == "POST"
-            and request.endpoint == "public.index"
+            and request.endpoint in ("public.index", "account.replace")
             and response.status_code < 400
         ):
             response.call_on_close(lambda: run_after_response(app))
@@ -150,5 +153,6 @@ def create_app(config_overrides: dict | None = None) -> Flask:
     app.register_blueprint(seo_bp)
     app.register_blueprint(public_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(account_bp)
 
     return app

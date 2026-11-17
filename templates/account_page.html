@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% from "_account_limits.html" import limits_card %}
+{% block sr_h1 %}{% endblock %}
+{% block robots %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 760px;">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="h4 mb-0">Mon compte</h1>
+    <form method="post" action="{{ url_for('account.logout') }}" class="m-0">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button class="btn btn-outline-secondary btn-sm" type="submit">Se déconnecter</button>
+    </form>
+  </div>
+
+  <div class="card shadow-sm mb-3">
+    <div class="card-body">
+      <p class="mb-1">Connecté avec <strong class="text-break">{{ rec.email }}</strong></p>
+      <p class="small text-muted mb-3">Compte créé le {{ rec.created_at[:10] }}.</p>
+      <p class="mb-2">
+        <strong>{{ file_count }}</strong> fichier(s) en ligne{% if pending_count %}, dont {{ pending_count }} en attente de vérification{% endif %}.
+      </p>
+      <a class="btn btn-primary btn-sm" href="{{ url_for('public.index') }}#upload-tool">Envoyer un fichier</a>
+      <a class="btn btn-outline-primary btn-sm" href="{{ url_for('public.index') }}#mes-fichiers">Voir mes fichiers</a>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mb-3">
+    <div class="card-body">
+      <h2 class="h6">Mes avantages</h2>
+      {{ limits_card(limits) }}
+      <p class="small text-muted mt-2 mb-0">
+        La pornographie et la nudité restent interdites. Au bout de 3 images refusées par la modération, le compte est suspendu.
+      </p>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mb-3">
+    <div class="card-body">
+      <h2 class="h6">Changer de mot de passe</h2>
+      <form method="post" action="{{ url_for('account.change_password') }}" class="row g-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="col-12">
+          <label class="form-label small" for="currentPassword">Mot de passe actuel</label>
+          <input id="currentPassword" class="form-control" type="password" name="current_password" maxlength="128" required autocomplete="current-password">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small" for="newPassword">Nouveau mot de passe</label>
+          <input id="newPassword" class="form-control" type="password" name="password" minlength="{{ password_min }}" maxlength="128" required autocomplete="new-password">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small" for="newPassword2">Le même, encore une fois</label>
+          <input id="newPassword2" class="form-control" type="password" name="password2" minlength="{{ password_min }}" maxlength="128" required autocomplete="new-password">
+        </div>
+        <div class="col-12">
+          <button class="btn btn-outline-primary btn-sm" type="submit">Changer</button>
+          <span class="small text-muted ms-2">Tes autres appareils seront déconnectés.</span>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card shadow-sm border-danger">
+    <div class="card-body">
+      <h2 class="h6 text-danger">Supprimer mon compte</h2>
+      <p class="small text-muted">Ton compte, ton adresse e-mail et <strong>tous tes fichiers</strong> sont effacés tout de suite. C'est définitif.</p>
+      <form method="post" action="{{ url_for('account.delete') }}" class="row g-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="col-md-6">
+          <label class="form-label small" for="deletePassword">Mot de passe</label>
+          <input id="deletePassword" class="form-control" type="password" name="password" maxlength="128" required autocomplete="current-password">
+        </div>
+        <div class="col-12">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" value="1" id="deleteConfirm" name="confirm" required>
+            <label class="form-check-label small" for="deleteConfirm">Je veux supprimer mon compte et tous mes fichiers.</label>
+          </div>
+        </div>
+        <div class="col-12">
+          <button class="btn btn-danger btn-sm" type="submit">Supprimer définitivement</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

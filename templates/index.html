@@ -117,6 +117,21 @@
           <a href="{{ url_for('public.cgu') }}">{{ _("cgu_short") }}</a>.
         </p>
 
+        {% if account %}
+          <div class="alert alert-success small py-2 mb-3" role="status">
+            ✔ Compte connecté : jusqu'à <strong>{{ limits.member.life }}</strong> et <strong>{{ limits.member.mb }} Mo</strong> par fichier.
+            <a href="{{ url_for('account.page') }}">Mon compte</a>
+          </div>
+        {% elif not admin and accounts_open %}
+          <div class="alert alert-info small py-2 mb-3">
+            Sans compte : jusqu'à {{ limits.guest.life }} et {{ limits.guest.mb }} Mo par fichier.
+            <a href="{{ url_for('account.signup') }}">Crée un compte gratuit</a> pour garder tes images jusqu'à
+            {{ limits.member.life }}, envoyer jusqu'à {{ limits.member.mb }} Mo, les retrouver sur tous tes appareils
+            et les remplacer sans changer le lien.
+            <a href="{{ url_for('account.login') }}">Connexion</a>
+          </div>
+        {% endif %}
+
         {% if not uploads_enabled %}
           <div class="alert alert-warning mb-3" role="alert">
             Le service d'upload est temporairement suspendu. Les fichiers déjà publiés restent accessibles jusqu'à leur expiration.
@@ -318,8 +333,8 @@
     <div class="card shadow-sm h-100">
       <div class="card-body">
 
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-          <h2 class="h6 mb-0">{{ _("history_title") }}</h2>
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2" id="mes-fichiers">
+          <h2 class="h6 mb-0">{{ _("history_title") }}{% if account %} <span class="small text-muted fw-normal">· tous tes appareils</span>{% endif %}</h2>
 
           {% if guest_files and guest_files|length > 0 %}
           <span class="badge text-bg-success">{{ guest_files|length }} {{ _("active_count_suffix") }}</span>
@@ -335,13 +350,14 @@
             {% set open_url = f.raw_url if f.previewable else f.download_url %}
             {% set is_pending = (f.status == 'pending') %}
 
-            <div class="mb-3 p-2 border rounded">
+            <div class="mb-3 p-2 border rounded" id="file-{{ f.id }}">
 
               <div class="d-flex align-items-center gap-2">
-                {% if f.previewable and not is_pending %}
+                {% if f.owner_preview_url %}
                 <img
-                  src="{{ f.raw_url }}"
+                  src="{{ f.owner_preview_url }}"
                   alt="{{ f.original }}"
+                  loading="lazy"
                   style="
                   width:50px;
                   height:50px;
@@ -396,7 +412,21 @@
                     {{ _("download") }}
                   </a>
                 {% else %}
-                  <span class="text-muted small align-self-center">Privée jusqu'à la décision du bot.</span>
+                  <span class="text-muted small align-self-center">Privée jusqu'à la vérification.</span>
+                {% endif %}
+
+                {% if account and f.account_id == account.id %}
+                <details class="w-100 order-last">
+                  <summary class="small text-primary" style="cursor:pointer">Remplacer par un autre fichier (même lien)</summary>
+                  <form method="post" enctype="multipart/form-data"
+                        action="{{ url_for('account.replace', file_id=f.id) }}" class="d-flex flex-wrap gap-2 mt-2">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <label class="visually-hidden" for="replace_{{ f.id }}">Nouveau fichier pour {{ f.original }}</label>
+                    <input id="replace_{{ f.id }}" class="form-control form-control-sm" style="max-width:260px" type="file" name="file" required>
+                    <button class="btn btn-outline-primary btn-sm" type="submit">Remplacer</button>
+                  </form>
+                  <div class="form-text">Le lien, la durée restante et les vues ne changent pas. La nouvelle image est vérifiée avant d'être visible.</div>
+                </details>
                 {% endif %}
 
                 <form method="post"

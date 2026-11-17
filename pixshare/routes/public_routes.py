@@ -23,6 +23,7 @@ from pixshare.services.file_service import (
     attach_guest_cookie,
     get_existing_guest_token,
     get_guest_token,
+    is_owner,
     get_or_create_visitor_token,
     is_image_filename,
     is_video_filename,
@@ -47,8 +48,12 @@ from pixshare.services.settings_service import (
     get_lifetime_choices,
     get_max_upload_size_bytes,
     get_max_upload_size_mb,
+    accounts_enabled,
+    get_uploads_per_hour,
+    limits_table,
     upload_service_enabled,
 )
+from pixshare.services.account_service import current_account
 from pixshare.services.url_import_service import UrlImportError, download_remote_image_to_temp
 from pixshare.services.moderation_service import pop_pending_notice
 from pixshare.services.embed_service import embed_codes
@@ -108,8 +113,7 @@ def _limited_access_allowed(file_id: str, meta: dict) -> bool:
         return True
     if is_admin():
         return True
-    owner = meta.get("guest_token") or ""
-    if owner and owner == (get_existing_guest_token() or ""):
+    if is_owner(meta):
         return True
     token = (request.cookies.get(current_app.config["VISITOR_COOKIE_NAME"]) or "").strip()
     if not token:
@@ -131,8 +135,7 @@ def _is_unlocked(file_id: str, meta: dict) -> bool:
         return True
     if is_admin():
         return True
-    owner = meta.get("guest_token") or ""
-    if owner and owner == (get_existing_guest_token() or ""):
+    if is_owner(meta):
         return True
     return file_id in (session.get(UNLOCKED_SESSION_KEY) or [])
 
@@ -215,11 +218,16 @@ def index():
         # on réaffiche la page avec un message et le code 429 (voir la fin de la fonction).
         rate_limited = False
         if (f and f.filename) or image_url:
-            rate = check_upload_rate(ip, exempt=is_admin())
+            account = current_account()
+            rate = check_upload_rate(
+                f"acct:{account['id']}" if account else ip,
+                exempt=is_admin(),
+                limit=get_uploads_per_hour(bool(account)),
+            )
             if not rate.allowed:
                 rate_limited = True
                 rate_limit_retry = rate.retry_after
-                flash(limit_message(rate), "warning")
+                flash(limit_message(rate, member=bool(account)), "warning")
 
         if not rate_limited and f and f.filename:
             original = f.filename
@@ -332,6 +340,9 @@ def index():
         default_lifetime=get_default_lifetime(),
         lifetime_choices=get_lifetime_choices(),
         uploads_enabled=uploads_enabled,
+        account=current_account(),
+        limits=limits_table(),
+        accounts_open=accounts_enabled(),
     ))
     if rate_limit_retry:
         response.status_code = 429
@@ -677,7 +688,8 @@ def delete_own_file(file_id):
         flash("Fichier introuvable.", "warning")
         return redirect(url_for("public.index"))
 
-    if not is_admin() and meta.get("guest_token") != get_guest_token():
+    get_guest_token()
+    if not is_admin() and not is_owner(meta):
         abort(403)
 
     ok = delete_by_id(file_id)

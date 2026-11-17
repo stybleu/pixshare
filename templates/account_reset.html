@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block sr_h1 %}{% endblock %}
+{% block robots %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 480px;">
+  <h1 class="h4 mb-3">Nouveau mot de passe</h1>
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <form method="post" class="row g-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="col-12">
+          <label class="form-label" for="resetPassword">Nouveau mot de passe</label>
+          <input id="resetPassword" class="form-control" type="password" name="password" minlength="{{ password_min }}" maxlength="128" required autocomplete="new-password">
+          <div class="form-text">Au moins {{ password_min }} caractères.</div>
+        </div>
+        <div class="col-12">
+          <label class="form-label" for="resetPassword2">Le même, encore une fois</label>
+          <input id="resetPassword2" class="form-control" type="password" name="password2" minlength="{{ password_min }}" maxlength="128" required autocomplete="new-password">
+        </div>
+        <div class="col-12">
+          <button class="btn btn-primary w-100" type="submit">Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

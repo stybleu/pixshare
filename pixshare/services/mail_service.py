@@ -3,6 +3,10 @@
 Réglé par des variables d'environnement (Render) : MAIL_SMTP_HOST, MAIL_SMTP_USER, MAIL_SMTP_PASS,
 MAIL_TO (destinataire), et en option MAIL_SMTP_PORT (587 par défaut ; 465 = SSL), MAIL_FROM, MAIL_SITE_URL.
 L'envoi ne bloque jamais la modération : en cas d'échec, on écrit seulement un avertissement dans les logs.
+
+Mails des comptes (confirmation, mot de passe oublié) : envoyés aux membres avec les mêmes réglages,
+ou avec une autre boîte si ACCOUNT_MAIL_SMTP_HOST est défini (ACCOUNT_MAIL_SMTP_USER, ACCOUNT_MAIL_SMTP_PASS,
+ACCOUNT_MAIL_SMTP_PORT, ACCOUNT_MAIL_FROM). L'adresse d'envoi est visible par les membres.
 Les alertes sont groupées : un mail liste toutes les images en attente, au plus un toutes les 5 minutes.
 """
 from __future__ import annotations
@@ -31,21 +35,21 @@ _last_sent = None
 _timer = None
 
 
-def _cfg() -> dict:
+def _cfg(prefix: str = "MAIL_") -> dict:
     env = os.environ
     try:
-        port = int(env.get("MAIL_SMTP_PORT") or 587)
+        port = int(env.get(prefix + "SMTP_PORT") or 587)
     except ValueError:
         port = 587
-    user = (env.get("MAIL_SMTP_USER") or "").strip()
+    user = (env.get(prefix + "SMTP_USER") or "").strip()
     to = (env.get("MAIL_TO") or "").strip()
     return {
-        "host": (env.get("MAIL_SMTP_HOST") or "").strip(),
+        "host": (env.get(prefix + "SMTP_HOST") or "").strip(),
         "port": port,
         "user": user,
-        "password": env.get("MAIL_SMTP_PASS") or "",
+        "password": env.get(prefix + "SMTP_PASS") or "",
         "to": to,
-        "sender": (env.get("MAIL_FROM") or "").strip() or user or to,
+        "sender": (env.get(prefix + "FROM") or "").strip() or user or (to if prefix == "MAIL_" else ""),
         "site": (env.get("MAIL_SITE_URL") or "https://pixshare.fr").strip().rstrip("/"),
     }
 
@@ -55,9 +59,27 @@ def mail_configured() -> bool:
     return bool(cfg["host"] and cfg["to"])
 
 
-def send_mail_now(subject: str, body: str, html: str | None = None, images: dict | None = None) -> tuple[bool, str]:
+def _account_cfg() -> dict:
+    return _cfg("ACCOUNT_MAIL_") if (os.environ.get("ACCOUNT_MAIL_SMTP_HOST") or "").strip() else _cfg()
+
+
+def account_mail_configured() -> bool:
+    cfg = _account_cfg()
+    return bool(cfg["host"] and cfg["sender"])
+
+
+def send_account_mail(to: str, subject: str, body: str, html: str | None = None) -> tuple[bool, str]:
+    """Mail à un membre (confirmation, mot de passe oublié)."""
+    cfg = _account_cfg()
+    if not (cfg["host"] and cfg["sender"]):
+        return False, "envoi de mails non configuré"
+    return send_mail_now(subject, body, html=html, cfg=dict(cfg, to=to))
+
+
+def send_mail_now(subject: str, body: str, html: str | None = None, images: dict | None = None,
+                  cfg: dict | None = None) -> tuple[bool, str]:
     """Envoie un mail tout de suite (texte, et HTML avec images intégrées si fourni). Renvoie (réussi, erreur)."""
-    cfg = _cfg()
+    cfg = cfg or _cfg()
     if not (cfg["host"] and cfg["to"]):
         return False, "variables MAIL_SMTP_HOST et MAIL_TO manquantes"
     msg = EmailMessage()

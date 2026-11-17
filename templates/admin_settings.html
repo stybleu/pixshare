@@ -36,7 +36,7 @@
       </div>
 
       <div class="col-12 col-md-6">
-        <label class="form-label fw-semibold">Taille maximale des fichiers (Mo)</label>
+        <label class="form-label fw-semibold">Taille maximale des fichiers des membres (Mo)</label>
         <input aria-label="Taille maximale des fichiers (Mo)"
           type="number"
           name="max_upload_size_mb"
@@ -60,15 +60,15 @@
       </div>
 
       <div class="col-12 col-md-6">
-        <label class="form-label fw-semibold" for="max_lifetime_minutes">Durée maximale d'hébergement</label>
+        <label class="form-label fw-semibold" for="max_lifetime_minutes">Durée maximale d'hébergement des membres</label>
         <select name="max_lifetime_minutes" id="max_lifetime_minutes" class="form-select">
-          <option value="" {% if not settings.max_lifetime_minutes %}selected{% endif %}>Par défaut (variable Render, sinon 7 jours)</option>
+          <option value="" {% if not settings.max_lifetime_minutes %}selected{% endif %}>Par défaut (variable Render, sinon 1 an)</option>
           {% for minutes, label_key in max_lifetime_choices %}
           <option value="{{ minutes }}" {% if settings.max_lifetime_minutes == minutes %}selected{% endif %}>{{ _(label_key) }}</option>
           {% endfor %}
         </select>
         <div class="form-text">
-          En ce moment : <strong>{{ _(dict(lifetime_choices)[max_lifetime_now]) }}</strong>. Les visiteurs ne peuvent pas choisir plus long. Sans disque sur Render, ce choix est perdu à chaque
+          En ce moment : <strong>{{ _(dict(lifetime_choices)[max_lifetime_now]) }}</strong>. Les membres ne peuvent pas choisir plus long. Les limites des visiteurs sans compte sont dans <a href="{{ url_for('admin.admin_accounts') }}#limites">Comptes</a>. Sans disque sur Render, ce choix est perdu à chaque
           déploiement : pour le garder, mets la variable <code>MAX_LIFETIME_MIN</code> sur Render (en minutes :
           <code>10080</code> = 7 jours, <code>43200</code> = 30 jours, <code>525600</code> = 1 an).
         </div>

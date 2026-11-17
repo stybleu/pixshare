@@ -14,8 +14,14 @@ DEFAULT_SETTINGS = {
     "max_upload_size_mb": 100,
     "allow_permanent_files": True,
     "default_lifetime_minutes": 10,
-    # Durée maximale proposée aux visiteurs. None = variable MAX_LIFETIME_MIN (7 jours par défaut).
+    # Durée maximale proposée aux membres. None = variable MAX_LIFETIME_MIN (1 an par défaut).
     "max_lifetime_minutes": None,
+    # Comptes : inscriptions ouvertes, et limites des visiteurs sans compte.
+    "accounts_enabled": True,
+    "guest_max_lifetime_minutes": 120,
+    "guest_max_upload_size_mb": 10,
+    "guest_uploads_per_hour": 10,
+    "member_uploads_per_hour": 100,
     # Lien « Soutenir PixShare » (Ko-fi...). "" = variable SUPPORT_URL, sinon pas de bouton.
     "support_url": "",
     "thumbnail_retention_hours": 24,
@@ -71,7 +77,7 @@ def nsfw_class_label(name) -> str:
 
 # Durées proposées (minutes, clé de traduction du libellé).
 LIFETIME_CHOICES = (
-    (5, "minutes_5"), (10, "minutes_10"), (20, "minutes_20"), (30, "minutes_30"),
+    (2, "minutes_2"), (5, "minutes_5"), (10, "minutes_10"), (20, "minutes_20"), (30, "minutes_30"),
     (60, "hour_1"), (120, "hours_2"), (360, "hours_6"), (720, "hours_12"),
     (1440, "day_1"), (2880, "days_2"), (4320, "days_3"), (10080, "days_7"),
     (20160, "days_14"), (43200, "days_30"), (129600, "days_90"), (525600, "year_1"),
@@ -79,6 +85,10 @@ LIFETIME_CHOICES = (
 ALLOWED_LIFETIMES = {minutes for minutes, _key in LIFETIME_CHOICES}
 # Durées possibles pour le maximum (à partir d'1 heure).
 MAX_LIFETIME_CHOICES = tuple(minutes for minutes, _key in LIFETIME_CHOICES if minutes >= 60)
+# Durées possibles pour le maximum des visiteurs sans compte (à partir de 10 minutes).
+GUEST_MAX_LIFETIME_CHOICES = tuple(minutes for minutes, _key in LIFETIME_CHOICES if minutes >= 10)
+ACCOUNT_KEYS = ("accounts_enabled", "guest_max_lifetime_minutes", "guest_max_upload_size_mb",
+                "guest_uploads_per_hour", "member_uploads_per_hour")
 
 
 ENV_SETTINGS = "PIXSHARE_SETTINGS"
@@ -136,6 +146,7 @@ def load_settings() -> dict:
     settings["thumbnail_retention_hours"] = get_valid_thumbnail_retention_hours(settings.get("thumbnail_retention_hours"))
     settings["keep_thumbnails"] = bool(settings.get("keep_thumbnails", True))
     settings.update(_clean_nsfw_settings(settings))
+    settings.update(clean_account_settings(settings))
     return settings
 
 
@@ -161,6 +172,8 @@ def save_settings(settings: dict) -> dict:
     clean_settings["season_theme"] = clean_choice(settings.get("season_theme", current.get("season_theme", "")))
     sky = settings.get("sky_enabled", current.get("sky_enabled"))
     clean_settings["sky_enabled"] = sky if isinstance(sky, bool) else None
+    # Réglages des comptes absents de `settings` (autre formulaire) : valeur actuelle.
+    clean_settings.update(clean_account_settings({key: settings.get(key, current.get(key)) for key in ACCOUNT_KEYS}))
 
     save_json(SETTINGS_FILENAME, clean_settings)
 
@@ -206,6 +219,41 @@ def _clean_nsfw_settings(source: dict) -> dict:
         "nsfw_tiling": bool(source.get("nsfw_tiling", True)),
         "nsfw_classes": get_valid_nsfw_classes(source.get("nsfw_classes")),
     }
+
+
+def _bounded_int(value, default: int, low: int, high: int) -> int:
+    try:
+        value = int(value)
+    except (TypeError, ValueError):
+        return default
+    return max(low, min(value, high))
+
+
+def clean_account_settings(source: dict) -> dict:
+    guest_life = source.get("guest_max_lifetime_minutes")
+    try:
+        guest_life = int(guest_life)
+    except (TypeError, ValueError):
+        guest_life = DEFAULT_SETTINGS["guest_max_lifetime_minutes"]
+    if guest_life not in GUEST_MAX_LIFETIME_CHOICES:
+        guest_life = DEFAULT_SETTINGS["guest_max_lifetime_minutes"]
+    enabled = source.get("accounts_enabled")
+    return {
+        "accounts_enabled": True if enabled is None else bool(enabled),
+        "guest_max_lifetime_minutes": guest_life,
+        "guest_max_upload_size_mb": _bounded_int(source.get("guest_max_upload_size_mb"), DEFAULT_SETTINGS["guest_max_upload_size_mb"], 1, 500),
+        "guest_uploads_per_hour": _bounded_int(source.get("guest_uploads_per_hour"), DEFAULT_SETTINGS["guest_uploads_per_hour"], 0, 10000),
+        "member_uploads_per_hour": _bounded_int(source.get("member_uploads_per_hour"), DEFAULT_SETTINGS["member_uploads_per_hour"], 0, 10000),
+    }
+
+
+def _member() -> bool:
+    """Membre connecté (ou admin) : il a droit aux limites des comptes."""
+    try:
+        from pixshare.services.account_service import is_member
+        return is_member()
+    except Exception:
+        return False
 
 
 def get_valid_max_upload_size_mb(value) -> int:
@@ -266,25 +314,45 @@ def get_valid_max_lifetime(value):
     return value if value in MAX_LIFETIME_CHOICES else None
 
 
-def get_max_lifetime() -> int:
-    """Durée maximale d'hébergement en minutes : réglage de l'admin, sinon
-    variable MAX_LIFETIME_MIN de Render, sinon 7 jours."""
+def get_max_lifetime(member: bool | None = None) -> int:
+    """Durée maximale d'hébergement en minutes. Membres : réglage de l'admin, sinon
+    variable MAX_LIFETIME_MIN de Render, sinon 1 an. Visiteurs sans compte : leur
+    propre maximum (2 heures par défaut), jamais plus que celui des membres."""
+    member_max = get_member_max_lifetime()
+    if member is None:
+        member = _member()
+    if member:
+        return member_max
+    return min(member_max, int(load_settings().get("guest_max_lifetime_minutes") or 120))
+
+
+def get_member_max_lifetime() -> int:
     chosen = load_settings().get("max_lifetime_minutes")
     if chosen:
         return int(chosen)
     from flask import current_app
     try:
-        env_value = int(current_app.config.get("MAX_LIFETIME_MIN", 10080))
+        env_value = int(current_app.config.get("MAX_LIFETIME_MIN", 525600))
     except (TypeError, ValueError):
-        env_value = 10080
+        env_value = 525600
     # On se cale sur la plus grande durée proposée qui ne dépasse pas la variable.
     fitting = [m for m in MAX_LIFETIME_CHOICES if m <= env_value]
     return fitting[-1] if fitting else MAX_LIFETIME_CHOICES[0]
 
 
-def get_lifetime_choices() -> list[tuple[int, str]]:
+def lifetime_label(minutes: int) -> str:
+    """« 2 heures », « 1 an »… (libellé traduit des durées proposées)."""
+    key = dict(LIFETIME_CHOICES).get(int(minutes))
+    if key:
+        from pixshare.services.translation_service import translate
+        return translate(key)
+    from pixshare.services.time_service import format_duration_minutes
+    return format_duration_minutes(minutes)
+
+
+def get_lifetime_choices(member: bool | None = None) -> list[tuple[int, str]]:
     """Durées affichées aux visiteurs : toutes celles qui ne dépassent pas le maximum."""
-    limit = get_max_lifetime()
+    limit = get_max_lifetime(member)
     return [(minutes, key) for minutes, key in LIFETIME_CHOICES if minutes <= limit]
 
 
@@ -297,8 +365,37 @@ def get_default_lifetime() -> int:
     return [m for m, _k in LIFETIME_CHOICES if m <= limit][-1]
 
 
-def get_max_upload_size_mb() -> int:
-    return int(load_settings().get("max_upload_size_mb", DEFAULT_SETTINGS["max_upload_size_mb"]))
+def get_max_upload_size_mb(member: bool | None = None) -> int:
+    """Membres : taille maximale de l'admin. Visiteurs sans compte : la leur (10 Mo par défaut)."""
+    settings = load_settings()
+    member_max = int(settings.get("max_upload_size_mb", DEFAULT_SETTINGS["max_upload_size_mb"]))
+    if member is None:
+        member = _member()
+    if member:
+        return member_max
+    return min(member_max, int(settings.get("guest_max_upload_size_mb") or 10))
+
+
+def get_uploads_per_hour(member: bool | None = None) -> int:
+    """Envois autorisés par heure (0 = pas de limite)."""
+    settings = load_settings()
+    if member is None:
+        member = _member()
+    return int(settings.get("member_uploads_per_hour" if member else "guest_uploads_per_hour") or 0)
+
+
+def limits_table() -> dict:
+    """Limites sans compte et avec compte (accueil, inscription, page du compte)."""
+    return {
+        "guest": {"life": lifetime_label(get_max_lifetime(False)), "mb": get_max_upload_size_mb(False),
+                  "per_hour": get_uploads_per_hour(False)},
+        "member": {"life": lifetime_label(get_max_lifetime(True)), "mb": get_max_upload_size_mb(True),
+                   "per_hour": get_uploads_per_hour(True)},
+    }
+
+
+def accounts_enabled() -> bool:
+    return bool(load_settings().get("accounts_enabled", True))
 
 
 def get_max_upload_size_bytes() -> int:
