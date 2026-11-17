@@ -34,16 +34,24 @@ for _ext, _mime in {
 def _forget_geolocation() -> None:
     """La géolocalisation des visiteurs a été retirée : on efface la base DB-IP téléchargée
     et les pays/villes déjà comptés dans les statistiques."""
+    import os
     import shutil
 
     from .services.json_services import _get_data_dir
     from .services.visitor_stats_service import forget_locations
 
+    log = logging.getLogger(__name__)
+    folder = os.path.join(_get_data_dir(), "geoip")
+    if os.path.isdir(folder):
+        try:
+            shutil.rmtree(folder)
+            log.info("Ancienne base de géolocalisation effacée : %s", folder)
+        except OSError as exc:
+            log.warning("Impossible d'effacer %s : %s", folder, exc)
     try:
-        shutil.rmtree(os.path.join(_get_data_dir(), "geoip"), ignore_errors=True)
         forget_locations()
     except Exception:
-        pass
+        log.exception("Effacement des anciens pays/villes des statistiques impossible")
 
 
 _ERRORS = {
