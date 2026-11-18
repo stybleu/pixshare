@@ -40,6 +40,7 @@ Disallow: /file/
 Disallow: /download/
 Disallow: /tmp/
 Disallow: /api/
+Disallow: /pub/
 
 Sitemap: {base}/sitemap.xml
 """

@@ -1,7 +1,7 @@
 import logging
 import mimetypes
 
-from flask import Flask, request
+from flask import Flask, g, request
 
 from .config import Config
 from .storage import init_storage, project_path
@@ -12,6 +12,7 @@ from .routes.admin_routes import admin_bp
 from .routes.seo_routes import seo_bp
 from .routes.account_routes import account_bp
 from .routes.extension_routes import extension_bp
+from .routes.ads_routes import ads_bp
 from .services.account_service import current_account
 from .services.turnstile_service import site_key, turnstile_required
 from .services.visitor_stats_service import record_image_display, record_page_view, should_count, should_count_display
@@ -130,8 +131,19 @@ def create_app(config_overrides: dict | None = None) -> Flask:
             "switch_lang_url": build_lang_url,
             "turnstile_site_key": site_key() if turnstile_required() else "",
             "member": current_account(),
+            "ads": _page_ads(),
         })
         return data
+
+    def _page_ads():
+        if "pxs_ads" not in g:
+            try:
+                from pixshare.services.ads_service import for_page
+                g.pxs_ads = for_page(request.endpoint, bool(current_account()))
+            except Exception:
+                app.logger.exception("Publicité ignorée")
+                g.pxs_ads = None
+        return g.pxs_ads
 
     @app.before_request
     def apply_language():
@@ -162,6 +174,10 @@ def create_app(config_overrides: dict | None = None) -> Flask:
             "base-uri 'self'; "
             "frame-ancestors 'none';"
         )
+        ads = g.get("pxs_ads")
+        if ads and ads.get("google"):
+            from pixshare.services.ads_service import csp as ads_csp
+            response.headers["Content-Security-Policy"] = ads_csp(response.headers["Content-Security-Policy"])
         return response
 
     @app.after_request
@@ -210,5 +226,6 @@ def create_app(config_overrides: dict | None = None) -> Flask:
     app.register_blueprint(admin_bp)
     app.register_blueprint(account_bp)
     app.register_blueprint(extension_bp)
+    app.register_blueprint(ads_bp)
 
     return app

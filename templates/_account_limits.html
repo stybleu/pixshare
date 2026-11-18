@@ -17,9 +17,12 @@
       <tr><th scope="row">Suppression après un nombre de vues</th><td>—</td><td class="fw-semibold">✔</td></tr>
       <tr><th scope="row">Remplacer une image en gardant le lien</th><td>—</td><td class="fw-semibold">✔</td></tr>
       <tr><th scope="row">Extension de navigateur (clic droit, capture)</th><td>—</td><td class="fw-semibold">✔</td></tr>
+      {% if limits.ads_free_members %}
+      <tr><th scope="row">Publicité</th><td>Oui</td><td class="fw-semibold">✔ Aucune</td></tr>
+      {% endif %}
       {% if not compact %}
       <tr><th scope="row">Photos en maillot de bain, sous-vêtements, torse nu</th><td>Peuvent être bloquées par le filtre</td><td class="fw-semibold">Acceptées (la nudité reste interdite)</td></tr>
-      <tr><th scope="row">Image jugée douteuse par le filtre</th><td>Supprimée automatiquement</td><td class="fw-semibold">Gardée en privé, vérifiée par une personne</td></tr>
+      <tr><th scope="row">Image jugée douteuse par le filtre</th><td>Supprimée automatiquement</td><td class="fw-semibold">{% if limits.absent_deletes_members %}Gardée en privé et vérifiée par une personne si elle est disponible, sinon supprimée par le filtre{% else %}Gardée en privé, vérifiée par une personne{% endif %}</td></tr>
       {% endif %}
     </tbody>
   </table>

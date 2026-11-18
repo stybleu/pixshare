@@ -141,7 +141,10 @@
     </form>
   </details>
 
-  <div class="alert alert-warning mb-0">
+  {% from "_ads.html" import ad_slot %}
+  {{ ad_slot(ads, "partage") }}
+
+  <div class="alert alert-warning mb-0 mt-3">
     Cette page correspond à un fichier temporaire. Elle n'est pas destinée à être indexée par les moteurs de recherche.
   </div>
 </div>

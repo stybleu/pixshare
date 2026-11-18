@@ -713,4 +713,5 @@ def cgu():
 
 @public_bp.route("/mentions-legales", endpoint="mentions_legales")
 def mentions_legales():
-    return render_template("mentions_legales.html", version=current_app.config["APP_VERSION"])
+    from pixshare.services.ads_service import site_info
+    return render_template("mentions_legales.html", version=current_app.config["APP_VERSION"], ads_site=site_info())

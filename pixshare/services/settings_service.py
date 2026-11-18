@@ -413,7 +413,23 @@ def limits_table() -> dict:
                   "per_hour": get_uploads_per_hour(False)},
         "member": {"life": lifetime_label(get_max_lifetime(True)), "mb": get_max_upload_size_mb(True),
                    "per_hour": get_uploads_per_hour(True)},
+        "ads_free_members": _ads_free_members(),
+        "absent_deletes_members": _absent_deletes_members(),
     }
+
+
+def _ads_free_members() -> bool:
+    try:
+        from pixshare.services.ads_service import site_info
+        info = site_info()
+        return info["enabled"] and info["hide_for_members"]
+    except Exception:
+        return False
+
+
+def _absent_deletes_members() -> bool:
+    s = load_settings()
+    return bool(s.get("admin_absent_mode")) and bool(s.get("admin_absent_members"))
 
 
 def accounts_enabled() -> bool:
