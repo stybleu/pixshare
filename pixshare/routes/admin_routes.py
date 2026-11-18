@@ -524,6 +524,20 @@ def admin_settings():
     )
 
 
+def _db_status() -> dict:
+    try:
+        from pixshare.services import sqlite_store
+        from pixshare.services.json_services import _get_data_dir, use_sqlite
+        if not use_sqlite():
+            return {"enabled": False}
+        info = sqlite_store.status(_get_data_dir())
+        info["enabled"] = True
+        info["size_mb"] = round(info["size"] / 1024 / 1024, 2)
+        return info
+    except Exception as exc:
+        return {"enabled": True, "ok": False, "check": str(exc)}
+
+
 def _env_check() -> dict:
     try:
         from pixshare.services.env_check_service import check
@@ -833,6 +847,7 @@ def admin_system():
         stats=stats,
         disk=get_disk_contents(),
         env_check=_env_check(),
+        db_status=_db_status(),
         ip_check=ip_check,
         version=current_app.config["APP_VERSION"],
     )
@@ -865,6 +880,9 @@ def admin_disk_open():
     path = resolve_disk_path(request.args.get("chemin", ""))
     if not path or not os.path.isfile(path):
         abort(404)
+    if os.path.basename(path).startswith("pixshare.db"):
+        # Fichier brut de la base en cours d'utilisation : copie incohérente. On passe par la sauvegarde.
+        return redirect(url_for("admin.admin_db_backup"))
     guessed = mimetypes.guess_type(path)[0] or "application/octet-stream"
     ext = os.path.splitext(path)[1].lower()
     if ext in (".json", ".txt", ".log", ".csv", ".md"):
@@ -1037,5 +1055,32 @@ def admin_disk_thumb():
             abort(404)
     response = make_response(send_file(cached, mimetype="image/webp"))
     response.headers["Cache-Control"] = "private, max-age=86400"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
+@admin_bp.route("/admin/base/sauvegarde", methods=["GET"], endpoint="admin_db_backup")
+@admin_required
+def admin_db_backup():
+    """Télécharge une copie complète et cohérente de la base (pixshare-AAAA-MM-JJ.db)."""
+    import tempfile
+    from datetime import datetime
+
+    from pixshare.services import sqlite_store
+    from pixshare.services.json_services import _get_data_dir, use_sqlite
+
+    if not use_sqlite():
+        abort(404)
+    handle, tmp = tempfile.mkstemp(suffix=".db")
+    os.close(handle)
+    sqlite_store.backup_to(_get_data_dir(), tmp)
+    with open(tmp, "rb") as f:
+        data = f.read()
+    os.remove(tmp)
+    name = f"pixshare-{datetime.now().strftime('%Y-%m-%d-%H%M')}.db"
+    response = make_response(data)
+    response.headers["Content-Type"] = "application/octet-stream"
+    response.headers["Content-Disposition"] = f'attachment; filename="{name}"'
+    response.headers["Cache-Control"] = "no-store"
     response.headers["X-Content-Type-Options"] = "nosniff"
     return response

@@ -44,6 +44,29 @@
     </div>
   </div>
 
+  <!-- BASE DE DONNÉES -->
+  <div class="col-12" id="base">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-1">
+          <h2 class="h6 mb-0">Base de données (SQLite)</h2>
+          {% if db_status.enabled %}<a class="btn btn-outline-primary btn-sm" href="{{ url_for('admin.admin_db_backup') }}">⬇️ Télécharger une sauvegarde</a>{% endif %}
+        </div>
+        {% if not db_status.enabled %}
+          <div class="small text-warning">Stockage en fichiers JSON (variable PIXSHARE_STORAGE=json).</div>
+        {% elif db_status.ok %}
+          <div class="small">
+            <span class="badge text-bg-success">Intacte</span>
+            {{ db_status.files }} fiche(s) de fichiers · {{ db_status.documents }} document(s) · {{ db_status.size_mb }} Mo · mode {{ db_status.journal|upper }}
+          </div>
+          <div class="small text-muted mt-1">La sauvegarde est une copie complète, cohérente même pendant que le site tourne. Garde-la en lieu sûr : elle contient les comptes (adresses e-mail) et les IP des envois.</div>
+        {% else %}
+          <div class="alert alert-danger small py-2 mb-0">Problème détecté : {{ db_status.check }}</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
   <!-- VARIABLES RENDER -->
   <div class="col-12" id="variables">
     <div class="card shadow-sm">

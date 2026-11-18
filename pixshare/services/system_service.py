@@ -194,6 +194,10 @@ _DESCRIPTIONS = {
     "translations": "Textes du site (français, anglais)",
     "geoip": "Ancienne base de localisation (à effacer)",
     "lost+found": "Dossier du système de fichiers (normal, à laisser)",
+    "pixshare.db": "Base de données du site (fichiers, comptes, réglages, statistiques…)",
+    "pixshare.db-wal": "Journal de la base de données (normal, géré tout seul)",
+    "pixshare.db-shm": "Mémoire partagée de la base de données (normal, géré tout seul)",
+    ".nsfw_scan.lock": "Verrou de l'analyse NudeNet (normal)",
     "files.json": "Liste des fichiers envoyés",
     "settings.json": "Réglages de l'admin",
     "accounts.json": "Comptes membres",
@@ -217,6 +221,12 @@ _DESCRIPTIONS = {
     "history.json": "Historique",
 }
 _MAX_FILES = 50000  # au-delà, on arrête de compter (disque énorme)
+
+
+def _legacy_description(name: str) -> str:
+    if name.endswith(".json.migre"):
+        return "Ancienne copie JSON, déjà importée dans la base (peut être supprimée)"
+    return ""
 
 
 def _kind(name: str) -> str:
@@ -299,7 +309,7 @@ def get_disk_contents() -> dict:
                 st = os.stat(path)
             except OSError:
                 continue
-            files.append({"name": name, "desc": _DESCRIPTIONS.get(name, ""), "size": st.st_size,
+            files.append({"name": name, "desc": _DESCRIPTIONS.get(name, "") or _legacy_description(name), "size": st.st_size,
                           "size_h": _human(st.st_size), "newest": when(st.st_mtime)})
             total += st.st_size
     folders.sort(key=lambda f: -f["size"])
@@ -368,7 +378,7 @@ def list_disk_dir(rel: str, sort: str = "nom", page: int = 1) -> dict | None:
         item = {"name": name, "rel": f"{rel}/{name}".strip("/"), "mtime": st.st_mtime,
                 "can_delete": rule["delete"], "can_move": rule["move"], "why": rule["why"],
                 "date": datetime.fromtimestamp(st.st_mtime, tz).strftime("%d/%m/%Y %H:%M"),
-                "desc": _DESCRIPTIONS.get(name, "") if not rel else ""}
+                "desc": (_DESCRIPTIONS.get(name, "") or _legacy_description(name)) if not rel else ""}
         if os.path.isdir(full):
             info = _folder_summary(full, budget)
             item.update(size=info["size"], count=info["count"], partial=info["partial"])
@@ -462,8 +472,10 @@ def protection(path: str) -> dict:
         return {"delete": False, "move": False, "why": "racine du disque"}
     if path in system:
         return {"delete": False, "move": False, "why": system[path] + " (utilisé par le site)"}
-    if parent == root and os.path.isfile(path) and name.endswith(".json"):
-        return {"delete": False, "move": False, "why": "fichier de données du site"}
+    if parent == root and os.path.isfile(path) and (name.endswith(".json") or name.startswith("pixshare.db")
+                                                     or name == ".nsfw_scan.lock"):
+        return {"delete": False, "move": False, "why": "base de données du site" if name.startswith("pixshare.db")
+                else "fichier de données du site"}
     for folder, label in system.items():
         if path.startswith(folder + os.sep):
             if label.startswith("textes") or label.startswith("dossier du système"):

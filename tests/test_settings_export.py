@@ -21,7 +21,8 @@ def test_export_then_fresh_deploy_restores_settings(make_app, monkeypatch):
     monkeypatch.setenv("PIXSHARE_SETTINGS", exported)
     with app.app_context():
         import os
-        os.remove(os.path.join(os.environ["PIXSHARE_DATA_DIR"], "settings.json"))
+        from pixshare.services import sqlite_store
+        sqlite_store.delete_document(os.environ["PIXSHARE_DATA_DIR"], "settings.json")
         restored = settings_service.load_settings()
         assert restored["nsfw_review_threshold"] == 0.55 and restored["nsfw_tiling"] is False
         assert settings_service.export_matches_env()

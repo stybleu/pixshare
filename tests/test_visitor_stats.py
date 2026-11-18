@@ -50,8 +50,11 @@ def test_bots_admin_and_technical_pages_are_ignored(make_app):
 def test_no_ip_is_stored(make_app):
     app = make_app()
     visit(app.test_client(), "203.0.113.77")
-    raw = open(os.path.join(os.environ["PIXSHARE_DATA_DIR"], "visitor_stats.json")).read()
-    assert "203.0.113.77" not in raw and json.loads(raw)["days"]
+    base = os.path.join(os.environ["PIXSHARE_DATA_DIR"], "pixshare.db")
+    raw = b"".join(open(base + s, "rb").read() for s in ("", "-wal") if os.path.exists(base + s))
+    assert b"203.0.113.77" not in raw  # ni dans la base, ni dans son journal
+    with app.app_context():
+        assert json_services.load_json("visitor_stats.json", {})["days"]
 
 
 def test_uploads_counted_and_admin_page(make_app):

@@ -21,6 +21,20 @@ def _get_data_dir():
     return data_dir
 
 
+def use_sqlite() -> bool:
+    """Base SQLite (par défaut). PIXSHARE_STORAGE=json revient aux fichiers JSON (secours)."""
+    return (os.environ.get("PIXSHARE_STORAGE") or "sqlite").strip().lower() != "json"
+
+
+def _document_name(path):
+    """Nom du document SQLite pour un chemin JSON du dossier de données, sinon None."""
+    if not path.endswith(".json"):
+        return None
+    if os.path.dirname(os.path.abspath(path)) != os.path.abspath(_get_data_dir()):
+        return None
+    return os.path.basename(path)
+
+
 def _ensure_parent_dir(path):
     parent = os.path.dirname(path)
     if parent:
@@ -31,6 +45,12 @@ def _write_json_file(path, data):
     """Écriture atomique : on écrit dans un fichier temporaire unique puis on
     remplace. Un lecteur concurrent voit donc toujours l'ancienne version
     complète ou la nouvelle, jamais un fichier tronqué."""
+    name = _document_name(path) if use_sqlite() else None
+    if name:
+        from pixshare.services import sqlite_store
+        with _json_lock:
+            sqlite_store.write_document(_get_data_dir(), name, data)
+        return
     _ensure_parent_dir(path)
     tmp = f"{path}.{os.getpid()}.{threading.get_ident()}.tmp"
     try:
@@ -57,6 +77,10 @@ def _backup_corrupt_file(path):
 
 
 def _read_json_file(path, default):
+    name = _document_name(path) if use_sqlite() else None
+    if name:
+        from pixshare.services import sqlite_store
+        return sqlite_store.read_document(_get_data_dir(), name, default)
     _ensure_parent_dir(path)
 
     if not os.path.exists(path):
@@ -96,6 +120,9 @@ def _json_path(filename):
 
 
 def json_exists(filename):
+    if use_sqlite():
+        from pixshare.services import sqlite_store
+        return sqlite_store.document_exists(_get_data_dir(), os.path.basename(filename))
     return os.path.exists(_json_path(filename))
 
 
@@ -114,10 +141,18 @@ def save_json(filename, data):
 # =========================================================
 
 def load_db():
+    if use_sqlite():
+        from pixshare.services import sqlite_store
+        return sqlite_store.read_files(_get_data_dir())
     return _read_json_file(_json_path("files.json"), {})
 
 
 def save_db(data):
+    if use_sqlite():
+        from pixshare.services import sqlite_store
+        with _json_lock:
+            sqlite_store.write_files(_get_data_dir(), data)
+        return
     _write_json_file(_json_path("files.json"), data)
 
 

@@ -60,6 +60,7 @@ GROUPS = [
     ]),
     ("Technique", [
         ("TRUSTED_PROXY_COUNT", "Nombre de relais devant le site (lecture de l'IP)", False),
+        ("PIXSHARE_STORAGE", "Stockage : base SQLite (par défaut) ou « json » en secours", False),
         ("SESSION_COOKIE_SECURE", "Cookie de session en HTTPS seulement", False),
         ("UPLOAD_FOLDER", "Dossier des fichiers (sinon sur le disque)", False),
         ("THUMBNAIL_FOLDER", "Dossier des miniatures (sinon sur le disque)", False),
