@@ -63,8 +63,8 @@ def _member():
     return rec, None
 
 
-def _choices() -> list[dict]:
-    return [{"minutes": minutes, "label": translate(key)} for minutes, key in get_lifetime_choices(True)]
+def _choices(rec) -> list[dict]:
+    return [{"minutes": minutes, "label": translate(key)} for minutes, key in get_lifetime_choices(rec)]
 
 
 @extension_bp.route("/extension/moi", methods=["GET"], endpoint="me")
@@ -73,8 +73,8 @@ def me():
     rec, error = _member()
     if error:
         return error
-    return jsonify({"ok": True, "email": rec.get("email", ""), "max_mb": get_max_upload_size_mb(True),
-                    "lifetimes": _choices(), "default_lifetime": current_app.config.get("DEFAULT_LIFETIME_MIN", 10)})
+    return jsonify({"ok": True, "email": rec.get("email", ""), "max_mb": get_max_upload_size_mb(rec),
+                    "lifetimes": _choices(rec), "default_lifetime": current_app.config.get("DEFAULT_LIFETIME_MIN", 10)})
 
 
 @extension_bp.route("/extension/envoi", methods=["POST"], endpoint="upload")
@@ -87,7 +87,7 @@ def upload():
         return _error("Accès bloqué.", 403)
     if not upload_service_enabled():
         return _error("Le service d'envoi est suspendu pour le moment.", 503)
-    rate = check_upload_rate(f"acct:{rec['id']}", limit=get_uploads_per_hour(True))
+    rate = check_upload_rate(f"acct:{rec['id']}", limit=get_uploads_per_hour(rec))
     if not rate.allowed:
         return _error(limit_message(rate, member=True), 429)
     if not has_room_for(request.content_length):

@@ -225,7 +225,7 @@ def index():
             rate = check_upload_rate(
                 f"acct:{account['id']}" if account else ip,
                 exempt=is_admin(),
-                limit=get_uploads_per_hour(bool(account)),
+                limit=get_uploads_per_hour(account or False),
             )
             if not rate.allowed:
                 rate_limited = True

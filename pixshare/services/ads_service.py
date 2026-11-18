@@ -112,13 +112,17 @@ def google_on(cfg: dict) -> bool:
     return cfg["auto_ads"] or any(cfg["slots"][n]["mode"] == "google" and slot_ready(cfg, n) for n in SLOTS)
 
 
-def for_page(endpoint: str | None, member: bool) -> dict | None:
-    """Publicités à afficher sur cette page, ou None."""
+def for_page(endpoint: str | None, member) -> dict | None:
+    """Publicités à afficher sur cette page, ou None. member : le compte connecté (ou None)."""
     if endpoint not in AD_ENDPOINTS:
         return None
     cfg = load()
     if not cfg["enabled"] or (member and cfg["hide_for_members"]):
         return None
+    if isinstance(member, dict):
+        from pixshare.services.account_service import active_plan
+        if active_plan(member).get("no_ads"):
+            return None
     slots = {n: cfg["slots"][n] for n in SLOTS if slot_ready(cfg, n)}
     google = google_on(cfg)
     if not slots and not google:

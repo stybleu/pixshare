@@ -953,7 +953,7 @@ def admin_disk_open():
 @admin_required
 def admin_accounts():
     from pixshare.services import account_service as accounts
-    from pixshare.services.settings_service import GUEST_MAX_LIFETIME_CHOICES, limits_table
+    from pixshare.services.settings_service import GUEST_MAX_LIFETIME_CHOICES, MAX_LIFETIME_CHOICES, limits_table
 
     counts: dict = {}
     for meta in load_db().values():
@@ -968,7 +968,11 @@ def admin_accounts():
         guest_life_choices=[c for c in LIFETIME_CHOICES if c[0] in GUEST_MAX_LIFETIME_CHOICES],
         limits=limits_table(),
         mail_ready=accounts.mail_ready(),
-        strikes_max=accounts.ACCOUNT_STRIKES,
+        strikes_max=accounts.strikes_max(),
+        plan_life_choices=[c for c in LIFETIME_CHOICES if c[0] in MAX_LIFETIME_CHOICES],
+        plan_max_mb=accounts.PLAN_MAX_MB,
+        today=utcnow().strftime("%Y-%m-%d"),
+        open_plan=request.args.get("formule", ""),
     )
 
 
@@ -983,10 +987,98 @@ def admin_accounts_settings():
         "guest_max_upload_size_mb": request.form.get("guest_max_upload_size_mb"),
         "guest_uploads_per_hour": request.form.get("guest_uploads_per_hour"),
         "member_uploads_per_hour": request.form.get("member_uploads_per_hour"),
+        "member_strikes_max": request.form.get("member_strikes_max"),
     })
     save_settings(current)
     flash("Réglages des comptes enregistrés ✅ (pense à copier la sauvegarde des réglages dans Render)", "success")
     return redirect(url_for("admin.admin_accounts"))
+
+
+@admin_bp.route("/admin/nudenet/test", methods=["GET", "POST"], endpoint="admin_nudenet_test")
+@admin_required
+def admin_nudenet_test():
+    """Envoie une image au filtre pour voir ce qu'il détecte, sans la publier ni la garder."""
+    from pixshare.services.nsfw_service import nudenet_installed, test_image
+
+    result, error, preview = None, "", ""
+    if request.method == "POST":
+        validate_csrf()
+        upload = request.files.get("image")
+        data = upload.read(25 * 1024 * 1024 + 1) if upload and upload.filename else b""
+        if not data:
+            error = "Choisis une image."
+        elif len(data) > 25 * 1024 * 1024:
+            error = "Image trop lourde pour le test (25 Mo maximum)."
+        else:
+            try:
+                result = test_image(data)
+                import base64
+                from io import BytesIO
+                from PIL import Image
+                with Image.open(BytesIO(data)) as im:
+                    im = im.convert("RGB")
+                    im.thumbnail((480, 480))
+                    buf = BytesIO()
+                    im.save(buf, "JPEG", quality=70)
+                preview = "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
+            except Exception as exc:
+                error = f"Analyse impossible : {exc}"
+    return render_template("admin_nudenet_test.html", result=result, error=error, preview=preview,
+                           installed=nudenet_installed(), label=nsfw_class_label)
+
+
+@admin_bp.route("/admin/blocked-ips/auto", methods=["POST"], endpoint="admin_auto_block_settings")
+@admin_required
+def admin_auto_block_settings():
+    validate_csrf()
+    current = load_settings()
+    if request.form.get("reset") == "1":
+        current.update(auto_block_rejections=None, auto_block_hours=None)
+        save_settings(current)
+        flash("Blocage automatique : retour aux variables Render.", "success")
+    else:
+        current.update(auto_block_rejections=request.form.get("auto_block_rejections"),
+                       auto_block_hours=request.form.get("auto_block_hours"))
+        saved = save_settings(current)
+        if saved["auto_block_rejections"] is None or saved["auto_block_hours"] is None:
+            flash("Valeur refusée : entre 0 et 100 images, entre 1 et 2160 heures.", "warning")
+        elif saved["auto_block_rejections"] == 0:
+            flash("Blocage automatique coupé.", "success")
+        else:
+            flash(f"Blocage automatique : {saved['auto_block_rejections']} image(s) rejetée(s) en "
+                  f"{saved['auto_block_hours']} h ✅", "success")
+    return redirect(url_for("admin.admin_blocked_ips") + "#auto")
+
+
+@admin_bp.route("/admin/comptes/formule", methods=["POST"], endpoint="admin_account_plan")
+@admin_required
+def admin_account_plan():
+    from pixshare.services import account_service as accounts
+
+    validate_csrf()
+    account_id = (request.form.get("account_id") or "").strip()
+    rec = accounts.get_account(account_id)
+    if not rec:
+        flash("Compte introuvable.", "warning")
+        return redirect(url_for("admin.admin_accounts"))
+    if request.form.get("do") == "clear":
+        accounts.set_plan(account_id, {})
+        flash(f"{rec['email']} revient aux réglages des membres.", "success")
+        return redirect(url_for("admin.admin_accounts"))
+    wanted = {k: request.form.get(k, "") for k in ("name", "life", "mb", "per_hour", "no_ads", "until")}
+    saved = accounts.set_plan(account_id, wanted)
+    plan = (saved or {}).get("plan") or {}
+    ignored = [label for key, label in (("mb", "taille"), ("per_hour", "envois par heure"), ("until", "date"))
+               if (wanted.get(key) or "").strip() and key not in plan]
+    if ignored:
+        flash("Valeur refusée, réglage des membres gardé pour : " + ", ".join(ignored) + ".", "warning")
+    if not plan:
+        flash(f"Aucune formule pour {rec['email']} : il garde les réglages des membres.", "info")
+    elif accounts.plan_expired(plan):
+        flash(f"Formule enregistrée pour {rec['email']}, mais la date de fin est déjà passée.", "warning")
+    else:
+        flash(f"Formule « {plan.get('name') or 'personnalisée'} » enregistrée pour {rec['email']} ✅", "success")
+    return redirect(url_for("admin.admin_accounts", formule=account_id))
 
 
 @admin_bp.route("/admin/comptes/action", methods=["POST"], endpoint="admin_account_action")

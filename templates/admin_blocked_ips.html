@@ -64,12 +64,34 @@
       <div class="form-text mt-2">
         {% if auto_block.rejections %}
           Blocage automatique : {{ auto_block.rejections }} images rejetées par NudeNet en {{ auto_block.hours|round|int }} h
-          (ou image interdite renvoyée) → IP bloquée {{ auto_block.hours|round|int }} h, puis 7 jours à la récidive, puis 30 jours. Réglable avec les variables Render <code>AUTO_BLOCK_REJECTIONS</code> (0 = désactivé) et <code>AUTO_BLOCK_HOURS</code>.
+          (ou image interdite renvoyée) → IP bloquée {{ auto_block.hours|round|int }} h, puis 7 jours à la récidive, puis 30 jours.
         {% else %}
-          Blocage automatique désactivé (<code>AUTO_BLOCK_REJECTIONS</code> = 0).
+          Blocage automatique désactivé.
         {% endif %}
         {% if not config.PERSISTENT_DIR %}Les blocages sont perdus à chaque déploiement (pas de disque persistant).{% endif %}
       </div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mb-3" id="auto">
+    <div class="card-body">
+      <h2 class="h6">Blocage automatique</h2>
+      <form method="post" action="{{ url_for('admin.admin_auto_block_settings') }}" class="row g-2 align-items-end">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="col-6 col-md-4">
+          <label class="form-label small mb-0" for="ab-rej">Images rejetées avant blocage</label>
+          <input class="form-control" type="number" min="0" max="100" id="ab-rej" name="auto_block_rejections" value="{{ auto_block.rejections }}">
+        </div>
+        <div class="col-6 col-md-4">
+          <label class="form-label small mb-0" for="ab-hours">Sur une période de (heures)</label>
+          <input class="form-control" type="number" min="1" max="2160" id="ab-hours" name="auto_block_hours" value="{{ auto_block.hours|round|int }}">
+        </div>
+        <div class="col-12 col-md-4 d-flex gap-2">
+          <button class="btn btn-primary" type="submit">Enregistrer</button>
+          {% if auto_block.from_admin %}<button class="btn btn-outline-secondary" type="submit" name="reset" value="1">Variables Render</button>{% endif %}
+        </div>
+        <div class="col-12 form-text">0 image = blocage automatique coupé. {% if not auto_block.from_admin %}Valeurs actuelles : variables Render ou réglage par défaut.{% endif %}</div>
+      </form>
     </div>
   </div>
 

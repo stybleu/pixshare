@@ -45,9 +45,19 @@ def _env_number(name: str, default: float) -> float:
 
 
 def auto_block_settings() -> dict:
+    """Réglage de l'admin s'il existe, sinon variables Render AUTO_BLOCK_REJECTIONS / AUTO_BLOCK_HOURS."""
+    stored = {}
+    try:
+        from pixshare.services.settings_service import load_settings
+        stored = load_settings()
+    except Exception:
+        pass
+    rejections = stored.get("auto_block_rejections")
+    hours = stored.get("auto_block_hours")
     return {
-        "rejections": int(_env_number("AUTO_BLOCK_REJECTIONS", 3)),
-        "hours": _env_number("AUTO_BLOCK_HOURS", 24) or 24,
+        "rejections": int(_env_number("AUTO_BLOCK_REJECTIONS", 3)) if rejections is None else int(rejections),
+        "hours": (_env_number("AUTO_BLOCK_HOURS", 24) or 24) if hours is None else float(hours),
+        "from_admin": rejections is not None or hours is not None,
     }
 
 

@@ -28,9 +28,18 @@
   <div class="card shadow-sm mb-3">
     <div class="card-body">
       <h2 class="h6">Mes avantages</h2>
+      {% if plan %}
+      <div class="alert alert-info py-2 small">
+        <strong>Votre formule : {{ plan.name }}</strong>{% if plan.until %}, jusqu'au {{ plan.until|day_fr }}{% endif %}<br>
+        Durée maximale {{ plan.life }} · {{ plan.mb }} Mo par fichier ·
+        {% if plan.per_hour %}{{ plan.per_hour }} envois par heure{% else %}envois illimités{% endif %}
+        {% if plan.no_ads %} · aucune publicité{% endif %}
+      </div>
+      {% endif %}
       {{ limits_card(limits) }}
       <p class="small text-muted mt-2 mb-0">
-        La pornographie et la nudité restent interdites. Au bout de 3 images refusées par la modération, le compte est suspendu.
+        La pornographie et la nudité restent interdites.
+        {% if strikes_max %}Au bout de {{ strikes_max }} image(s) refusée(s) par la modération, le compte est suspendu.{% endif %}
       </p>
     </div>
   </div>

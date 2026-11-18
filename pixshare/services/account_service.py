@@ -15,7 +15,7 @@ import hashlib
 import hmac
 import re
 import secrets
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 from flask import current_app, g, session, url_for
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
@@ -210,6 +210,13 @@ def set_status(account_id: str, status: str) -> dict | None:
     return _update(account_id, **changes)
 
 
+def strikes_max() -> int:
+    """Refus avant suspension (réglage admin, 0 = jamais de suspension automatique)."""
+    from pixshare.services.settings_service import load_settings
+    value = load_settings().get("member_strikes_max")
+    return ACCOUNT_STRIKES if value is None else int(value)
+
+
 def add_strike(account_id: str) -> dict | None:
     """Une image du compte a été refusée par la modération. Trop de refus : compte suspendu."""
     rec = get_account(account_id)
@@ -217,9 +224,76 @@ def add_strike(account_id: str) -> dict | None:
         return None
     strikes = int(rec.get("strikes") or 0) + 1
     changes = {"strikes": strikes}
-    if strikes >= ACCOUNT_STRIKES:
+    limit = strikes_max()
+    if limit and strikes >= limit:
         changes["status"] = "suspended"
     return _update(account_id, **changes)
+
+
+# ------------------------------------------------------------------ formule personnalisée d'un compte
+
+PLAN_NAME_MAX = 40
+PLAN_MAX_MB = 1000          # limite des requêtes du serveur (MAX_CONTENT_LENGTH)
+PLAN_MAX_PER_HOUR = 10000
+
+
+def clean_plan(raw) -> dict:
+    """Formule d'un compte. Champ absent = réglage général des membres."""
+    from pixshare.services.settings_service import MAX_LIFETIME_CHOICES
+    raw = raw if isinstance(raw, dict) else {}
+    plan: dict = {}
+    name = " ".join(str(raw.get("name") or "").split())[:PLAN_NAME_MAX]
+    name = "".join(c for c in name if c not in "<>\"{}")
+    if name:
+        plan["name"] = name
+
+    def _int(key, low, high):
+        value = raw.get(key)
+        if value in (None, ""):
+            return None
+        try:
+            value = int(value)
+        except (TypeError, ValueError):
+            return None
+        return value if low <= value <= high else None
+
+    life = _int("life", 1, 10 ** 7)
+    if life in MAX_LIFETIME_CHOICES:
+        plan["life"] = life
+    mb = _int("mb", 1, PLAN_MAX_MB)
+    if mb:
+        plan["mb"] = mb
+    per_hour = _int("per_hour", 0, PLAN_MAX_PER_HOUR)
+    if per_hour is not None:
+        plan["per_hour"] = per_hour
+    if raw.get("no_ads") in (True, "1", 1):
+        plan["no_ads"] = True
+    until = str(raw.get("until") or "").strip()
+    try:
+        plan["until"] = datetime.strptime(until, "%Y-%m-%d").strftime("%Y-%m-%d") if until else ""
+    except ValueError:
+        plan["until"] = ""
+    if not plan.get("until"):
+        plan.pop("until", None)
+    return plan
+
+
+def plan_expired(plan: dict) -> bool:
+    until = (plan or {}).get("until")
+    return bool(until) and until < datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+
+def active_plan(rec: dict | None) -> dict:
+    """Formule en vigueur du compte ({} = réglages généraux des membres)."""
+    plan = clean_plan((rec or {}).get("plan"))
+    if not plan or plan_expired(plan):
+        return {}
+    return plan
+
+
+def set_plan(account_id: str, raw) -> dict | None:
+    plan = clean_plan(raw)
+    return _update(account_id, plan=plan)
 
 
 def delete_account(account_id: str) -> int:

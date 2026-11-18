@@ -32,6 +32,7 @@ from pixshare.services.settings_service import (
     get_max_upload_size_mb,
     get_uploads_per_hour,
     limits_table,
+    plan_limits,
     upload_service_enabled,
 )
 from pixshare.services.system_service import has_room_for
@@ -271,7 +272,8 @@ def _account_page(rec: dict, new_key: str = ""):
              and (m.get("status") or "active").lower() in ("active", "pending")]
     return _page("account_page.html", title="Mon compte", rec=rec, file_count=len(files),
                  pending_count=sum(1 for m in files if (m.get("status") or "").lower() == "pending"),
-                 limits=limits_table(), password_min=accounts.PASSWORD_MIN, new_key=new_key)
+                 limits=limits_table(), password_min=accounts.PASSWORD_MIN, new_key=new_key,
+                 plan=plan_limits(rec), strikes_max=accounts.strikes_max())
 
 
 @account_bp.route("/compte", methods=["GET"], endpoint="page")
@@ -388,7 +390,7 @@ def replace(file_id):
         flash("Ce format de fichier n'est pas accepté.", "danger")
         return back
     ip = get_client_ip()
-    rate = check_upload_rate(f"acct:{rec['id']}", exempt=is_admin(), limit=get_uploads_per_hour(True))
+    rate = check_upload_rate(f"acct:{rec['id']}", exempt=is_admin(), limit=get_uploads_per_hour(rec))
     if not rate.allowed:
         flash(limit_message(rate, member=True), "warning")
         return back

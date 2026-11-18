@@ -91,6 +91,12 @@ def create_app(config_overrides: dict | None = None) -> Flask:
         app.config.update(config_overrides)
     app.config["UPLOAD_FOLDER"] = project_path(app, app.config["UPLOAD_FOLDER"])
 
+    @app.template_filter("day_fr")
+    def day_fr(value: str) -> str:
+        """« 31/12/2026 » à partir de « 2026-12-31 »."""
+        parts = str(value or "").split("-")
+        return "/".join(reversed(parts)) if len(parts) == 3 else str(value or "")
+
     @app.template_filter("date_fr")
     def date_fr(value: str) -> str:
         """« 17/11/2026 à 17:00 » (heure de Paris) à partir d'une date ISO enregistrée en UTC."""
@@ -139,7 +145,7 @@ def create_app(config_overrides: dict | None = None) -> Flask:
         if "pxs_ads" not in g:
             try:
                 from pixshare.services.ads_service import for_page
-                g.pxs_ads = for_page(request.endpoint, bool(current_account()))
+                g.pxs_ads = for_page(request.endpoint, current_account())
             except Exception:
                 app.logger.exception("Publicité ignorée")
                 g.pxs_ads = None

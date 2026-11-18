@@ -52,11 +52,15 @@
         <label class="form-label small" for="member_uploads_per_hour">Envois / heure avec compte</label>
         <input class="form-control form-control-sm" type="number" min="0" max="10000" id="member_uploads_per_hour" name="member_uploads_per_hour" value="{{ settings.member_uploads_per_hour }}">
       </div>
+      <div class="col-6 col-md-4">
+        <label class="form-label small" for="member_strikes_max">Images refusées avant suspension</label>
+        <input class="form-control form-control-sm" type="number" min="0" max="50" id="member_strikes_max" name="member_strikes_max" value="{{ settings.member_strikes_max }}">
+      </div>
       <div class="col-12 col-md-4">
         <button class="btn btn-primary btn-sm" type="submit">Enregistrer</button>
       </div>
       <div class="col-12 form-text">
-        0 envoi par heure = pas de limite. La durée et la taille maximales <strong>des membres</strong> se règlent dans
+        0 envoi par heure = pas de limite. 0 image refusée = jamais de suspension automatique. La durée et la taille maximales <strong>des membres</strong> se règlent dans
         <a href="{{ url_for('admin.admin_settings') }}">Paramètres</a>. Avec 1 Go de disque, des fichiers lourds gardés 1 an peuvent le remplir :
         surveille la page Système.
       </div>
@@ -79,7 +83,12 @@
           <strong class="text-break">{{ r.email }}</strong>
           {% if not r.confirmed_at %}<span class="badge text-bg-secondary">non confirmé</span>{% endif %}
           {% if r.status == "suspended" %}<span class="badge text-bg-danger">suspendu</span>{% endif %}
-          {% if r.strikes %}<span class="badge text-bg-warning">{{ r.strikes }}/{{ strikes_max }} image(s) refusée(s)</span>{% endif %}
+          {% if r.strikes %}<span class="badge text-bg-warning">{{ r.strikes }}{% if strikes_max %}/{{ strikes_max }}{% endif %} image(s) refusée(s)</span>{% endif %}
+          {% set p = r.plan or {} %}
+          {% if p %}
+            {% if p.until and p.until < today %}<span class="badge text-bg-secondary">Formule « {{ p.name or "personnalisée" }} » expirée le {{ p.until|day_fr }}</span>
+            {% else %}<span class="badge text-bg-info">Formule « {{ p.name or "personnalisée" }} »{% if p.until %} jusqu'au {{ p.until|day_fr }}{% endif %}</span>{% endif %}
+          {% endif %}
           <div class="text-muted">
             Créé le {{ (r.created_at or "")[:16]|replace("T", " ") }} · dernière connexion
             {{ (r.last_login_at or "jamais")[:16]|replace("T", " ") }} · {{ r.files }} fichier(s) en ligne
@@ -98,6 +107,48 @@
                   onclick="return confirm('Supprimer ce compte et tous ses fichiers ?');">Supprimer</button>
         </form>
       </div>
+      <details class="mt-2" {% if open_plan == r.id %}open{% endif %}>
+        <summary class="py-1">Formule personnalisée</summary>
+        <form method="post" action="{{ url_for('admin.admin_account_plan') }}" class="row g-2 mt-1">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="account_id" value="{{ r.id }}">
+          <div class="col-12 col-md-4">
+            <label class="form-label small mb-0" for="plan-name-{{ loop.index }}">Nom affiché au membre</label>
+            <input class="form-control" id="plan-name-{{ loop.index }}" name="name" maxlength="40" value="{{ p.name }}" placeholder="Partenaire, Donateur, Pro…">
+          </div>
+          <div class="col-6 col-md-4">
+            <label class="form-label small mb-0" for="plan-life-{{ loop.index }}">Durée maximale</label>
+            <select class="form-select" id="plan-life-{{ loop.index }}" name="life">
+              <option value="">Comme les membres ({{ limits.member.life }})</option>
+              {% for minutes, key in plan_life_choices %}<option value="{{ minutes }}" {% if p.life == minutes %}selected{% endif %}>{{ _(key) }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-6 col-md-4">
+            <label class="form-label small mb-0" for="plan-mb-{{ loop.index }}">Taille max (Mo)</label>
+            <input class="form-control" type="number" min="1" max="{{ plan_max_mb }}" id="plan-mb-{{ loop.index }}" name="mb" value="{{ p.mb or '' }}" placeholder="{{ limits.member.mb }} (membres)">
+          </div>
+          <div class="col-6 col-md-4">
+            <label class="form-label small mb-0" for="plan-hour-{{ loop.index }}">Envois / heure</label>
+            <input class="form-control" type="number" min="0" max="10000" id="plan-hour-{{ loop.index }}" name="per_hour" value="{{ p.per_hour if p.per_hour is not none else '' }}" placeholder="{{ limits.member.per_hour or 'illimité' }} (membres)">
+          </div>
+          <div class="col-6 col-md-4">
+            <label class="form-label small mb-0" for="plan-ads-{{ loop.index }}">Publicité</label>
+            <select class="form-select" id="plan-ads-{{ loop.index }}" name="no_ads">
+              <option value="0" {% if not p.no_ads %}selected{% endif %}>Comme les membres</option>
+              <option value="1" {% if p.no_ads %}selected{% endif %}>Aucune pub</option>
+            </select>
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label small mb-0" for="plan-until-{{ loop.index }}">Valable jusqu'au (vide = sans fin)</label>
+            <input class="form-control" type="date" id="plan-until-{{ loop.index }}" name="until" value="{{ p.until or '' }}">
+          </div>
+          <div class="col-12 d-flex flex-wrap gap-2">
+            <button class="btn btn-primary btn-sm" type="submit" name="do" value="save">Enregistrer la formule</button>
+            {% if p %}<button class="btn btn-outline-secondary btn-sm" type="submit" name="do" value="clear">Revenir aux réglages des membres</button>{% endif %}
+          </div>
+          <div class="col-12 form-text">Un champ vide garde le réglage général des membres ; 0 envoi par heure = illimité. À la date de fin, le compte revient tout seul aux réglages des membres.</div>
+        </form>
+      </details>
     </div>
     {% endfor %}
   </div>

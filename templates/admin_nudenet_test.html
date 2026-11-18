@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block sr_h1 %}{% endblock %}
+{% set title = "Admin - Tester le filtre" %}
+{% block robots %}<meta name="robots" content="noindex, nofollow, noarchive">{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap gap-2 align-items-center justify-content-between mb-3">
+  <div>
+    <h1 class="h4 mb-0">Tester le filtre NudeNet</h1>
+    <div class="text-muted small">L'image est analysée puis oubliée : elle n'est ni publiée, ni enregistrée.</div>
+  </div>
+  {% include "_admin_nav.html" %}
+</div>
+
+{% if not installed %}<div class="alert alert-danger">NudeNet n'est pas installé sur ce serveur.</div>{% endif %}
+
+<form method="post" enctype="multipart/form-data" class="card shadow-sm mb-3">
+  <div class="card-body d-flex flex-wrap gap-2 align-items-end">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="flex-grow-1">
+      <label class="form-label small mb-0" for="test-image">Image à tester</label>
+      <input class="form-control" type="file" id="test-image" name="image" accept="image/*" required>
+    </div>
+    <button class="btn btn-primary" type="submit">🔬 Analyser</button>
+    <a class="btn btn-outline-secondary" href="{{ url_for('admin.admin_settings') }}#nudenet">Réglages du filtre</a>
+  </div>
+</form>
+
+{% if error %}<div class="alert alert-warning">{{ error }}</div>{% endif %}
+
+{% if result %}
+{% set names = {"approve": ("Publiée", "success"), "review": ("Mise de côté (douteuse)", "warning"), "reject": ("Supprimée", "danger")} %}
+<div class="row g-3">
+  {% if preview %}
+  <div class="col-12 col-md-4">
+    <img src="{{ preview }}" alt="Image testée" class="img-fluid rounded border" style="filter: blur(18px); cursor: pointer"
+         onclick="this.style.filter = this.style.filter ? '' : 'blur(18px)'" title="Toucher pour afficher / flouter">
+    <div class="form-text">Floutée : touche-la pour l'afficher.</div>
+  </div>
+  {% endif %}
+  <div class="col-12 col-md-8">
+    <div class="card shadow-sm mb-3">
+      <div class="card-body">
+        <h2 class="h6">Ce que ferait le filtre</h2>
+        {% for who, key in (("Visiteur sans compte", "guest"), ("Membre", "member")) %}
+          {% set v = result[key] %}
+          <div class="mb-1">
+            {{ who }} : <span class="badge text-bg-{{ names[v.decision][1] }}">{{ names[v.decision][0] }}</span>
+            {% if v.label %}<span class="small text-muted">— {{ label(v.label) }} à {{ (v.score * 100)|round|int }} %</span>{% endif %}
+          </div>
+        {% endfor %}
+        <div class="small text-muted mt-2">
+          Seuils actuels : mise de côté dès {{ (result.settings.review_threshold * 100)|round|int }} %, suppression dès
+          {{ (result.settings.block_threshold * 100)|round|int }} %. Les membres ne sont jamais supprimés directement
+          (sauf en ton absence, si le mode absent l'autorise). {{ result.views }} vue(s) analysée(s).
+        </div>
+      </div>
+    </div>
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h2 class="h6">Tout ce que NudeNet a vu</h2>
+        {% if result.detections %}
+        <ul class="list-unstyled mb-0 small">
+          {% for d in result.detections %}
+          <li class="d-flex justify-content-between border-bottom py-1">
+            <span>{{ label(d.label) }}{% if not d.watched %} <span class="text-muted">(non surveillé)</span>{% endif %}</span>
+            <strong>{{ (d.score * 100)|round|int }} %</strong>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <div class="small text-muted">Rien détecté.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

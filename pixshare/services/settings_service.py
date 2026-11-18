@@ -36,6 +36,10 @@ DEFAULT_SETTINGS = {
     "admin_absent_mode": True,
     "admin_absent_after_minutes": 15,
     "admin_absent_members": True,
+    # Modération : refus avant suspension d'un compte, blocage automatique des IP (None = variables Render).
+    "member_strikes_max": 3,
+    "auto_block_rejections": None,
+    "auto_block_hours": None,
     # Thème de saison : "" = variable SEASON_THEME ou automatique (voir theme_service).
     "season_theme": "",
     # Ciel selon l'heure : None = variable SKY_THEME (activé par défaut).
@@ -152,6 +156,7 @@ def load_settings() -> dict:
     settings.update(_clean_nsfw_settings(settings))
     settings.update(clean_account_settings(settings))
     settings.update(clean_absent_settings(settings))
+    settings.update(clean_moderation_settings(settings))
     return settings
 
 
@@ -180,10 +185,32 @@ def save_settings(settings: dict) -> dict:
     # Réglages des comptes absents de `settings` (autre formulaire) : valeur actuelle.
     clean_settings.update(clean_account_settings({key: settings.get(key, current.get(key)) for key in ACCOUNT_KEYS}))
     clean_settings.update(clean_absent_settings({key: settings.get(key, current.get(key)) for key in ABSENT_KEYS}))
+    clean_settings.update(clean_moderation_settings({key: settings.get(key, current.get(key)) for key in MODERATION_KEYS}))
 
     save_json(SETTINGS_FILENAME, clean_settings)
 
     return clean_settings
+
+
+MODERATION_KEYS = ("member_strikes_max", "auto_block_rejections", "auto_block_hours")
+
+
+def clean_moderation_settings(source: dict) -> dict:
+    def _opt(key, low, high):
+        value = source.get(key)
+        if value in (None, ""):
+            return None
+        try:
+            value = int(value)
+        except (TypeError, ValueError):
+            return None
+        return value if low <= value <= high else None
+    strikes = _opt("member_strikes_max", 0, 50)
+    return {
+        "member_strikes_max": DEFAULT_SETTINGS["member_strikes_max"] if strikes is None else strikes,
+        "auto_block_rejections": _opt("auto_block_rejections", 0, 100),
+        "auto_block_hours": _opt("auto_block_hours", 1, 24 * 90),
+    }
 
 
 ABSENT_KEYS = ("admin_absent_mode", "admin_absent_after_minutes", "admin_absent_members")
@@ -336,13 +363,32 @@ def get_valid_max_lifetime(value):
     return value if value in MAX_LIFETIME_CHOICES else None
 
 
-def get_max_lifetime(member: bool | None = None) -> int:
+def _who(member) -> tuple[bool, dict]:
+    """(membre ?, formule du compte). member : None = la personne connectée, un compte, ou True/False."""
+    from pixshare.services.account_service import active_plan
+    if isinstance(member, dict):
+        return True, active_plan(member)
+    if member is None:
+        try:
+            from pixshare.services.account_service import current_account
+            account = current_account()
+        except Exception:
+            account = None
+        if account:
+            return True, active_plan(account)
+        return _member(), {}
+    return bool(member), {}
+
+
+def get_max_lifetime(member=None) -> int:
     """Durée maximale d'hébergement en minutes. Membres : réglage de l'admin, sinon
     variable MAX_LIFETIME_MIN de Render, sinon 1 an. Visiteurs sans compte : leur
-    propre maximum (2 heures par défaut), jamais plus que celui des membres."""
+    propre maximum (2 heures par défaut), jamais plus que celui des membres.
+    Un compte avec une formule personnalisée a sa propre durée."""
     member_max = get_member_max_lifetime()
-    if member is None:
-        member = _member()
+    member, plan = _who(member)
+    if plan.get("life"):
+        return int(plan["life"])
     if member:
         return member_max
     return min(member_max, int(load_settings().get("guest_max_lifetime_minutes") or 120))
@@ -372,7 +418,7 @@ def lifetime_label(minutes: int) -> str:
     return format_duration_minutes(minutes)
 
 
-def get_lifetime_choices(member: bool | None = None) -> list[tuple[int, str]]:
+def get_lifetime_choices(member=None) -> list[tuple[int, str]]:
     """Durées affichées aux visiteurs : toutes celles qui ne dépassent pas le maximum."""
     limit = get_max_lifetime(member)
     return [(minutes, key) for minutes, key in LIFETIME_CHOICES if minutes <= limit]
@@ -387,23 +433,36 @@ def get_default_lifetime() -> int:
     return [m for m, _k in LIFETIME_CHOICES if m <= limit][-1]
 
 
-def get_max_upload_size_mb(member: bool | None = None) -> int:
+def get_max_upload_size_mb(member=None) -> int:
     """Membres : taille maximale de l'admin. Visiteurs sans compte : la leur (10 Mo par défaut)."""
     settings = load_settings()
     member_max = int(settings.get("max_upload_size_mb", DEFAULT_SETTINGS["max_upload_size_mb"]))
-    if member is None:
-        member = _member()
+    member, plan = _who(member)
+    if plan.get("mb"):
+        return int(plan["mb"])
     if member:
         return member_max
     return min(member_max, int(settings.get("guest_max_upload_size_mb") or 10))
 
 
-def get_uploads_per_hour(member: bool | None = None) -> int:
+def get_uploads_per_hour(member=None) -> int:
     """Envois autorisés par heure (0 = pas de limite)."""
     settings = load_settings()
-    if member is None:
-        member = _member()
+    member, plan = _who(member)
+    if "per_hour" in plan:
+        return int(plan["per_hour"])
     return int(settings.get("member_uploads_per_hour" if member else "guest_uploads_per_hour") or 0)
+
+
+def plan_limits(account: dict) -> dict | None:
+    """Formule personnalisée en vigueur d'un compte, prête à afficher (None s'il n'en a pas)."""
+    from pixshare.services.account_service import active_plan
+    plan = active_plan(account)
+    if not plan:
+        return None
+    return {"name": plan.get("name") or "Formule personnalisée", "life": lifetime_label(get_max_lifetime(account)),
+            "mb": get_max_upload_size_mb(account), "per_hour": get_uploads_per_hour(account),
+            "no_ads": bool(plan.get("no_ads")), "until": plan.get("until", "")}
 
 
 def limits_table() -> dict:

@@ -254,6 +254,55 @@ def analyze_bytes(data: bytes, tiling: bool = True, classes=None) -> tuple[str |
     return best_label, best_score
 
 
+def test_image(data: bytes) -> dict:
+    """Testeur de l'admin : tout ce que NudeNet voit dans l'image et ce que le filtre déciderait,
+    pour un visiteur et pour un membre, avec les réglages actuels. Rien n'est enregistré."""
+    cfg = effective_settings()
+    detector = _get_detector()
+    if detector is None:
+        raise RuntimeError("NudeNet n'est pas disponible sur ce serveur.")
+    if not _scan_lock.acquire(timeout=60):
+        raise RuntimeError("Une analyse est déjà en cours, réessaie dans un instant.")
+    try:
+        found: dict[str, float] = {}
+        views = extract_views(data, cfg["tiling"])
+        for frame in views:
+            temp_path = ""
+            try:
+                with tempfile.NamedTemporaryFile(prefix="pixshare_test_", suffix=".png", delete=False) as tmp:
+                    tmp.write(frame)
+                    temp_path = tmp.name
+                detections = detector.detect(temp_path)
+            finally:
+                if temp_path:
+                    with contextlib.suppress(OSError):
+                        os.remove(temp_path)
+            for detection in detections:
+                label = str(detection.get("class") or "")
+                score = float(detection.get("score") or 0.0)
+                if label and score > found.get(label, 0.0):
+                    found[label] = score
+    finally:
+        _scan_lock.release()
+
+    def verdict(classes, member):
+        best = max(((s, l) for l, s in found.items() if l in set(classes)), default=(0.0, None))
+        decision = decide(best[1], best[0], cfg["review_threshold"], cfg["block_threshold"])
+        if member and decision == "reject":
+            decision = "review"
+        return {"decision": decision, "label": best[1], "score": best[0]}
+
+    watched = set(cfg["classes"])
+    return {
+        "views": len(views),
+        "detections": sorted(({"label": l, "score": s, "watched": l in watched} for l, s in found.items()),
+                             key=lambda d: -d["score"]),
+        "guest": verdict(cfg["classes"], False),
+        "member": verdict(member_classes(cfg["classes"]), True),
+        "settings": cfg,
+    }
+
+
 def decide(label: str | None, score: float, review_threshold: float, block_threshold: float) -> str:
     if label is not None and score >= block_threshold:
         return "reject"
