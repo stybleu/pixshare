@@ -63,3 +63,15 @@ def make_app(tmp_path, monkeypatch):
         return create_app(config)
 
     return _make
+
+
+from pixshare.services import admin_presence_service as _presence  # noqa: E402
+
+REAL_IS_PRESENT = _presence.is_present
+
+
+@pytest.fixture(autouse=True)
+def _admin_present_by_default(monkeypatch):
+    """Les anciens tests supposent que l'admin décide : on le dit présent. Les tests du mode absent
+    remettent la vraie fonction (voir tests/test_admin_absent.py)."""
+    monkeypatch.setattr(_presence, "is_present", lambda: True)

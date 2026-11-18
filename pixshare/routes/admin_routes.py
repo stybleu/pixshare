@@ -5,7 +5,7 @@ from datetime import timedelta
 from flask import Blueprint, abort, current_app, flash, jsonify, make_response, redirect, render_template, request, send_file, session, url_for
 
 from pixshare.security.csrf import validate_csrf
-from pixshare.services.auth_service import admin_required, process_admin_login
+from pixshare.services.auth_service import admin_required, is_admin, process_admin_login
 from pixshare.services.file_service import (
     cleanup_expired,
     delete_all_thumbnails,
@@ -66,6 +66,31 @@ from pixshare.services.theme_service import THEME_CHOICES, THEMES, active_theme,
 from pixshare.services.time_service import get_remaining_time_label, format_duration_minutes, utcnow
 
 admin_bp = Blueprint("admin", __name__)
+
+
+@admin_bp.before_request
+def _admin_is_here():
+    """Toute page admin ouverte = admin présent : c'est lui qui décide, pas le filtre."""
+    if not is_admin():
+        return
+    try:
+        from pixshare.services.admin_presence_service import touch
+        deleted = touch() + int(session.pop("absent_deleted", 0) or 0)
+        if deleted and request.endpoint != "admin.admin_presence_ping":
+            flash(f"Pendant ton absence, le filtre a supprimé {deleted} image(s) douteuse(s). "
+                  "Elles sont marquées « par le filtre (admin absent) » dans les fichiers.", "info")
+        elif deleted:
+            session["absent_deleted"] = deleted
+    except Exception:
+        current_app.logger.exception("Présence admin non enregistrée")
+
+
+@admin_bp.route("/admin/presence", methods=["GET"], endpoint="admin_presence_ping")
+@admin_required
+def admin_presence_ping():
+    response = make_response("", 204)
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @admin_bp.context_processor
@@ -302,6 +327,11 @@ def admin_login():
 def admin_logout():
     validate_csrf()
     session.pop("is_admin", None)
+    try:  # le filtre reprend la main tout de suite
+        from pixshare.services.admin_presence_service import logged_out
+        logged_out()
+    except Exception:
+        current_app.logger.exception("Présence admin non enregistrée")
     flash("Déconnecté.", "success")
     return redirect(url_for("public.index"))
 
@@ -638,6 +668,25 @@ def admin_nsfw_settings():
         if released:
             flash(f"NudeNet coupé : {released} image(s) en attente publiée(s). Les nouvelles images ne sont plus bloquées.", "info")
     return redirect(url_for("admin.admin_settings"))
+
+
+@admin_bp.route("/admin/settings/absent", methods=["POST"], endpoint="admin_absent_settings")
+@admin_required
+def admin_absent_settings():
+    validate_csrf()
+    current = load_settings()
+    current.update({
+        "admin_absent_mode": request.form.get("admin_absent_mode") == "1",
+        "admin_absent_after_minutes": request.form.get("admin_absent_after_minutes"),
+        "admin_absent_members": request.form.get("admin_absent_members") == "1",
+    })
+    saved = save_settings(current)
+    if saved["admin_absent_mode"]:
+        flash(f"Mode absent activé ✅ : {saved['admin_absent_after_minutes']} min après ta dernière activité "
+              "(ou dès la déconnexion), le filtre supprime seul les images douteuses.", "success")
+    else:
+        flash("Mode absent coupé : les images douteuses attendent toujours ta décision.", "success")
+    return redirect(url_for("admin.admin_settings") + "#absent")
 
 
 @admin_bp.route("/admin/mail-test", methods=["POST"], endpoint="admin_mail_test")

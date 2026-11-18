@@ -38,6 +38,8 @@ def build_notice_message(reason: str) -> str:
         return "Une de vos images a été supprimée par la modération pour non-respect des conditions d’utilisation de PixShare."
     if reason == "contenu_illicite":
         return "Une de vos images a été supprimée par la modération car elle contrevenait aux règles du service ou à la législation applicable."
+    if reason == "filtre_absent":
+        return "Une de vos images a été retirée par le filtre automatique de PixShare, car elle semblait ne pas respecter les conditions d’utilisation."
     if reason == "spam_abus":
         return "Un de vos fichiers a été supprimé par la modération pour usage abusif du service."
     return "Un de vos fichiers a été supprimé par l’administration de PixShare."

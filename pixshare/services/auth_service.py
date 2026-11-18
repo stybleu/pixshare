@@ -155,6 +155,13 @@ def process_admin_login(username: str, password: str) -> tuple[bool, int | None]
     if user_ok and pass_ok:
         reset_fail(ip)
         session["is_admin"] = True
+        try:  # l'admin est là : c'est lui qui décide à nouveau
+            from pixshare.services.admin_presence_service import touch
+            touched = touch(force=True)
+            if touched:
+                session["absent_deleted"] = touched
+        except Exception:
+            pass
         return True, None
 
     time.sleep(0.6)

@@ -379,6 +379,11 @@ def _process_one(file_id: str, review_threshold: float, block_threshold: float, 
     decision = decide(label, score, review_threshold, block_threshold)
     if member and decision == "reject":
         decision = "review"  # membre : jamais de suppression automatique, l'admin décide
+    if decision == "review" and _filter_decides(member):
+        bump_stat("auto_review")
+        if _delete_while_absent(file_id, meta, label, score):
+            stats["rejected"] += 1
+        return
     if decision == "approve":
         approve_image(db, file_id, meta, DETECTOR_NAME, score)
         stats["approved"] += 1
@@ -403,6 +408,66 @@ def _process_one(file_id: str, review_threshold: float, block_threshold: float, 
             _log.warning("Image supprimée: file_id=%s label=%s score=%.3f", file_id, label, score)
         else:
             stats["errors"] += 1
+
+
+# ------------------------------------------------------------------ admin absent : le filtre décide seul
+
+ABSENT_REASON = "auto:admin_absent"
+
+
+def _filter_decides(member: bool) -> bool:
+    try:
+        from pixshare.services.admin_presence_service import filter_decides
+        return filter_decides(member)
+    except Exception:
+        _log.exception("Présence admin inconnue : l'image attend l'admin")
+        return False
+
+
+def _delete_while_absent(file_id: str, meta: dict, label, score) -> bool:
+    """Image douteuse et admin absent : supprimée par le filtre. Pas de blocage d'IP, pas
+    d'avertissement de compte, pas d'empreinte bannie (ce n'est qu'un doute, pas une certitude)."""
+    if not delete_by_id(file_id, reason=ABSENT_REASON):
+        return False
+    db = load_db()
+    rec = db.get(file_id)
+    if isinstance(rec, dict):
+        rec["moderated_at"] = _utc_now_iso()
+        rec["moderation_decision"] = "rejected_absent"
+        rec["moderation_detector"] = DETECTOR_NAME
+        rec["moderation_score"] = float(score) if isinstance(score, (int, float)) else None
+        rec["moderation_label"] = (label or "")[:80]
+        db[file_id] = rec
+        save_db(db)
+    create_moderation_notice(meta, file_id, reason="filtre_absent")
+    bump_stat("absent_deleted")
+    try:
+        from pixshare.services.admin_presence_service import count_deletion
+        count_deletion()
+    except Exception:
+        pass
+    _log.warning("Admin absent, image douteuse supprimée par le filtre: file_id=%s label=%s score=%s", file_id, label, score)
+    return True
+
+
+def apply_absent_decisions(limit: int = 50) -> int:
+    """Admin parti sans trancher : le filtre supprime les images qu'il avait mises de côté.
+    Les signalements et les analyses impossibles attendent toujours l'admin (le filtre n'a rien vu)."""
+    if not nudenet_ready():
+        return 0
+    done = 0
+    for file_id, meta in list(load_db().items()):
+        if done >= limit:
+            break
+        if not is_manual_review(meta) or meta.get("moderation_detector") != DETECTOR_NAME:
+            continue
+        if meta.get("moderation_label") in ("", None, "analyse_impossible", "signalement"):
+            continue
+        if not _filter_decides(bool(meta.get("account_id"))):
+            continue
+        if _delete_while_absent(file_id, meta, meta.get("moderation_label"), meta.get("moderation_score")):
+            done += 1
+    return done
 
 
 def release_waiting_images() -> int:
@@ -520,5 +585,6 @@ def run_after_response(app) -> None:
             run_auto_moderation()
             if nudenet_ready():
                 run_late_checks()
+                apply_absent_decisions()
     except Exception:  # pragma: no cover
         _log.exception("Modération automatique interrompue")

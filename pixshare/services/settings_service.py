@@ -32,6 +32,10 @@ DEFAULT_SETTINGS = {
     "nsfw_block_threshold": None,
     "nsfw_tiling": True,
     "nsfw_classes": None,
+    # Admin absent : sans activité dans l'admin, le filtre décide seul et supprime les images douteuses.
+    "admin_absent_mode": True,
+    "admin_absent_after_minutes": 15,
+    "admin_absent_members": True,
     # Thème de saison : "" = variable SEASON_THEME ou automatique (voir theme_service).
     "season_theme": "",
     # Ciel selon l'heure : None = variable SKY_THEME (activé par défaut).
@@ -147,6 +151,7 @@ def load_settings() -> dict:
     settings["keep_thumbnails"] = bool(settings.get("keep_thumbnails", True))
     settings.update(_clean_nsfw_settings(settings))
     settings.update(clean_account_settings(settings))
+    settings.update(clean_absent_settings(settings))
     return settings
 
 
@@ -174,10 +179,27 @@ def save_settings(settings: dict) -> dict:
     clean_settings["sky_enabled"] = sky if isinstance(sky, bool) else None
     # Réglages des comptes absents de `settings` (autre formulaire) : valeur actuelle.
     clean_settings.update(clean_account_settings({key: settings.get(key, current.get(key)) for key in ACCOUNT_KEYS}))
+    clean_settings.update(clean_absent_settings({key: settings.get(key, current.get(key)) for key in ABSENT_KEYS}))
 
     save_json(SETTINGS_FILENAME, clean_settings)
 
     return clean_settings
+
+
+ABSENT_KEYS = ("admin_absent_mode", "admin_absent_after_minutes", "admin_absent_members")
+ABSENT_DELAY_CHOICES = (5, 10, 15, 30, 60, 120)
+
+
+def clean_absent_settings(source: dict) -> dict:
+    delay = _bounded_int(source.get("admin_absent_after_minutes"), DEFAULT_SETTINGS["admin_absent_after_minutes"], 1, 1440)
+    if delay not in ABSENT_DELAY_CHOICES:
+        delay = DEFAULT_SETTINGS["admin_absent_after_minutes"]
+    mode, members = source.get("admin_absent_mode"), source.get("admin_absent_members")
+    return {
+        "admin_absent_mode": True if mode is None else bool(mode),
+        "admin_absent_after_minutes": delay,
+        "admin_absent_members": True if members is None else bool(members),
+    }
 
 
 NSFW_KEYS = ("nsfw_auto_moderation", "nsfw_review_threshold", "nsfw_block_threshold", "nsfw_tiling", "nsfw_classes")

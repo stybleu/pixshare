@@ -172,6 +172,48 @@
     </p>
   </div>
 </div>
+<div class="card shadow-sm mt-4" id="absent">
+  <div class="card-body">
+    <h2 class="h5">Quand tu es absent</h2>
+    <div class="text-muted small mb-3">
+      Tant que tu utilises l'admin, c'est toi qui décides pour les images douteuses. Quand tu n'es plus là,
+      le filtre prend le relais : il supprime lui-même ce qu'il aurait mis de côté pour toi, y compris les images
+      qui t'attendaient encore. Rien de tout ça n'est visible du public.
+    </div>
+    <ul class="small mb-3">
+      <li><strong>Présent</strong> : une page de l'admin ouverte (même en arrière-plan sur ordinateur) ou une action récente.</li>
+      <li><strong>Absent</strong> : dès que tu te déconnectes, ou après le délai choisi sans activité.</li>
+      <li>Les images signalées par les visiteurs et celles que le filtre n'a pas pu analyser t'attendent toujours.</li>
+      <li>Une suppression en ton absence ne bloque pas l'IP, ne compte pas d'avertissement pour le compte et n'interdit pas l'image : c'est un doute, pas une certitude.</li>
+    </ul>
+    <form method="post" action="{{ url_for('admin.admin_absent_settings') }}" class="row g-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="col-12 col-md-4">
+        <label class="form-label fw-semibold" for="absent-mode">Mode absent</label>
+        <select id="absent-mode" name="admin_absent_mode" class="form-select">
+          <option value="1" {% if settings.admin_absent_mode %}selected{% endif %}>Activé</option>
+          <option value="0" {% if not settings.admin_absent_mode %}selected{% endif %}>Coupé (tout t'attend)</option>
+        </select>
+      </div>
+      <div class="col-12 col-md-4">
+        <label class="form-label fw-semibold" for="absent-delay">Absent après</label>
+        <select id="absent-delay" name="admin_absent_after_minutes" class="form-select">
+          {% for m in (5, 10, 15, 30, 60, 120) %}
+            <option value="{{ m }}" {% if settings.admin_absent_after_minutes == m %}selected{% endif %}>{{ m if m < 60 else m // 60 }} {{ "min" if m < 60 else "h" }} sans activité</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-12 col-md-4">
+        <label class="form-label fw-semibold" for="absent-members">Images des membres</label>
+        <select id="absent-members" name="admin_absent_members" class="form-select">
+          <option value="1" {% if settings.admin_absent_members %}selected{% endif %}>Supprimées aussi si douteuses</option>
+          <option value="0" {% if not settings.admin_absent_members %}selected{% endif %}>Gardées pour mon retour</option>
+        </select>
+      </div>
+      <div class="col-12"><button class="btn btn-primary" type="submit">Enregistrer</button></div>
+    </form>
+  </div>
+</div>
 <div class="card shadow-sm mt-4" id="nudenet">
   <div class="card-body">
     <h2 class="h5">Modération automatique (NudeNet)</h2>
@@ -198,6 +240,7 @@
         <span class="badge text-bg-success">{{ st.auto_approved }} publiées</span>
         <span class="badge text-bg-warning">{{ st.auto_review }} mises de côté</span>
         <span class="badge text-bg-danger">{{ st.auto_rejected }} supprimées</span>
+        <span class="badge text-bg-dark">{{ st.absent_deleted }} supprimées en ton absence</span>
       </div>
       <div>Images « à vérifier » : <strong>{{ st.review_approved }}</strong> approuvées par toi (fausses alertes),
         <strong>{{ st.review_deleted }}</strong> supprimées (alertes justifiées){% if st.false_alarm_pct is not none %} → {{ st.false_alarm_pct }} % de fausses alertes{% endif %}.</div>

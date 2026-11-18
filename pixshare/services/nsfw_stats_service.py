@@ -12,7 +12,7 @@ from pixshare.services.json_services import _json_lock, load_json, save_json
 
 _log = logging.getLogger(__name__)
 STATS_FILE = "nsfw_stats.json"
-KEYS = ("auto_approved", "auto_review", "auto_rejected", "review_approved", "review_deleted")
+KEYS = ("auto_approved", "auto_review", "auto_rejected", "review_approved", "review_deleted", "absent_deleted")
 
 
 def bump(key: str) -> None:

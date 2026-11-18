@@ -98,6 +98,8 @@
                 {% if _r == "deleted" %}
                   <span class="badge text-bg-primary">par l'utilisateur</span>
                 {{ filter_verdict(f) }}
+                {% elif _r == "auto:admin_absent" %}
+                  <span class="badge text-bg-dark" title="Douteuse ; tu étais absent, le filtre a décidé seul">par le filtre (admin absent)</span>
                 {% elif _r.startswith("auto:") %}
                   <span class="badge text-bg-warning">par NudeNet</span>
                 {% elif _r == "view_limit" %}

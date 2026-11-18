@@ -24,3 +24,12 @@
     <button class="btn btn-outline-secondary btn-sm" type="submit">Déconnexion</button>
   </form>
 </nav>
+<script>
+/* Page admin ouverte = admin présent : le filtre ne décide pas à sa place. */
+(function () {
+  if (window.__pxsPresence) return; window.__pxsPresence = true;
+  function ping() { if (document.visibilityState === "visible") fetch("{{ url_for('admin.admin_presence_ping') }}", {credentials: "same-origin", cache: "no-store"}).catch(function () {}); }
+  setInterval(ping, 60000);
+  document.addEventListener("visibilitychange", ping);
+})();
+</script>
