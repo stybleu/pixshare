@@ -426,6 +426,66 @@ def release_waiting_images() -> int:
     return released
 
 
+# ------------------------------------------------------------------ analyse après suppression
+
+def late_check_dir() -> str:
+    import tempfile
+    folder = os.path.join(tempfile.gettempdir(), "pixshare_late_check")
+    os.makedirs(folder, exist_ok=True)
+    return folder
+
+
+def late_check_path(file_id: str, server_name: str) -> str:
+    return os.path.join(late_check_dir(), file_id + os.path.splitext(server_name)[1].lower())
+
+
+def nudenet_ready() -> bool:
+    return auto_moderation_enabled() and nudenet_installed()
+
+
+def run_late_checks(limit: int = 10) -> int:
+    """Images supprimées par leur auteur avant l'analyse : NudeNet les analyse quand même (pour l'admin),
+    note le verdict, refuse leur renvoi si elles auraient été supprimées, puis efface la copie."""
+    from pixshare.services.json_services import save_db
+
+    done = 0
+    db = load_db()
+    queued = [fid for fid, meta in db.items() if isinstance(meta, dict) and meta.get("late_check") == "queued"][:limit]
+    if not queued:
+        return 0
+    values = effective_settings()
+    for file_id in queued:
+        meta = db[file_id]
+        path = late_check_path(file_id, str(meta.get("server_name") or ""))
+        verdict, label, score = "", None, None
+        try:
+            if os.path.isfile(path) and _get_detector() is not None:
+                with open(path, "rb") as handle:
+                    label, score = analyze_bytes(handle.read(), values["tiling"], values["classes"])
+                decision = decide(label, score, values["review_threshold"], values["block_threshold"])
+                verdict = {"approve": "ok", "review": "review", "reject": "reject"}.get(decision, decision)
+                if verdict == "reject":
+                    from pixshare.services.image_ban_service import ban_file
+                    ban_file(path, "auto:non_respect_cgu", str(label or ""), file_id)
+        except Exception:
+            _log.exception("Analyse après suppression impossible pour %s", file_id)
+            verdict = "error"
+        finally:
+            try:
+                os.remove(path)
+            except OSError:
+                pass
+        db = load_db()
+        meta = db.get(file_id)
+        if isinstance(meta, dict):
+            meta["late_check"] = verdict or "missing"
+            meta["late_check_label"] = label or ""
+            meta["late_check_score"] = round(float(score), 4) if isinstance(score, (int, float)) else None
+            save_db(db)
+        done += 1
+    return done
+
+
 def run_auto_moderation(limit: int = 10) -> dict[str, int]:
     """Analyse jusqu'à `limit` images en attente. À appeler dans un contexte d'application Flask."""
     stats = {"approved": 0, "review": 0, "rejected": 0, "errors": 0}
@@ -458,5 +518,7 @@ def run_after_response(app) -> None:
     try:
         with app.app_context():
             run_auto_moderation()
+            if nudenet_ready():
+                run_late_checks()
     except Exception:  # pragma: no cover
         _log.exception("Modération automatique interrompue")

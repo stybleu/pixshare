@@ -1,0 +1,24 @@
+{# Pour une image supprimée par son auteur : était-elle en vérification, et qu'en a pensé le filtre ? #}
+{% macro filter_verdict(f) %}
+  {% if f.status_before_delete == "pending" %}<span class="badge text-bg-warning" title="Supprimée alors qu'elle attendait la vérification">⏳ pendant la vérification</span>{% endif %}
+  {% set _score = (" · %.2f"|format(f.late_check_score) if f.late_check_score is not none else "") %}
+  {% if f.late_check == "queued" %}
+    <span class="badge text-bg-light border">🔍 analyse en cours…</span>
+  {% elif f.late_check == "ok" %}
+    <span class="badge text-bg-success" title="Analysée par NudeNet juste après la suppression">🔍 filtre : rien de suspect</span>
+  {% elif f.late_check == "review" %}
+    <span class="badge text-bg-warning" title="Analysée par NudeNet juste après la suppression">🔍 filtre : douteuse ({{ nsfw_label(f.late_check_label) }}{{ _score }})</span>
+  {% elif f.late_check == "reject" %}
+    <span class="badge text-bg-danger" title="Analysée par NudeNet juste après la suppression ; son renvoi est refusé">🔍 filtre : aurait été supprimée ({{ nsfw_label(f.late_check_label) }}{{ _score }}) · renvoi bloqué</span>
+  {% elif f.late_check in ("error", "missing") %}
+    <span class="badge text-bg-secondary">🔍 analyse impossible</span>
+  {% elif f.moderation_decision == "approved" %}
+    <span class="badge text-bg-success">🔍 filtre : passée (publiée)</span>
+  {% elif f.moderation_decision == "manual_review" %}
+    <span class="badge text-bg-warning">🔍 filtre : à vérifier ({{ f.moderation_label_fr or f.moderation_label }}{% if f.moderation_score is not none %} · {{ "%.2f"|format(f.moderation_score) }}{% endif %})</span>
+  {% elif f.moderation_decision == "not_required" %}
+    <span class="badge text-bg-light border">pas d'analyse (pas une image)</span>
+  {% else %}
+    <span class="badge text-bg-secondary" title="Supprimée avant l'analyse, filtre coupé ou indisponible">🔍 jamais analysée</span>
+  {% endif %}
+{% endmacro %}

@@ -170,7 +170,7 @@ def create_app(config_overrides: dict | None = None) -> Flask:
         # les images en attente. Seuls les envois de fichiers déclenchent l'analyse.
         if (
             request.method == "POST"
-            and request.endpoint in ("public.index", "account.replace", "extension.upload")
+            and request.endpoint in ("public.index", "account.replace", "extension.upload", "public.delete_own_file")
             and response.status_code < 400
         ):
             response.call_on_close(lambda: run_after_response(app))

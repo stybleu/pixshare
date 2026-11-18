@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_filter_verdict.html" import filter_verdict with context %}
 {% block sr_h1 %}{% endblock %}
 {% set title = "Admin - Miniatures" %}
 
@@ -44,20 +45,20 @@
   {% include "_admin_nav.html" %}
 </div>
 
-{% set ns = namespace(user=0, nude=0, admin=0, review=0) %}
+{% set ns = namespace(user=0, user_pending=0, nude=0, admin=0, review=0) %}
 {% for f in thumbnails %}
   {% set _r = (f.delete_reason or "")|lower %}
   {% if f.status == "pending" and f.moderation_decision == "manual_review" %}
     {% set ns.review = ns.review + 1 %}
   {% elif f.status not in ["active", "pending", "expired"] %}
-    {% if _r == "deleted" %}{% set ns.user = ns.user + 1 %}
+    {% if _r == "deleted" %}{% set ns.user = ns.user + 1 %}{% if f.status_before_delete == "pending" %}{% set ns.user_pending = ns.user_pending + 1 %}{% endif %}
     {% elif _r.startswith("auto:") %}{% set ns.nude = ns.nude + 1 %}
     {% elif _r and _r != "view_limit" %}{% set ns.admin = ns.admin + 1 %}
     {% endif %}
   {% endif %}
 {% endfor %}
 <div class="d-flex flex-wrap gap-2 mb-1">
-  <span class="badge text-bg-primary">Supprimées par l'utilisateur : {{ ns.user }}</span>
+  <span class="badge text-bg-primary">Supprimées par l'utilisateur : {{ ns.user }}{% if ns.user_pending %} (dont {{ ns.user_pending }} pendant la vérification){% endif %}</span>
   <span class="badge text-bg-warning">Supprimées par NudeNet : {{ ns.nude }}</span>
   <span class="badge text-bg-dark">Supprimées par l'admin : {{ ns.admin }}</span>
   <span class="badge text-bg-info">À vérifier : {{ ns.review }}</span>
@@ -96,6 +97,7 @@
                 <span class="badge text-bg-danger">Supprimé</span>
                 {% if _r == "deleted" %}
                   <span class="badge text-bg-primary">par l'utilisateur</span>
+                {{ filter_verdict(f) }}
                 {% elif _r.startswith("auto:") %}
                   <span class="badge text-bg-warning">par NudeNet</span>
                 {% elif _r == "view_limit" %}

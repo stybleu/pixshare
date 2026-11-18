@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_filter_verdict.html" import filter_verdict with context %}
 {% block sr_h1 %}{% endblock %}
 {% set title = "Admin - Banque de fichiers" %}
 
@@ -169,6 +170,7 @@
                   {% set _r = (f.delete_reason or "")|lower %}
                   {% if _r == "deleted" %}
                     <span class="badge text-bg-primary">par l'utilisateur</span>
+                  {{ filter_verdict(f) }}
                   {% elif _r.startswith("auto:") %}
                     <span class="badge text-bg-warning">par NudeNet</span>
                   {% elif _r == "view_limit" %}

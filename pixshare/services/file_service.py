@@ -564,6 +564,10 @@ def file_meta(file_id: str, db: dict | None = None):
         ),
         "deleted_at": meta.get("deleted_at", ""),
         "delete_reason": meta.get("delete_reason", ""),
+        "status_before_delete": meta.get("status_before_delete", ""),
+        "late_check": meta.get("late_check", ""),
+        "late_check_label": meta.get("late_check_label", ""),
+        "late_check_score": meta.get("late_check_score"),
         "thumb_url": url_for("admin.admin_thumbnail", file_id=file_id, _external=False) if thumb_exists else "",
         "has_public_file": public_exists,
         "account_id": meta.get("account_id", ""),
@@ -1011,6 +1015,20 @@ def delete_by_id(file_id: str, reason: str = "deleted") -> bool:
     path = os.path.join(current_app.config["UPLOAD_FOLDER"], server_name) if server_name else ""
 
     deleted_anything = False
+    status_before = (meta.get("status") or "active").lower()
+    late_check = False
+    if (reason == "deleted" and status_before == "pending" and server_name and os.path.isfile(path)
+            and str(meta.get("moderation_decision") or "pending") == "pending"
+            and requires_image_moderation(server_name)):
+        # Supprimée par son auteur AVANT l'analyse : on garde une copie privée le temps que NudeNet
+        # l'analyse juste après (pour savoir ce que le filtre en aurait pensé), puis la copie est effacée.
+        try:
+            from .nsfw_service import late_check_path, nudenet_ready
+            if nudenet_ready():
+                os.replace(path, late_check_path(file_id, server_name))
+                deleted_anything = late_check = True
+        except Exception:
+            late_check = False
     if server_name and os.path.isfile(path):
         try:  # image refusée : on garde son empreinte pour la refuser si elle revient
             from .image_ban_service import ban_file
@@ -1038,8 +1056,11 @@ def delete_by_id(file_id: str, reason: str = "deleted") -> bool:
             pass
 
     meta["status"] = "deleted"
+    meta["status_before_delete"] = status_before
     meta["deleted_at"] = utcnow().isoformat(timespec="seconds")
     meta["delete_reason"] = reason or "deleted"
+    if late_check:
+        meta["late_check"] = "queued"
     schedule_thumbnail_cleanup(meta)
     db[file_id] = meta
 
