@@ -39,17 +39,17 @@
     <div class="card-body">
       <h2 class="h6">Extension de navigateur</h2>
       <p class="small mb-2">
-        Envoie une image sur PixShare d'un clic droit, ou une capture de la page, sans ouvrir le site.
-        Le lien est copié tout seul. Pour Chrome, Edge, Brave, Opera et Firefox sur ordinateur.
+        Envoyez une image sur PixShare d'un clic droit, ou une capture de la page, sans ouvrir le site.
+        Le lien est copié automatiquement. Pour Chrome, Edge, Brave, Opera et Firefox sur ordinateur.
       </p>
       {% if new_key %}
         <div class="alert alert-warning small" role="alert">
-          <strong>Ta clé (affichée une seule fois) :</strong>
+          <strong>Votre clé (affichée une seule fois) :</strong>
           <div class="input-group input-group-sm my-2">
             <input class="form-control font-monospace" id="extKey" type="text" readonly value="{{ new_key }}" aria-label="Clé de l'extension">
             <button class="btn btn-outline-dark" type="button" onclick="navigator.clipboard.writeText(document.getElementById('extKey').value); this.textContent='Copiée ✓';">Copier</button>
           </div>
-          Colle-la dans les réglages de l'extension. Ne la donne à personne : elle permet d'envoyer des fichiers avec ton compte.
+          Collez-la dans les réglages de l'extension. Ne la donnez à personne : elle permet d'envoyer des fichiers avec votre compte.
         </div>
       {% elif rec.ext_key_hash %}
         <p class="small text-muted mb-2">
@@ -72,10 +72,10 @@
       <details class="small">
         <summary style="cursor:pointer">Comment l'installer</summary>
         <ol class="mt-2 mb-0">
-          <li>Télécharge le .zip et décompresse-le.</li>
-          <li><strong>Chrome, Edge, Brave, Opera :</strong> ouvre <code>chrome://extensions</code>, active le « Mode développeur », puis « Charger l'extension non empaquetée » et choisis le dossier <code>pixshare-extension</code>.</li>
-          <li><strong>Firefox :</strong> ouvre <code>about:debugging#/runtime/this-firefox</code>, puis « Charger un module temporaire » et choisis <code>manifest.json</code> (à refaire après chaque redémarrage de Firefox).</li>
-          <li>Clique sur l'icône PixShare, ouvre les réglages et colle ta clé.</li>
+          <li>Téléchargez le .zip et décompressez-le.</li>
+          <li><strong>Chrome, Edge, Brave, Opera :</strong> ouvrez <code>chrome://extensions</code>, activez le « Mode développeur », puis « Charger l'extension non empaquetée » et choisissez le dossier <code>pixshare-extension</code>.</li>
+          <li><strong>Firefox :</strong> ouvrez <code>about:debugging#/runtime/this-firefox</code>, puis « Charger un module temporaire » et choisissez <code>manifest.json</code> (à refaire après chaque redémarrage de Firefox).</li>
+          <li>Cliquez sur l'icône PixShare, ouvrez les réglages et collez votre clé.</li>
         </ol>
       </details>
     </div>
@@ -100,7 +100,7 @@
         </div>
         <div class="col-12">
           <button class="btn btn-outline-primary btn-sm" type="submit">Changer</button>
-          <span class="small text-muted ms-2">Tes autres appareils seront déconnectés et la clé de l'extension désactivée.</span>
+          <span class="small text-muted ms-2">Vos autres appareils seront déconnectés et la clé de l'extension désactivée.</span>
         </div>
       </form>
     </div>
@@ -109,7 +109,7 @@
   <div class="card shadow-sm border-danger">
     <div class="card-body">
       <h2 class="h6 text-danger">Supprimer mon compte</h2>
-      <p class="small text-muted">Ton compte, ton adresse e-mail et <strong>tous tes fichiers</strong> sont effacés tout de suite. C'est définitif.</p>
+      <p class="small text-muted">Votre compte, votre adresse e-mail et <strong>tous vos fichiers</strong> sont effacés tout de suite. C'est définitif.</p>
       <form method="post" action="{{ url_for('account.delete') }}" class="row g-2">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <div class="col-md-6">

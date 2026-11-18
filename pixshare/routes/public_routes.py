@@ -191,17 +191,17 @@ def index():
         validate_csrf()
 
         if not uploads_enabled:
-            flash("Le service d'upload est actuellement suspendu. Réessaie plus tard.", "warning")
+            flash("Le service d'upload est actuellement suspendu. Réessayez plus tard.", "warning")
             return attach_guest_cookie(redirect(url_for("public.index")))
 
         if not turnstile_ok(request.form, ip):
-            flash("Vérification anti-robot échouée : coche la case puis réessaie.", "warning")
+            flash("Vérification anti-robot échouée : cochez la case puis réessayez.", "warning")
             return attach_guest_cookie(redirect(url_for("public.index")))
 
         if not has_room_for(request.content_length):
             cleanup_expired()  # libère d'abord les fichiers expirés
             if not has_room_for(request.content_length):
-                flash("Le stockage est plein pour le moment. Réessaie un peu plus tard.", "warning")
+                flash("Le stockage est plein pour le moment. Réessayez un peu plus tard.", "warning")
                 return attach_guest_cookie(redirect(url_for("public.index")))
 
         f = request.files.get("file")
@@ -316,7 +316,7 @@ def index():
             return attach_guest_cookie(redirect(url_for("public.index")))
 
         if not rate_limited:
-            flash("Choisis un fichier ou colle une URL d'image directe.", "warning")
+            flash("Choisissez un fichier ou collez une URL d'image directe.", "warning")
             return attach_guest_cookie(redirect(url_for("public.index")))
 
     guest_files = list_guest_files()
@@ -386,7 +386,7 @@ def contact():
         validate_csrf()
 
         if not turnstile_ok(request.form, ip):
-            flash("Vérification anti-robot échouée : coche la case puis réessaie.", "warning")
+            flash("Vérification anti-robot échouée : cochez la case puis réessayez.", "warning")
             return redirect(url_for("public.contact"))
 
         msg_type = (request.form.get("type") or "contact").strip()
@@ -407,7 +407,7 @@ def contact():
             return redirect(url_for("public.contact"))
 
         if not _contact_rate_ok(get_client_ip()):
-            flash("Trop de messages envoyés. Réessaie dans une heure.", "warning")
+            flash("Trop de messages envoyés. Réessayez dans une heure.", "warning")
             return redirect(url_for("public.contact"))
 
         # Seuls les vrais liens web sont gardés (pas de « javascript: » piégé).
@@ -558,9 +558,9 @@ def report_file_route(file_id):
     if outcome == "missing":
         abort(404)
     if outcome == "already":
-        flash("Tu as déjà signalé cette image. Merci !", "info")
+        flash("Vous avez déjà signalé cette image. Merci !", "info")
     else:
-        flash("Merci, ton signalement a bien été envoyé.", "success")
+        flash("Merci, votre signalement a bien été envoyé.", "success")
     if request.form.get("back") == "view":
         return redirect(url_for("public.view_file", file_id=file_id))
     return redirect(url_for("public.image_page", file_id=file_id))
@@ -667,7 +667,7 @@ def unlock_file(file_id):
     key = "filepw:" + (get_client_ip() or "?")
     locked, seconds = is_locked(key)
     if locked:
-        flash(f"Trop d'essais. Réessaie dans {max(1, seconds // 60)} min.", "warning")
+        flash(f"Trop d'essais. Réessayez dans {max(1, seconds // 60)} min.", "warning")
         return target
 
     if file_password_ok(meta, request.form.get("password") or ""):

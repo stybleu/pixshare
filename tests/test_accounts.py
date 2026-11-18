@@ -44,7 +44,7 @@ def form_post(client, url, page=None, **data):
 
 def signup(client, mails, email="alice@example.com", password=PASSWORD):
     resp = form_post(client, "/inscription", email=email, password=password, password2=password, accept_cgu="1")
-    assert resp.status_code == 200 and "Vérifie ta boîte mail" in resp.get_data(as_text=True)
+    assert resp.status_code == 200 and "Vérifiez votre boîte mail" in resp.get_data(as_text=True)
     return mails[-1]
 
 

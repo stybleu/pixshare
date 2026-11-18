@@ -7,7 +7,7 @@
   <h1 class="h4 mb-3">Confirmer mon adresse</h1>
   <div class="card shadow-sm">
     <div class="card-body text-center">
-      <p>{% if already %}Cette adresse est déjà confirmée.{% else %}Dernière étape pour activer ton compte :{% endif %}</p>
+      <p>{% if already %}Cette adresse est déjà confirmée.{% else %}Dernière étape pour activer votre compte :{% endif %}</p>
       <p class="fw-semibold text-break">{{ email }}</p>
       <form method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

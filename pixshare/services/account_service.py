@@ -121,7 +121,7 @@ def check_password_rules(password: str, email: str = "") -> None:
     if len(password) > PASSWORD_MAX:
         raise AccountError(f"Le mot de passe doit faire au plus {PASSWORD_MAX} caractères.")
     if email and password.strip().lower() == email.strip().lower():
-        raise AccountError("Le mot de passe ne doit pas être ton adresse e-mail.")
+        raise AccountError("Le mot de passe ne doit pas être votre adresse e-mail.")
 
 
 def find_by_email(email: str) -> dict | None:
@@ -352,7 +352,7 @@ def read_token(kind: str, token: str) -> tuple[dict | None, str]:
     try:
         data = _serializer().loads(token, max_age=max_age)
     except SignatureExpired:
-        return None, "Ce lien a expiré. Recommence la demande."
+        return None, "Ce lien a expiré. Recommencez la demande."
     except BadSignature:
         return None, "Lien invalide."
     if not isinstance(data, dict) or data.get("k") != kind:
@@ -391,25 +391,25 @@ def _send(rec: dict, subject: str, text: str, button: str = "", link: str = "") 
 
 def send_confirmation(rec: dict) -> bool:
     link = url_for("account.confirm", token=make_token("confirm", rec), _external=True)
-    return _send(rec, "PixShare : confirme ton adresse e-mail",
-                 "Bienvenue sur PixShare !\n\nClique sur le bouton pour confirmer ton adresse et activer ton compte. "
-                 "Le lien est valable 48 heures.\n\nSi tu n'as pas créé de compte, ignore simplement ce message : "
+    return _send(rec, "PixShare : confirmez votre adresse e-mail",
+                 "Bienvenue sur PixShare !\n\nCliquez sur le bouton pour confirmer votre adresse et activer votre compte. "
+                 "Le lien est valable 48 heures.\n\nSi vous n'avez pas créé de compte, ignorez simplement ce message : "
                  "le compte sera effacé automatiquement.",
                  "Confirmer mon adresse", link)
 
 
 def send_already_registered(rec: dict) -> bool:
     link = url_for("account.forgot", _external=True)
-    return _send(rec, "PixShare : tu as déjà un compte",
-                 "Quelqu'un (sans doute toi) a voulu créer un compte PixShare avec cette adresse, "
-                 "mais tu en as déjà un.\n\nSi tu as oublié ton mot de passe, tu peux en choisir un nouveau. "
-                 "Sinon, ignore ce message.",
+    return _send(rec, "PixShare : vous avez déjà un compte",
+                 "Quelqu'un (sans doute vous) a voulu créer un compte PixShare avec cette adresse, "
+                 "mais vous en avez déjà un.\n\nSi vous avez oublié votre mot de passe, vous pouvez en choisir un nouveau. "
+                 "Sinon, ignorez ce message.",
                  "Choisir un nouveau mot de passe", link)
 
 
 def send_reset(rec: dict) -> bool:
     link = url_for("account.reset", token=make_token("reset", rec), _external=True)
     return _send(rec, "PixShare : nouveau mot de passe",
-                 "Tu as demandé à changer le mot de passe de ton compte PixShare. Le lien est valable 1 heure "
-                 "et ne sert qu'une fois.\n\nSi ce n'est pas toi, ignore ce message : ton mot de passe ne change pas.",
+                 "Vous avez demandé à changer le mot de passe de votre compte PixShare. Le lien est valable 1 heure "
+                 "et ne sert qu'une fois.\n\nSi ce n'est pas vous, ignorez ce message : votre mot de passe ne change pas.",
                  "Choisir un nouveau mot de passe", link)

@@ -18,8 +18,8 @@
     <div class="card-body">
       {% if not open_ %}
         <div class="alert alert-warning mb-0" role="status">
-          {% if not accounts_on %}Les inscriptions sont fermées pour le moment.{% else %}Les inscriptions sont indisponibles pour le moment : réessaie plus tard.{% endif %}
-          Tu peux toujours utiliser PixShare sans compte.
+          {% if not accounts_on %}Les inscriptions sont fermées pour le moment.{% else %}Les inscriptions sont indisponibles pour le moment : réessayez plus tard.{% endif %}
+          Vous pouvez toujours utiliser PixShare sans compte.
         </div>
       {% else %}
       <form method="post" class="row g-3" autocomplete="on">
@@ -31,7 +31,7 @@
         <div class="col-12">
           <label class="form-label" for="signupEmail">Adresse e-mail</label>
           <input id="signupEmail" class="form-control" type="email" name="email" value="{{ email }}" maxlength="254" required autocomplete="email">
-          <div class="form-text">Elle sert seulement à te connecter et à récupérer ton mot de passe. Elle n'est jamais affichée ni partagée.</div>
+          <div class="form-text">Elle sert seulement à vous connecter et à récupérer votre mot de passe. Elle n'est jamais affichée ni partagée.</div>
         </div>
         <div class="col-md-6">
           <label class="form-label" for="signupPassword">Mot de passe</label>

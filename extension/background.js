@@ -21,7 +21,7 @@ api.runtime.onStartup?.addListener(createMenus);
 
 async function upload({ blob, filename, imageUrl }) {
   const s = await settings();
-  if (!s.key) throw new Error("Ajoute d'abord ta clé PixShare dans les réglages de l'extension.");
+  if (!s.key) throw new Error("Ajoutez d'abord votre clé PixShare dans les réglages de l'extension.");
   const form = new FormData();
   if (blob) form.append("file", blob, filename || "image.png");
   else form.append("image_url", imageUrl);
@@ -35,7 +35,7 @@ async function upload({ blob, filename, imageUrl }) {
       credentials: "omit",
     });
   } catch (e) {
-    throw new Error("PixShare est injoignable. Vérifie ta connexion.");
+    throw new Error("PixShare est injoignable. Vérifiez votre connexion.");
   }
   let data = {};
   try { data = await response.json(); } catch (e) { /* réponse non JSON */ }

@@ -54,11 +54,11 @@ def _member():
     header = request.headers.get("Authorization", "")
     key = header[7:].strip() if header.lower().startswith("bearer ") else ""
     if not key:
-        return None, _error("Clé manquante : colle ta clé PixShare dans les réglages de l'extension.", 401)
+        return None, _error("Clé manquante : collez votre clé PixShare dans les réglages de l'extension.", 401)
     rec = accounts.account_for_extension_key(key)
     if not rec:
         return None, _error("Clé refusée : elle a été supprimée ou remplacée, ou le compte est suspendu. "
-                            "Crée une nouvelle clé dans « Mon compte ».", 401)
+                            "Créez une nouvelle clé dans « Mon compte ».", 401)
     accounts.act_as(rec)
     return rec, None
 
@@ -91,7 +91,7 @@ def upload():
     if not rate.allowed:
         return _error(limit_message(rate, member=True), 429)
     if not has_room_for(request.content_length):
-        return _error("Le stockage est plein pour le moment. Réessaie un peu plus tard.", 507)
+        return _error("Le stockage est plein pour le moment. Réessayez un peu plus tard.", 507)
 
     max_bytes = get_max_upload_size_bytes()
     max_mb = get_max_upload_size_mb()
@@ -124,7 +124,7 @@ def upload():
         return _error(str(exc), 422)
     except Exception:
         current_app.logger.exception("Envoi depuis l'extension impossible")
-        return _error("L'envoi n'a pas pu aboutir. Réessaie.", 500)
+        return _error("L'envoi n'a pas pu aboutir. Réessayez.", 500)
 
     pending = requires_image_moderation(name)
     return jsonify({

@@ -95,7 +95,7 @@ def test_wrong_format_and_member_rate_limit(make_app, mails):
     assert send(app, key, file=(io.BytesIO(b"MZ..."), "virus.exe")).status_code == 415
     assert send(app, key, file=(io.BytesIO(png()), "a.png")).status_code == 200
     resp = send(app, key, file=(io.BytesIO(png()), "b.png"))
-    assert resp.status_code == 429 and "pour ton compte" in resp.get_json()["error"]
+    assert resp.status_code == 429 and "pour votre compte" in resp.get_json()["error"]
 
 
 def test_extension_zip_download(make_app):

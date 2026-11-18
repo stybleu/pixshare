@@ -44,7 +44,7 @@ SIGNUPS_PER_DAY = 5      # créations de compte par IP et par jour
 MAILS_PER_HOUR = 5       # renvois de confirmation / mots de passe oubliés par IP et par heure
 LOGIN_FAILS = 8          # essais ratés avant un blocage temporaire (par IP)
 EMAIL_LOGIN_FAILS = 20   # essais ratés avant un blocage temporaire (par adresse)
-SENT_MESSAGE = "C'est envoyé ! Regarde ta boîte mail (et les spams) : le lien est valable 48 heures."
+SENT_MESSAGE = "C'est envoyé ! Regardez votre boîte mail (et les spams) : le lien est valable 48 heures."
 
 
 def _rate_ok(name: str, ip: str, limit: int, window: int) -> bool:
@@ -92,9 +92,9 @@ def signup():
         if request.form.get("website"):  # champ piège invisible : seuls les robots le remplissent
             abort(400)
         if not turnstile_ok(request.form, ip):
-            flash("Vérification anti-robot échouée : coche la case puis réessaie.", "warning")
+            flash("Vérification anti-robot échouée : cochez la case puis réessayez.", "warning")
         elif request.form.get("accept_cgu") != "1":
-            flash("Tu dois accepter les conditions d'utilisation pour créer un compte.", "warning")
+            flash("Vous devez accepter les conditions d'utilisation pour créer un compte.", "warning")
         elif password != (request.form.get("password2") or ""):
             flash("Les deux mots de passe ne sont pas identiques.", "warning")
         else:
@@ -105,15 +105,15 @@ def signup():
                 flash(str(exc), "warning")
             else:
                 if not _rate_ok("signup", ip, SIGNUPS_PER_DAY, 86400):
-                    flash("Trop de comptes créés depuis ta connexion aujourd'hui. Réessaie demain.", "warning")
+                    flash("Trop de comptes créés depuis votre connexion aujourd'hui. Réessayez demain.", "warning")
                 else:
                     rec, created = accounts.create_account(email, password)
                     sent = accounts.send_confirmation(rec) if created else accounts.send_already_registered(rec)
                     if not sent:
-                        flash("Le mail n'a pas pu partir. Réessaie dans quelques minutes.", "danger")
+                        flash("Le mail n'a pas pu partir. Réessayez dans quelques minutes.", "danger")
                     else:
                         # Même message que l'adresse soit libre ou non : on ne révèle pas qui a un compte.
-                        return _page("account_message.html", title="Vérifie ta boîte mail", heading="Vérifie ta boîte mail",
+                        return _page("account_message.html", title="Vérifiez votre boîte mail", heading="Vérifiez votre boîte mail",
                                      text=SENT_MESSAGE)
     return _page("account_signup.html", title="Créer un compte", open_=open_, email=email,
                  accounts_on=accounts_enabled(), limits=limits_table(),
@@ -133,7 +133,7 @@ def confirm(token):
             accounts.login(rec)
             get_guest_token()
             claimed = claim_device_files(rec["id"])
-            flash("Adresse confirmée, ton compte est prêt ✅"
+            flash("Adresse confirmée, votre compte est prêt ✅"
                   + (f" {claimed} fichier(s) envoyé(s) depuis ce navigateur y ont été ajoutés." if claimed else ""), "success")
             return attach_guest_cookie(redirect(url_for("account.page")))
         flash("Adresse confirmée.", "success")
@@ -148,14 +148,14 @@ def resend():
         validate_csrf()
         ip = get_client_ip()
         if not turnstile_ok(request.form, ip):
-            flash("Vérification anti-robot échouée : coche la case puis réessaie.", "warning")
+            flash("Vérification anti-robot échouée : cochez la case puis réessayez.", "warning")
         elif not _rate_ok("account_mail", ip, MAILS_PER_HOUR, 3600):
-            flash("Trop de demandes. Réessaie dans une heure.", "warning")
+            flash("Trop de demandes. Réessayez dans une heure.", "warning")
         else:
             rec = accounts.find_by_email(request.form.get("email") or "")
             if rec and not rec.get("confirmed_at"):
                 accounts.send_confirmation(rec)
-            return _page("account_message.html", title="Vérifie ta boîte mail", heading="Vérifie ta boîte mail",
+            return _page("account_message.html", title="Vérifiez votre boîte mail", heading="Vérifiez votre boîte mail",
                          text="Si un compte attend une confirmation avec cette adresse, un nouveau lien vient de partir.")
     return _page("account_email_form.html", title="Renvoyer le mail de confirmation",
                  heading="Renvoyer le mail de confirmation", button="Renvoyer le lien",
@@ -176,7 +176,7 @@ def login():
         email = (request.form.get("email") or "").strip()[:254]
         mail_key = "acctmail:" + accounts.email_key(email)
         if is_locked("acct:" + ip)[0] or is_locked(mail_key)[0]:
-            flash("Trop d'essais ratés. Réessaie dans quelques minutes.", "danger")
+            flash("Trop d'essais ratés. Réessayez dans quelques minutes.", "danger")
             status = 429
         else:
             rec = accounts.authenticate(email, request.form.get("password") or "")
@@ -187,17 +187,17 @@ def login():
                 flash("Adresse ou mot de passe incorrect.", "danger")
                 status = 401
             elif not rec.get("confirmed_at"):
-                flash("Confirme d'abord ton adresse avec le lien reçu par mail.", "warning")
+                flash("Confirmez d'abord votre adresse avec le lien reçu par mail.", "warning")
                 return redirect(url_for("account.resend"))
             elif rec.get("status") != "active":
-                flash("Ce compte est suspendu. Écris-nous via le formulaire de contact si tu penses que c'est une erreur.", "danger")
+                flash("Ce compte est suspendu. Écrivez-nous via le formulaire de contact si vous pensez que c'est une erreur.", "danger")
                 status = 403
             else:
                 reset_fail("acct:" + ip)
                 accounts.login(rec)
                 get_guest_token()
                 claimed = claim_device_files(rec["id"])
-                flash("Connecté ✅" + (f" {claimed} fichier(s) de ce navigateur ajouté(s) à ton compte." if claimed else ""),
+                flash("Connecté ✅" + (f" {claimed} fichier(s) de ce navigateur ajouté(s) à votre compte." if claimed else ""),
                       "success")
                 target = request.args.get("next") or ""
                 if not target.startswith("/") or target.startswith("//"):
@@ -212,7 +212,7 @@ def login():
 def logout():
     validate_csrf()
     accounts.logout()
-    flash("Tu es déconnecté.", "info")
+    flash("Vous êtes déconnecté.", "info")
     return redirect(url_for("public.index"))
 
 
@@ -224,14 +224,14 @@ def forgot():
         validate_csrf()
         ip = get_client_ip()
         if not turnstile_ok(request.form, ip):
-            flash("Vérification anti-robot échouée : coche la case puis réessaie.", "warning")
+            flash("Vérification anti-robot échouée : cochez la case puis réessayez.", "warning")
         elif not _rate_ok("account_mail", ip, MAILS_PER_HOUR, 3600):
-            flash("Trop de demandes. Réessaie dans une heure.", "warning")
+            flash("Trop de demandes. Réessayez dans une heure.", "warning")
         else:
             rec = accounts.find_by_email(request.form.get("email") or "")
             if rec and rec.get("confirmed_at"):
                 accounts.send_reset(rec)
-            return _page("account_message.html", title="Vérifie ta boîte mail", heading="Vérifie ta boîte mail",
+            return _page("account_message.html", title="Vérifiez votre boîte mail", heading="Vérifiez votre boîte mail",
                          text="Si un compte existe avec cette adresse, un lien pour choisir un nouveau mot de passe "
                               "vient de partir. Il est valable 1 heure.")
     return _page("account_email_form.html", title="Mot de passe oublié", heading="Mot de passe oublié",
@@ -332,10 +332,10 @@ def delete():
     if not rec:
         return redirect(url_for("account.login"))
     if request.form.get("confirm") != "1" or not accounts.authenticate(rec["email"], request.form.get("password") or ""):
-        flash("Coche la case et donne ton mot de passe pour supprimer le compte.", "danger")
+        flash("Cochez la case et indiquez votre mot de passe pour supprimer le compte.", "danger")
         return redirect(url_for("account.page"))
     removed = accounts.delete_account(rec["id"])
-    flash(f"Compte supprimé, avec ses {removed} fichier(s). Ton adresse e-mail a été effacée.", "success")
+    flash(f"Compte supprimé, avec ses {removed} fichier(s). Votre adresse e-mail a été effacée.", "success")
     return redirect(url_for("public.index"))
 
 
@@ -381,7 +381,7 @@ def replace(file_id):
         return back
     f = request.files.get("file")
     if not f or not f.filename:
-        flash("Choisis le nouveau fichier.", "warning")
+        flash("Choisissez le nouveau fichier.", "warning")
         return back
     safe_name = secure_filename(f.filename)
     if not safe_name or not allowed_file(safe_name):
@@ -393,7 +393,7 @@ def replace(file_id):
         flash(limit_message(rate, member=True), "warning")
         return back
     if not has_room_for(request.content_length):
-        flash("Le stockage est plein pour le moment. Réessaie un peu plus tard.", "warning")
+        flash("Le stockage est plein pour le moment. Réessayez un peu plus tard.", "warning")
         return back
     max_bytes = get_max_upload_size_bytes()
     if (request.content_length or 0) > max_bytes:

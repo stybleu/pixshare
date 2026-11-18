@@ -128,9 +128,9 @@ def format_window(seconds: int) -> str:
 
 
 def limit_message(info: RateInfo, member: bool = False) -> str:
-    who = "pour ton compte" if member else "depuis ton adresse"
+    who = "pour votre compte" if member else "depuis votre adresse"
     tip = "" if member else " Avec un compte gratuit, la limite est bien plus haute."
     return (
         f"Trop d'envois {who} (maximum {info.limit} par {format_window(info.window)}). "
-        f"Réessaie dans {format_wait(info.retry_after)}.{tip}"
+        f"Réessayez dans {format_wait(info.retry_after)}.{tip}"
     )
