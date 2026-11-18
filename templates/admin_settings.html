@@ -12,11 +12,7 @@
     <h1 class="h4 mb-0">Paramètres</h1>
     <div class="text-muted small">Réglages minimum du site.</div>
   </div>
-  <div class="d-flex gap-2">
-    <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_panel') }}">Fichiers</a>
-    <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_thumbnails') }}">Miniatures</a>
-    <a class="btn btn-outline-primary btn-sm" href="{{ url_for('public.index') }}">Voir page publique</a>
-  </div>
+  {% include "_admin_nav.html" %}
 </div>
 
 <div class="card shadow-sm">

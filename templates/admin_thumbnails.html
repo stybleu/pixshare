@@ -41,15 +41,7 @@
     <h1 class="h4 mb-0">Miniatures de modération</h1>
     <div class="text-muted small">Affichage séparé des miniatures stockées dans <code>mod_thumbs</code>.</div>
   </div>
-  <div class="d-flex gap-2 flex-wrap">
-    <a class="btn btn-outline-primary btn-sm" href="{{ url_for('admin.admin_panel') }}">Retour fichiers</a>
-    <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_messages') }}">Messages</a>
-    <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_blocked_ips') }}">IP bloquées</a>
-    <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_system') }}">Système</a>
-    <a class="btn btn-outline-dark btn-sm" href="{{ url_for('admin.admin_stats') }}">Statistiques</a>
-    <a class="btn btn-outline-success btn-sm" href="{{ url_for('admin.admin_live') }}">● En direct</a>
-    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('admin.admin_settings') }}">Paramètres</a>
-  </div>
+  {% include "_admin_nav.html" %}
 </div>
 
 {% set ns = namespace(user=0, nude=0, admin=0, review=0) %}

@@ -1,0 +1,26 @@
+{# Menu commun à toutes les pages de l'admin : mêmes boutons partout, la page en cours est mise en avant. #}
+{% set _here = request.endpoint %}
+<nav class="d-flex gap-2 flex-wrap admin-nav" aria-label="Menu de l'admin">
+  {% for endpoint, label, style in [
+      ("admin.admin_panel", "Fichiers", "dark"),
+      ("admin.admin_thumbnails", "Miniatures", "dark"),
+      ("admin.admin_messages", "Messages", "dark"),
+      ("admin.admin_accounts", "Comptes", "dark"),
+      ("admin.admin_stats", "Statistiques", "dark"),
+      ("admin.admin_live", "● En direct", "success"),
+      ("admin.admin_blocked_ips", "IP bloquées", "dark"),
+      ("admin.admin_system", "Système", "dark"),
+      ("admin.admin_settings", "Paramètres", "secondary"),
+  ] %}
+    {% if _here == endpoint or (endpoint == "admin.admin_system" and _here == "admin.admin_disk") %}
+      <a class="btn btn-{{ style }} btn-sm" aria-current="page" href="{{ url_for(endpoint) }}">{{ label }}</a>
+    {% else %}
+      <a class="btn btn-outline-{{ style }} btn-sm" href="{{ url_for(endpoint) }}">{{ label }}</a>
+    {% endif %}
+  {% endfor %}
+  <a class="btn btn-outline-primary btn-sm" href="{{ url_for('public.index') }}">Voir le site</a>
+  <form method="post" action="{{ url_for('admin.admin_logout') }}" class="m-0">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button class="btn btn-outline-secondary btn-sm" type="submit">Déconnexion</button>
+  </form>
+</nav>
