@@ -974,6 +974,7 @@ def admin_accounts():
         plan_max_mb=accounts.PLAN_MAX_MB,
         today=utcnow().strftime("%Y-%m-%d"),
         open_plan=request.args.get("formule", ""),
+        **_album_rows(),
     )
 
 
@@ -989,7 +990,12 @@ def admin_accounts_settings():
         "guest_uploads_per_hour": request.form.get("guest_uploads_per_hour"),
         "member_uploads_per_hour": request.form.get("member_uploads_per_hour"),
         "member_strikes_max": request.form.get("member_strikes_max"),
+        **{key: request.form.get(key) for key in ("albums_per_member", "album_max_mb", "album_max_photos",
+                                                  "album_guest_per_hour", "album_guestbook_per_hour")
+           if key in request.form},
     })
+    if "albums_enabled" in request.form:
+        current["albums_enabled"] = request.form.get("albums_enabled") == "1"
     save_settings(current)
     flash("Réglages des comptes enregistrés ✅ (pense à copier la sauvegarde des réglages dans Render)", "success")
     return redirect(url_for("admin.admin_accounts"))
@@ -1068,6 +1074,31 @@ def admin_auto_block_settings():
     return redirect(url_for("admin.admin_blocked_ips") + "#auto")
 
 
+def _album_rows() -> dict:
+    from pixshare.services import account_service as accounts
+    from pixshare.services import album_service as albums
+    rows = []
+    for album in sorted(albums._load().values(), key=lambda a: a.get("created_at", ""), reverse=True):
+        if not isinstance(album, dict):
+            continue
+        owner = accounts.get_account(album.get("owner", "")) or {}
+        rows.append({**album, "owner_email": owner.get("email", "compte supprimé"), "usage": albums.usage(album, owner or None),
+                     "guestbook_count": len(albums.guestbook(album["id"]))})
+    return {"album_rows": rows, "album_total_mb": round(sum(r["usage"]["mb"] for r in rows), 1)}
+
+
+@admin_bp.route("/admin/albums/supprimer", methods=["POST"], endpoint="admin_album_delete")
+@admin_required
+def admin_album_delete():
+    from pixshare.services import album_service as albums
+    validate_csrf()
+    album = albums.get(request.form.get("album_id", ""))
+    if album:
+        removed = albums.delete(album["id"])
+        flash(f"Album « {album['name']} » supprimé, avec ses {removed} photo(s).", "success")
+    return redirect(url_for("admin.admin_accounts") + "#albums")
+
+
 @admin_bp.route("/admin/comptes/formule", methods=["POST"], endpoint="admin_account_plan")
 @admin_required
 def admin_account_plan():
@@ -1083,10 +1114,11 @@ def admin_account_plan():
         accounts.set_plan(account_id, {})
         flash(f"{rec['email']} revient aux réglages des membres.", "success")
         return redirect(url_for("admin.admin_accounts"))
-    wanted = {k: request.form.get(k, "") for k in ("name", "life", "mb", "per_hour", "no_ads", "until")}
+    wanted = {k: request.form.get(k, "") for k in ("name", "life", "mb", "per_hour", "no_ads", "until", "albums", "album_mb")}
     saved = accounts.set_plan(account_id, wanted)
     plan = (saved or {}).get("plan") or {}
-    ignored = [label for key, label in (("mb", "taille"), ("per_hour", "envois par heure"), ("until", "date"))
+    ignored = [label for key, label in (("mb", "taille"), ("per_hour", "envois par heure"), ("until", "date"),
+                                        ("albums", "albums"), ("album_mb", "place par album"))
                if (wanted.get(key) or "").strip() and key not in plan]
     if ignored:
         flash("Valeur refusée, réglage des membres gardé pour : " + ", ".join(ignored) + ".", "warning")

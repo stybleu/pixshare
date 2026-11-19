@@ -8,9 +8,14 @@
 <p class="text-muted small">
   Un album rassemble des photos sur une seule page, à partager par un lien ou un QR code : mariage, anniversaire,
   sortie… Les invités qui ont le lien peuvent voir les photos et, si vous le permettez, ajouter les leurs, sans compte.
-  Jusqu'à {{ max_albums }} albums de {{ max_photos }} photos.
+  Jusqu'à {{ max_albums }} album(s) de {{ max_photos }} photos et {{ max_mb }} Mo chacun.
 </p>
 
+{% if not albums_on %}
+<div class="alert alert-info">La création d'albums est suspendue pour le moment. Vos albums existants restent en ligne.</div>
+{% elif not can_create %}
+<div class="alert alert-info">Vous avez atteint le nombre maximum d'albums pour votre compte ({{ max_albums }}). Supprimez-en un pour en créer un autre.</div>
+{% else %}
 <div class="card shadow-sm mb-4">
   <div class="card-body">
     <h2 class="h6">Créer un album</h2>
@@ -42,6 +47,7 @@
     </form>
   </div>
 </div>
+{% endif %}
 
 {% if not items %}
   <p class="text-muted">Vous n'avez pas encore d'album.</p>
@@ -57,6 +63,11 @@
           · créé le {{ a.created_at[:10]|day_fr }}
           {% if a.password_hash %} · 🔒 mot de passe{% endif %}
           · {% if a.guests_can_add %}les invités peuvent ajouter des photos{% else %}ajout fermé aux invités{% endif %}
+        </div>
+        {% set u = a.usage %}
+        <div class="small mt-1">{{ u.mb }} Mo utilisés sur {{ u.max_mb }} Mo · {{ u.photos }} / {{ u.max_photos }} photos{% if u.full %} · <strong class="text-danger">album plein</strong>{% endif %}</div>
+        <div class="progress mt-1" style="height: .4rem; max-width: 260px" role="progressbar" aria-label="Place utilisée" aria-valuenow="{{ u.pct }}" aria-valuemin="0" aria-valuemax="100">
+          <div class="progress-bar {% if u.pct >= 90 %}bg-danger{% elif u.pct >= 70 %}bg-warning{% endif %}" style="width: {{ u.pct }}%"></div>
         </div>
       </div>
       <img src="{{ url_for('album.qr_svg', album_id=a.id) }}" alt="QR code de l'album" width="88" height="88" class="border rounded">

@@ -68,10 +68,12 @@ def mine():
         except albums.AlbumError as exc:
             flash(str(exc), "warning")
         return redirect(url_for("album.mine"))
-    items = [{**a, "counts": albums.counts(a["id"])} for a in albums.list_for(me["id"])]
+    items = [{**a, "counts": albums.counts(a["id"]), "usage": albums.usage(a, me)} for a in albums.list_for(me["id"])]
+    lim = albums.limits(me)
     return _noindex(make_response(render_template(
-        "albums_mine.html", items=items, max_albums=albums.ALBUMS_PER_ACCOUNT,
-        max_photos=albums.PHOTOS_PER_ALBUM, themes=albums.THEMES, title="Mes albums – PixShare")))
+        "albums_mine.html", items=items, max_albums=lim["albums"], max_photos=lim["photos"], max_mb=lim["mb"],
+        can_create=albums.enabled() and len(items) < lim["albums"], albums_on=albums.enabled(),
+        themes=albums.THEMES, title="Mes albums – PixShare")))
 
 
 @album_bp.route("/mes-albums/<album_id>/modifier", methods=["POST"], endpoint="edit")
@@ -141,6 +143,7 @@ def view(album_id):
         return _noindex(make_response(render_template("album_locked.html", album=album, look=albums.style(album),
                                                       title=f"{album['name']} – PixShare")))
     owner = albums.is_owner(album, me)
+    owner_acc = accounts.get_account(album["owner"])
     items = albums.photos(album["id"], include_pending=owner)
     people = albums.contributors(items)
     who = request.args.get("par", "")
@@ -158,7 +161,8 @@ def view(album_id):
     can_add = (owner or album.get("guests_can_add")) and upload_service_enabled()
     response = make_response(render_template(
         "album.html", album=album, photos=shown, people=people, who=who, owner=owner, counts=counts,
-        can_add=can_add, room_left=albums.room_left(album["id"]),
+        can_add=can_add, room_left=0 if albums.usage(album, owner_acc)["full"] else albums.room_left(album["id"], owner_acc),
+        usage=albums.usage(album, owner_acc) if owner else None,
         need_human=not owner and not albums.human_checked(album["id"]),
         contributor=session.get("album_name", ""),
         max_mb=get_max_upload_size_mb(accounts.get_account(album["owner"]) or True),
@@ -251,18 +255,24 @@ def add(album_id):
     if not files:
         return done("Choisissez au moins une photo.", "warning", 400)
     max_bytes = get_max_upload_size_mb(owner_rec) * 1024 * 1024
+    lim = albums.limits(owner_rec)
     guest_token = get_guest_token()
     added, errors = 0, []
+    if request.content_length and len(files) == 1 and request.content_length - 4096 > albums.bytes_left(album["id"], owner_rec):
+        return done(f"L'album est plein ({lim['mb']} Mo maximum).", "warning", 400, added=0)
     for f in files:
         name = f.filename
-        if albums.room_left(album["id"]) <= 0:
-            errors.append(f"L'album est complet ({albums.PHOTOS_PER_ALBUM} photos).")
+        if albums.room_left(album["id"], owner_rec) <= 0:
+            errors.append(f"L'album est complet ({lim['photos']} photos).")
+            break
+        if albums.bytes_left(album["id"], owner_rec) <= 0:
+            errors.append(f"L'album est plein ({lim['mb']} Mo maximum).")
             break
         if not secure_filename(name) or not is_image_filename(name):
             errors.append(f"{name} : seules les photos sont acceptées dans un album.")
             continue
         rate = check_upload_rate(f"album:{album['id']}:{'owner' if by_owner else ip}", exempt=is_admin(),
-                                 limit=albums.OWNER_UPLOADS_PER_HOUR if by_owner else albums.GUEST_UPLOADS_PER_HOUR)
+                                 limit=albums.OWNER_UPLOADS_PER_HOUR if by_owner else lim["guest_per_hour"])
         if not rate.allowed:
             errors.append("Trop de photos envoyées d'un coup. Réessayez dans une heure.")
             break
@@ -277,6 +287,10 @@ def add(album_id):
             errors.append(f"{name} : fichier refusé (trop lourd, {get_max_upload_size_mb(owner_rec)} Mo maximum, ou illisible).")
             continue
         albums.finalize_photo(file_id, album, owner_rec, by_owner, contributor, challenge)
+        if albums.usage_bytes(album["id"]) > lim["mb"] * 1024 * 1024:
+            delete_by_id(file_id, reason="deleted")  # cette photo fait dépasser le plafond de l'album
+            errors.append(f"{name} : l'album est plein ({lim['mb']} Mo maximum).")
+            break
         added += 1
     if added and not errors:
         return done(f"{added} photo(s) ajoutée(s) ✅ Elles apparaissent dans l'album après la vérification automatique.",
@@ -329,7 +343,7 @@ def sign(album_id):
             return back
         albums.mark_human(album["id"])
     rate = check_upload_rate(f"albumbook:{album['id']}:{ip}", exempt=albums.is_owner(album, me),
-                             limit=albums.GUESTBOOK_PER_HOUR)
+                             limit=albums.limits(accounts.get_account(album["owner"]))["book_per_hour"])
     if not rate.allowed:
         flash("Vous avez déjà écrit plusieurs messages : réessayez dans une heure.", "warning")
         return back

@@ -38,6 +38,13 @@ DEFAULT_SETTINGS = {
     "admin_absent_members": True,
     # Modération : refus avant suspension d'un compte, blocage automatique des IP (None = variables Render).
     "member_strikes_max": 3,
+    # Albums des membres (le plafond en Mo protège le petit disque : à monter avec un plus gros disque).
+    "albums_enabled": True,
+    "albums_per_member": 20,
+    "album_max_photos": 500,
+    "album_max_mb": 200,
+    "album_guest_per_hour": 60,
+    "album_guestbook_per_hour": 5,
     "auto_block_rejections": None,
     "auto_block_hours": None,
     # Thème de saison : "" = variable SEASON_THEME ou automatique (voir theme_service).
@@ -157,6 +164,7 @@ def load_settings() -> dict:
     settings.update(clean_account_settings(settings))
     settings.update(clean_absent_settings(settings))
     settings.update(clean_moderation_settings(settings))
+    settings.update(clean_album_settings(settings))
     return settings
 
 
@@ -186,10 +194,28 @@ def save_settings(settings: dict) -> dict:
     clean_settings.update(clean_account_settings({key: settings.get(key, current.get(key)) for key in ACCOUNT_KEYS}))
     clean_settings.update(clean_absent_settings({key: settings.get(key, current.get(key)) for key in ABSENT_KEYS}))
     clean_settings.update(clean_moderation_settings({key: settings.get(key, current.get(key)) for key in MODERATION_KEYS}))
+    clean_settings.update(clean_album_settings({key: settings.get(key, current.get(key)) for key in ALBUM_KEYS}))
 
     save_json(SETTINGS_FILENAME, clean_settings)
 
     return clean_settings
+
+
+ALBUM_KEYS = ("albums_enabled", "albums_per_member", "album_max_photos", "album_max_mb", "album_guest_per_hour",
+              "album_guestbook_per_hour")
+
+
+def clean_album_settings(source: dict) -> dict:
+    enabled = source.get("albums_enabled")
+    d = DEFAULT_SETTINGS
+    return {
+        "albums_enabled": True if enabled is None else bool(enabled),
+        "albums_per_member": _bounded_int(source.get("albums_per_member"), d["albums_per_member"], 0, 200),
+        "album_max_photos": _bounded_int(source.get("album_max_photos"), d["album_max_photos"], 1, 5000),
+        "album_max_mb": _bounded_int(source.get("album_max_mb"), d["album_max_mb"], 10, 100000),
+        "album_guest_per_hour": _bounded_int(source.get("album_guest_per_hour"), d["album_guest_per_hour"], 1, 10000),
+        "album_guestbook_per_hour": _bounded_int(source.get("album_guestbook_per_hour"), d["album_guestbook_per_hour"], 1, 1000),
+    }
 
 
 MODERATION_KEYS = ("member_strikes_max", "auto_block_rejections", "auto_block_hours")
@@ -466,7 +492,8 @@ def plan_limits(account: dict) -> dict | None:
         return None
     return {"name": plan.get("name") or "Formule personnalisée", "life": lifetime_label(get_max_lifetime(account)),
             "mb": get_max_upload_size_mb(account), "per_hour": get_uploads_per_hour(account),
-            "no_ads": bool(plan.get("no_ads")), "until": plan.get("until", "")}
+            "no_ads": bool(plan.get("no_ads")), "until": plan.get("until", ""),
+            "albums": plan.get("albums"), "album_mb": plan.get("album_mb")}
 
 
 def limits_table() -> dict:
@@ -479,7 +506,15 @@ def limits_table() -> dict:
         "ads_free_members": _ads_free_members(),
         "absent_deletes_members": _absent_deletes_members(),
         "absent_mode": bool(load_settings().get("admin_absent_mode")),
+        "albums": _album_limits_for_table(),
     }
+
+
+def _album_limits_for_table() -> dict | None:
+    s = load_settings()
+    if not s.get("albums_enabled") or not s.get("albums_per_member"):
+        return None
+    return {"count": s["albums_per_member"], "photos": s["album_max_photos"], "mb": s["album_max_mb"]}
 
 
 def _ads_free_members() -> bool:

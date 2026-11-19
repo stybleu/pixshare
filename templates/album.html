@@ -61,7 +61,9 @@
   <section class="pxa-card">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
       <div><strong>Vous êtes l'organisateur de cet album.</strong>
-        {% if counts.pending %}<span class="badge text-bg-warning">{{ counts.pending }} photo(s) en vérification</span>{% endif %}</div>
+        {% if counts.pending %}<span class="badge text-bg-warning">{{ counts.pending }} photo(s) en vérification</span>{% endif %}
+        {% if usage %}<div class="small pxa-muted">{{ usage.mb }} Mo utilisés sur {{ usage.max_mb }} Mo · {{ usage.photos }} / {{ usage.max_photos }} photos{% if usage.full %} · <strong>album plein</strong>{% endif %}</div>
+        <div class="progress mt-1" style="height: .4rem; max-width: 260px" role="progressbar" aria-label="Place utilisée" aria-valuenow="{{ usage.pct }}" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" style="width: {{ usage.pct }}%; background: var(--accent)"></div></div>{% endif %}</div>
       <div class="d-flex flex-wrap gap-2">
         <a class="btn btn-ghost btn-sm" href="{{ url_for('album.poster', album_id=album.id) }}" target="_blank" rel="noopener">🖨️ Affiche</a>
         <a class="btn btn-ghost btn-sm" href="{{ url_for('album.qr_png', album_id=album.id) }}">⬇️ QR code</a>
@@ -129,7 +131,7 @@
   <section class="pxa-card" id="ajouter">
     <h2 class="h6">📤 {% if owner %}Ajouter des photos{% else %}Ajoutez vos photos{% endif %}</h2>
     {% if room_left <= 0 %}
-      <p class="small text-muted mb-0">L'album est complet.</p>
+      <p class="small text-muted mb-0">L'album est complet : il n'est plus possible d'y ajouter des photos.</p>
     {% else %}
     <form method="post" action="{{ url_for('album.add', album_id=album.id) }}" enctype="multipart/form-data" id="pxa-form">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

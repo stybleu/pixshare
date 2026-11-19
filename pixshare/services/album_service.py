@@ -21,9 +21,6 @@ ALBUMS_FILE = "albums.json"
 NAME_MAX = 80
 DESCRIPTION_MAX = 300
 PASSWORD_MIN, PASSWORD_MAX = 4, 128
-ALBUMS_PER_ACCOUNT = 20
-PHOTOS_PER_ALBUM = 500
-GUEST_UPLOADS_PER_HOUR = 60     # par invité et par album
 OWNER_UPLOADS_PER_HOUR = 300    # le membre qui remplit son album
 HUMAN_CHECK_HOURS = 3           # anti-robot validé une fois pour une série d'envois
 
@@ -99,7 +96,6 @@ CHALLENGE_MAX_LEN = 80
 GUESTBOOK_FILE = "album_guestbook.json"
 GUESTBOOK_MAX = 300
 GUESTBOOK_TEXT_MAX = 500
-GUESTBOOK_PER_HOUR = 5
 SUGGESTED_CHALLENGES = {
     "mariage": ["Un éclat de rire", "Les mariés", "La plus belle tenue", "La décoration", "Sur la piste de danse",
                 "Un selfie avec les mariés", "Le gâteau", "Un moment d'émotion"],
@@ -246,6 +242,49 @@ class AlbumError(Exception):
     """Message à montrer tel quel à la personne."""
 
 
+def enabled() -> bool:
+    from pixshare.services.settings_service import load_settings
+    return bool(load_settings().get("albums_enabled", True))
+
+
+def limits(owner: dict | None) -> dict:
+    """Limites des albums : réglages de l'admin, puis formule personnalisée du compte s'il en a une."""
+    from pixshare.services.account_service import active_plan
+    from pixshare.services.settings_service import load_settings
+    s = load_settings()
+    plan = active_plan(owner) if owner else {}
+    return {
+        "albums": int(plan["albums"]) if "albums" in plan else int(s.get("albums_per_member", 20)),
+        "photos": int(s.get("album_max_photos", 500)),
+        "mb": int(plan.get("album_mb") or s.get("album_max_mb", 200)),
+        "guest_per_hour": int(s.get("album_guest_per_hour", 60)),
+        "book_per_hour": int(s.get("album_guestbook_per_hour", 5)),
+    }
+
+
+def usage_bytes(album_id: str) -> int:
+    """Place occupée sur le disque par les photos de l'album (en attente comprises)."""
+    import os
+    from flask import current_app
+    folder = current_app.config["UPLOAD_FOLDER"]
+    total = 0
+    for meta in photos(album_id, include_pending=True):
+        try:
+            total += os.path.getsize(os.path.join(folder, os.path.basename(meta.get("server_name") or "")))
+        except OSError:
+            pass
+    return total
+
+
+def usage(album: dict, owner: dict | None = None) -> dict:
+    lim = limits(owner)
+    used = usage_bytes(album["id"])
+    count = counts(album["id"])["total"]
+    return {"mb": round(used / 1024 / 1024, 1), "max_mb": lim["mb"], "photos": count, "max_photos": lim["photos"],
+            "pct": min(100, round(used * 100 / (lim["mb"] * 1024 * 1024))) if lim["mb"] else 0,
+            "full": used >= lim["mb"] * 1024 * 1024 or count >= lim["photos"]}
+
+
 def _clean_text(value, limit: int) -> str:
     text = " ".join(str(value or "").split())[:limit]
     return "".join(c for c in text if c not in "<>")
@@ -270,8 +309,12 @@ def create(owner: dict, name, description="", password="", guests_can_add=True, 
     name = _clean_text(name, NAME_MAX)
     if not name:
         raise AlbumError("Donnez un nom à l'album.")
-    if len(list_for(owner["id"])) >= ALBUMS_PER_ACCOUNT:
-        raise AlbumError(f"Vous avez déjà {ALBUMS_PER_ACCOUNT} albums : supprimez-en un pour en créer un autre.")
+    if not enabled():
+        raise AlbumError("La création d'albums est suspendue pour le moment.")
+    max_albums = limits(owner)["albums"]
+    if len(list_for(owner["id"])) >= max_albums:
+        raise AlbumError(f"Vous avez déjà {max_albums} album(s), le maximum pour votre compte : supprimez-en un pour en créer un autre."
+                         if max_albums else "La création d'albums n'est pas ouverte pour votre compte.")
     password = str(password or "")
     if password and not PASSWORD_MIN <= len(password) <= PASSWORD_MAX:
         raise AlbumError(f"Le mot de passe de l'album doit faire entre {PASSWORD_MIN} et {PASSWORD_MAX} caractères.")
@@ -376,7 +419,8 @@ def is_owner(album: dict, account: dict | None) -> bool:
 
 
 def unlocked(album: dict, account: dict | None = None) -> bool:
-    if not album.get("password_hash") or is_owner(album, account):
+    from pixshare.services.auth_service import is_admin
+    if not album.get("password_hash") or is_owner(album, account) or is_admin():
         return True
     return album["id"] in (session.get("albums_ok") or [])
 
@@ -451,5 +495,9 @@ def finalize_photo(file_id: str, album: dict, owner: dict, by_owner: bool, contr
     save_db(db)
 
 
-def room_left(album_id: str) -> int:
-    return max(0, PHOTOS_PER_ALBUM - counts(album_id)["total"])
+def room_left(album_id: str, owner: dict | None = None) -> int:
+    return max(0, limits(owner)["photos"] - counts(album_id)["total"])
+
+
+def bytes_left(album_id: str, owner: dict | None = None) -> int:
+    return max(0, limits(owner)["mb"] * 1024 * 1024 - usage_bytes(album_id))

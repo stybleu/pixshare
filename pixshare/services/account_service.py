@@ -266,6 +266,12 @@ def clean_plan(raw) -> dict:
     per_hour = _int("per_hour", 0, PLAN_MAX_PER_HOUR)
     if per_hour is not None:
         plan["per_hour"] = per_hour
+    albums = _int("albums", 0, 200)
+    if albums is not None:
+        plan["albums"] = albums
+    album_mb = _int("album_mb", 10, 100000)
+    if album_mb:
+        plan["album_mb"] = album_mb
     if raw.get("no_ads") in (True, "1", 1):
         plan["no_ads"] = True
     until = str(raw.get("until") or "").strip()
