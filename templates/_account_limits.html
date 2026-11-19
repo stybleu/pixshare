@@ -20,9 +20,6 @@
       {% if limits.albums %}
       <tr><th scope="row">Albums photo à partager par QR code (mariage, fête…), où les invités ajoutent leurs photos</th><td>—</td><td class="fw-semibold">✔ {{ limits.albums.count }} album(s) de {{ limits.albums.photos }} photos et {{ limits.albums.mb }} Mo</td></tr>
       {% endif %}
-      {% if limits.ads_free_members %}
-      <tr><th scope="row">Publicité</th><td>Oui</td><td class="fw-semibold">✔ Aucune</td></tr>
-      {% endif %}
       {% if not compact %}
       <tr><th scope="row">Photos en maillot de bain, sous-vêtements, torse nu</th><td>Peuvent être bloquées par le filtre</td><td class="fw-semibold">Acceptées (la nudité reste interdite)</td></tr>
       <tr><th scope="row">Image jugée douteuse par le filtre</th><td>{% if limits.absent_mode %}Mise de côté et vérifiée par une personne si elle est disponible, sinon supprimée par le filtre{% else %}Mise de côté jusqu'à la vérification par une personne{% endif %}</td><td class="fw-semibold">{% if limits.absent_deletes_members %}Gardée en privé et vérifiée par une personne si elle est disponible, sinon supprimée par le filtre{% else %}Gardée en privé, vérifiée par une personne{% endif %}</td></tr>

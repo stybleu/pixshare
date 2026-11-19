@@ -708,10 +708,9 @@ def delete_own_file(file_id):
 
 @public_bp.route("/cgu", endpoint="cgu")
 def cgu():
-    from pixshare.services.ads_service import site_info
     from pixshare.services.settings_service import load_settings
     s = load_settings()
-    return render_template("cgu.html", version=current_app.config["APP_VERSION"], ads_site=site_info(),
+    return render_template("cgu.html", version=current_app.config["APP_VERSION"],
                            absent_members=bool(s.get("admin_absent_mode")) and bool(s.get("admin_absent_members")))
 
 
@@ -726,5 +725,4 @@ def albums_info():
 
 @public_bp.route("/mentions-legales", endpoint="mentions_legales")
 def mentions_legales():
-    from pixshare.services.ads_service import site_info
-    return render_template("mentions_legales.html", version=current_app.config["APP_VERSION"], ads_site=site_info())
+    return render_template("mentions_legales.html", version=current_app.config["APP_VERSION"])

@@ -43,7 +43,6 @@
         <strong>Votre formule : {{ plan.name }}</strong>{% if plan.until %}, jusqu'au {{ plan.until|day_fr }}{% endif %}<br>
         Durée maximale {{ plan.life }} · {{ plan.mb }} Mo par fichier ·
         {% if plan.per_hour %}{{ plan.per_hour }} envois par heure{% else %}envois illimités{% endif %}
-        {% if plan.no_ads %} · aucune publicité{% endif %}
         {% if plan.albums is not none %} · {{ plan.albums }} album(s){% endif %}{% if plan.album_mb %} · {{ plan.album_mb }} Mo par album{% endif %}
       </div>
       {% endif %}

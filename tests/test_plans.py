@@ -15,7 +15,7 @@ def alice(app):
 
 def set_plan(admin, account_id, **fields):
     data = {"csrf_token": csrf(admin, "/admin/comptes"), "account_id": account_id, "do": "save",
-            "name": "", "life": "", "mb": "", "per_hour": "", "no_ads": "0", "until": ""}
+            "name": "", "life": "", "mb": "", "per_hour": "", "until": ""}
     data.update(fields)
     return admin.post("/admin/comptes/formule", data=data)
 
@@ -25,11 +25,11 @@ def test_custom_plan_applies_everywhere(make_app, mails):
     user = member(app.test_client(), mails)
     rec = alice(app)
     admin = login(app.test_client())
-    resp = set_plan(admin, rec["id"], name="Donateur", life="2880", mb="50", per_hour="1", no_ads="1",
+    resp = set_plan(admin, rec["id"], name="Donateur", life="2880", mb="50", per_hour="1",
                     until="2099-12-31")
     assert resp.status_code == 302
     page = user.get("/compte").get_data(as_text=True)
-    assert "Votre formule : Donateur" in page and "31/12/2099" in page and "50 Mo" in page and "aucune publicité" in page
+    assert "Votre formule : Donateur" in page and "31/12/2099" in page and "50 Mo" in page
     home = user.get("/").get_data(as_text=True)
     assert 'value="2880"' in home and 'value="10080"' not in home      # durées : jusqu'à 2 jours seulement
     upload(user, "a.png")
@@ -51,17 +51,6 @@ def test_expired_plan_falls_back_to_member_settings(make_app, mails):
     with app.test_request_context():
         from pixshare.services.settings_service import get_max_upload_size_mb
         assert get_max_upload_size_mb(alice(app)) == get_max_upload_size_mb(True)
-
-
-def test_plan_without_ads(make_app, mails):
-    from test_ads import CLIENT, configure
-    app = make_app()
-    admin = login(app.test_client())
-    configure(admin, adsense_client=CLIENT, auto_ads="1", hide_for_members="0")
-    user = member(app.test_client(), mails)
-    assert "adsbygoogle" in user.get("/").get_data(as_text=True)
-    set_plan(admin, alice(app)["id"], no_ads="1")
-    assert "adsbygoogle" not in user.get("/").get_data(as_text=True)
 
 
 def test_plan_input_is_checked_and_can_be_cleared(make_app, mails):

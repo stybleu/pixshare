@@ -492,7 +492,7 @@ def plan_limits(account: dict) -> dict | None:
         return None
     return {"name": plan.get("name") or "Formule personnalisée", "life": lifetime_label(get_max_lifetime(account)),
             "mb": get_max_upload_size_mb(account), "per_hour": get_uploads_per_hour(account),
-            "no_ads": bool(plan.get("no_ads")), "until": plan.get("until", ""),
+            "until": plan.get("until", ""),
             "albums": plan.get("albums"), "album_mb": plan.get("album_mb")}
 
 
@@ -503,7 +503,6 @@ def limits_table() -> dict:
                   "per_hour": get_uploads_per_hour(False)},
         "member": {"life": lifetime_label(get_max_lifetime(True)), "mb": get_max_upload_size_mb(True),
                    "per_hour": get_uploads_per_hour(True)},
-        "ads_free_members": _ads_free_members(),
         "absent_deletes_members": _absent_deletes_members(),
         "absent_mode": bool(load_settings().get("admin_absent_mode")),
         "albums": _album_limits_for_table(),
@@ -515,15 +514,6 @@ def _album_limits_for_table() -> dict | None:
     if not s.get("albums_enabled") or not s.get("albums_per_member"):
         return None
     return {"count": s["albums_per_member"], "photos": s["album_max_photos"], "mb": s["album_max_mb"]}
-
-
-def _ads_free_members() -> bool:
-    try:
-        from pixshare.services.ads_service import site_info
-        info = site_info()
-        return info["enabled"] and info["hide_for_members"]
-    except Exception:
-        return False
 
 
 def _absent_deletes_members() -> bool:

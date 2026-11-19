@@ -113,31 +113,8 @@
         qui fonctionne directement sur le serveur de PixShare, sans transmission à un service tiers.
         Lorsqu’une image doit être vérifiée par une personne, un aperçu réduit peut être envoyé par e-mail à l’éditeur.
         Les informations cachées des photos (position GPS, appareil, date) sont retirées à l’envoi des formats courants.
-        {% if not ads_site.enabled %}
         PixShare n’affiche aucune publicité et n’utilise aucun cookie publicitaire ou de mesure d’audience.
-        {% endif %}
       </p>
-
-      {% if ads_site.enabled %}
-      <p class="mb-2" id="publicite">
-        Publicité : PixShare affiche des publicités, signalées par la mention « Publicité », sur la page d’accueil et sur les
-        pages de partage, jamais dans les espaces de compte ni d’administration.
-        {% if ads_site.hide_for_members %}Les membres connectés ne voient aucune publicité.{% endif %}
-        {% if ads_site.google %}
-        Les annonces sont fournies par Google AdSense (Google Ireland Limited). À votre première visite, un bandeau vous
-        demande votre accord avant tout cookie publicitaire : sans accord, Google n’affiche que des annonces non
-        personnalisées, qui utilisent tout de même des informations techniques (adresse IP, navigateur) pour être
-        diffusées et protégées contre la fraude. Vous pouvez changer d’avis à tout moment avec le lien
-        « Gérer mes choix de cookies » en bas des pages.
-        Plus d’informations : policies.google.com/technologies/partner-sites.
-        {% endif %}
-        {% if ads_site.direct %}
-        Les bannières de partenaires sont affichées par PixShare lui-même : elles ne déposent aucun cookie, et seul le
-        nombre total de clics est compté, sans aucune information sur la personne qui clique.
-        {% endif %}
-        PixShare n’utilise aucun outil de mesure d’audience.
-      </p>
-      {% endif %}
 
       <p class="mb-2">
         Cookies : un cookie technique de session (sécurité des formulaires et, pour les membres, connexion pendant 30 jours)

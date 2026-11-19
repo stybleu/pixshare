@@ -1153,7 +1153,7 @@ def admin_account_plan():
         accounts.set_plan(account_id, {})
         flash(f"{rec['email']} revient aux réglages des membres.", "success")
         return redirect(url_for("admin.admin_accounts"))
-    wanted = {k: request.form.get(k, "") for k in ("name", "life", "mb", "per_hour", "no_ads", "until", "albums", "album_mb")}
+    wanted = {k: request.form.get(k, "") for k in ("name", "life", "mb", "per_hour", "until", "albums", "album_mb")}
     saved = accounts.set_plan(account_id, wanted)
     plan = (saved or {}).get("plan") or {}
     ignored = [label for key, label in (("mb", "taille"), ("per_hour", "envois par heure"), ("until", "date"),

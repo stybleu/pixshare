@@ -162,13 +162,6 @@
             <input class="form-control" type="number" min="0" max="10000" id="plan-hour-{{ loop.index }}" name="per_hour" value="{{ p.per_hour if p.per_hour is not none else '' }}" placeholder="{{ limits.member.per_hour or 'illimité' }} (membres)">
           </div>
           <div class="col-6 col-md-4">
-            <label class="form-label small mb-0" for="plan-ads-{{ loop.index }}">Publicité</label>
-            <select class="form-select" id="plan-ads-{{ loop.index }}" name="no_ads">
-              <option value="0" {% if not p.no_ads %}selected{% endif %}>Comme les membres</option>
-              <option value="1" {% if p.no_ads %}selected{% endif %}>Aucune pub</option>
-            </select>
-          </div>
-          <div class="col-6 col-md-4">
             <label class="form-label small mb-0" for="plan-albums-{{ loop.index }}">Albums</label>
             <input class="form-control" type="number" min="0" max="200" id="plan-albums-{{ loop.index }}" name="albums" value="{{ p.albums if p.albums is not none else '' }}" placeholder="{{ settings.albums_per_member }} (membres)">
           </div>

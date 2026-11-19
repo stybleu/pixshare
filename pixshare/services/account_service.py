@@ -272,8 +272,6 @@ def clean_plan(raw) -> dict:
     album_mb = _int("album_mb", 10, 100000)
     if album_mb:
         plan["album_mb"] = album_mb
-    if raw.get("no_ads") in (True, "1", 1):
-        plan["no_ads"] = True
     until = str(raw.get("until") or "").strip()
     try:
         plan["until"] = datetime.strptime(until, "%Y-%m-%d").strftime("%Y-%m-%d") if until else ""
