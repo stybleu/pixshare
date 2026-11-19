@@ -348,10 +348,14 @@ def clean_support_url(value) -> str:
     return value
 
 
+DEFAULT_SUPPORT_URL = "https://ko-fi.com/stybleu"
+
+
 def get_support_url() -> str:
-    """Réglage de l'admin, sinon variable SUPPORT_URL de Render, sinon rien."""
+    """Réglage de l'admin, sinon variable SUPPORT_URL de Render, sinon la page Ko-fi de PixShare."""
     import os
-    return clean_support_url(load_settings().get("support_url")) or clean_support_url(os.environ.get("SUPPORT_URL"))
+    return (clean_support_url(load_settings().get("support_url")) or clean_support_url(os.environ.get("SUPPORT_URL"))
+            or DEFAULT_SUPPORT_URL)
 
 
 def get_valid_max_lifetime(value):
