@@ -87,10 +87,6 @@ class Config:
     NSFW_CLASSES = os.environ.get("NSFW_CLASSES", "")
 
     DATA_DIR = "data"
-    DB_FILE = os.path.join(DATA_DIR, "files.json")
-    BLOCKED_FILE = os.path.join(DATA_DIR, "blocked_ips.json")
-    FAILED_LOGINS_FILE = os.path.join(DATA_DIR, "failed_logins.json")
-    VIEWS_FILE = os.path.join(DATA_DIR, "views.json")
     CONTACTS_FILE = os.path.join(DATA_DIR, "contacts.json")
     # Disque persistant (Render) : PIXSHARE_DATA_DIR=/var/data -> données, images et miniatures y sont rangées
     # et survivent aux déploiements. Sans disque : dossiers temporaires du projet.

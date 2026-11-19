@@ -44,22 +44,6 @@ def read_json_file(path: str, default):
     return default.copy() if isinstance(default, (dict, list)) else default
 
 
-def db_path(app: Flask) -> str:
-    return project_path(app, app.config["DB_FILE"])
-
-
-def blocked_path(app: Flask) -> str:
-    return project_path(app, app.config["BLOCKED_FILE"])
-
-
-def failed_logins_path(app: Flask) -> str:
-    return project_path(app, app.config["FAILED_LOGINS_FILE"])
-
-
-def views_path(app: Flask) -> str:
-    return project_path(app, app.config["VIEWS_FILE"])
-
-
 def contacts_path(app: Flask) -> str:
     return project_path(app, app.config["CONTACTS_FILE"])
 
