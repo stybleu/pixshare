@@ -302,6 +302,11 @@ def delete_account(account_id: str) -> int:
     from pixshare.services.json_services import load_db, save_db
 
     removed = 0
+    try:  # ses albums, avec les photos que les invités y ont ajoutées
+        from pixshare.services.album_service import delete_all_for
+        removed += delete_all_for(account_id)
+    except Exception:
+        pass
     for file_id, meta in list(load_db().items()):
         if isinstance(meta, dict) and meta.get("account_id") == account_id:
             if (meta.get("status") or "active").lower() in ("active", "pending"):

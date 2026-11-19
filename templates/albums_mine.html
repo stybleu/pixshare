@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block robots %}<meta name="robots" content="noindex, nofollow, noarchive">{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <h1 class="h4 mb-0">Mes albums</h1>
+  <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('account.page') }}">Mon compte</a>
+</div>
+<p class="text-muted small">
+  Un album rassemble des photos sur une seule page, à partager par un lien ou un QR code : mariage, anniversaire,
+  sortie… Les invités qui ont le lien peuvent voir les photos et, si vous le permettez, ajouter les leurs, sans compte.
+  Jusqu'à {{ max_albums }} albums de {{ max_photos }} photos.
+</p>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <h2 class="h6">Créer un album</h2>
+    <form method="post" class="row g-2">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="col-12 col-md-6">
+        <label class="form-label small mb-0" for="al-name">Nom de l'album</label>
+        <input class="form-control" id="al-name" name="name" maxlength="80" required placeholder="Mariage de Julie et Marc">
+      </div>
+      <div class="col-12 col-md-6">
+        <label class="form-label small mb-0" for="al-pass">Mot de passe (facultatif)</label>
+        <input class="form-control" id="al-pass" name="password" type="password" minlength="4" maxlength="128" autocomplete="new-password" placeholder="Laissez vide : le lien suffit">
+      </div>
+      <div class="col-12">
+        <label class="form-label small mb-0" for="al-theme">Type d'événement (mise en page, modifiable ensuite)</label>
+        <select class="form-select" id="al-theme" name="theme">
+          {% for key, t in themes.items() %}<option value="{{ key }}">{{ t.emoji }} {{ t.label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-12">
+        <label class="form-label small mb-0" for="al-desc">Petit mot affiché en haut de l'album (facultatif)</label>
+        <input class="form-control" id="al-desc" name="description" maxlength="300" placeholder="Merci d'avoir partagé cette journée avec nous !">
+      </div>
+      <div class="col-12 form-check ms-1">
+        <input class="form-check-input" type="checkbox" id="al-guests" name="guests_can_add" value="1" checked>
+        <label class="form-check-label" for="al-guests">Les invités peuvent ajouter leurs photos</label>
+      </div>
+      <div class="col-12"><button class="btn btn-primary" type="submit">Créer l'album</button></div>
+    </form>
+  </div>
+</div>
+
+{% if not items %}
+  <p class="text-muted">Vous n'avez pas encore d'album.</p>
+{% endif %}
+{% for a in items %}
+<div class="card shadow-sm mb-3" id="album-{{ a.id }}">
+  <div class="card-body">
+    <div class="d-flex flex-wrap justify-content-between gap-2">
+      <div>
+        <h2 class="h6 mb-1">{{ a.name }}</h2>
+        <div class="small text-muted">
+          {{ a.counts.active }} photo(s){% if a.counts.pending %} · {{ a.counts.pending }} en vérification{% endif %}
+          · créé le {{ a.created_at[:10]|day_fr }}
+          {% if a.password_hash %} · 🔒 mot de passe{% endif %}
+          · {% if a.guests_can_add %}les invités peuvent ajouter des photos{% else %}ajout fermé aux invités{% endif %}
+        </div>
+      </div>
+      <img src="{{ url_for('album.qr_svg', album_id=a.id) }}" alt="QR code de l'album" width="88" height="88" class="border rounded">
+    </div>
+    <div class="d-flex flex-wrap gap-2 mt-2">
+      <a class="btn btn-primary btn-sm" href="{{ url_for('album.view', album_id=a.id) }}">Ouvrir</a>
+      <a class="btn btn-outline-primary btn-sm" href="{{ url_for('album.poster', album_id=a.id) }}" target="_blank" rel="noopener">🖨️ Affiche à imprimer</a>
+      <a class="btn btn-outline-primary btn-sm" href="{{ url_for('album.qr_png', album_id=a.id) }}">⬇️ QR code (image)</a>
+      <a class="btn btn-outline-primary btn-sm" href="{{ url_for('album.slideshow', album_id=a.id) }}" target="_blank" rel="noopener">▶️ Diaporama</a>
+    </div>
+    <details class="mt-2">
+      <summary class="py-1">Modifier ou supprimer</summary>
+      <form method="post" action="{{ url_for('album.edit', album_id=a.id) }}" class="row g-2 mt-1">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="col-12 col-md-6">
+          <label class="form-label small mb-0" for="name-{{ a.id }}">Nom</label>
+          <input class="form-control" id="name-{{ a.id }}" name="name" maxlength="80" required value="{{ a.name }}">
+        </div>
+        <div class="col-12 col-md-6">
+          <label class="form-label small mb-0" for="pass-{{ a.id }}">{% if a.password_hash %}Nouveau mot de passe{% else %}Ajouter un mot de passe{% endif %}</label>
+          <input class="form-control" id="pass-{{ a.id }}" name="password" type="password" minlength="4" maxlength="128" autocomplete="new-password" placeholder="Laissez vide pour ne rien changer">
+        </div>
+        <div class="col-12">
+          <label class="form-label small mb-0" for="desc-{{ a.id }}">Petit mot</label>
+          <input class="form-control" id="desc-{{ a.id }}" name="description" maxlength="300" value="{{ a.description }}">
+        </div>
+        <div class="col-12 form-check ms-1">
+          <input class="form-check-input" type="checkbox" id="guests-{{ a.id }}" name="guests_can_add" value="1" {% if a.guests_can_add %}checked{% endif %}>
+          <label class="form-check-label" for="guests-{{ a.id }}">Les invités peuvent ajouter leurs photos</label>
+        </div>
+        {% if a.password_hash %}
+        <div class="col-12 form-check ms-1">
+          <input class="form-check-input" type="checkbox" id="nopass-{{ a.id }}" name="remove_password" value="1">
+          <label class="form-check-label" for="nopass-{{ a.id }}">Retirer le mot de passe</label>
+        </div>
+        {% endif %}
+        <div class="col-12"><button class="btn btn-primary btn-sm" type="submit">Enregistrer</button></div>
+      </form>
+      <form method="post" action="{{ url_for('album.delete', album_id=a.id) }}" class="mt-3 border-top pt-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="del-{{ a.id }}" name="confirm" value="1">
+          <label class="form-check-label small" for="del-{{ a.id }}">Supprimer l'album et toutes ses photos, y compris celles des invités. C'est définitif.</label>
+        </div>
+        <button class="btn btn-outline-danger btn-sm mt-1" type="submit">Supprimer l'album</button>
+      </form>
+    </details>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

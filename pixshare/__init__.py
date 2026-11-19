@@ -13,6 +13,7 @@ from .routes.seo_routes import seo_bp
 from .routes.account_routes import account_bp
 from .routes.extension_routes import extension_bp
 from .routes.ads_routes import ads_bp
+from .routes.album_routes import album_bp
 from .services.account_service import current_account
 from .services.turnstile_service import site_key, turnstile_required
 from .services.visitor_stats_service import record_image_display, record_page_view, should_count, should_count_display
@@ -192,7 +193,8 @@ def create_app(config_overrides: dict | None = None) -> Flask:
         # les images en attente. Seuls les envois de fichiers déclenchent l'analyse.
         if (
             request.method == "POST"
-            and request.endpoint in ("public.index", "account.replace", "extension.upload", "public.delete_own_file")
+            and request.endpoint in ("public.index", "account.replace", "extension.upload", "public.delete_own_file",
+                                 "album.add", "album.delete_photo", "album.delete")
             and response.status_code < 400
         ):
             response.call_on_close(lambda: run_after_response(app))
@@ -233,5 +235,6 @@ def create_app(config_overrides: dict | None = None) -> Flask:
     app.register_blueprint(account_bp)
     app.register_blueprint(extension_bp)
     app.register_blueprint(ads_bp)
+    app.register_blueprint(album_bp)
 
     return app

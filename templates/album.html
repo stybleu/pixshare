@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% block robots %}<meta name="robots" content="noindex, nofollow, noarchive, noimageindex">{% endblock %}
+{% block canonical %}{% endblock %}
+{% block social %}<meta property="og:title" content="{{ album.name }}"><meta property="og:description" content="Album photo partagé avec PixShare">{% endblock %}
+{% block sr_h1 %}{% endblock %}
+{% block head %}
+<style>
+.pxa { --bg: {{ look.bg }}; --card: {{ look.card }}; --text: {{ look.text }}; --muted: {{ look.muted }}; --accent: {{ look.accent }};
+  background: var(--bg); color: var(--text); border-radius: 1rem; padding: 1rem; font-family: {{ look.font_css }}; }
+.pxa .text-muted, .pxa .pxa-muted { color: var(--muted) !important; }
+.pxa .pxa-card { background: var(--card); border-radius: .9rem; padding: 1rem; box-shadow: 0 1px 6px rgba(0,0,0,.08); margin-bottom: 1rem; }
+.pxa .btn-accent { background: var(--accent); border-color: var(--accent); color: #fff; }
+.pxa .btn-accent:hover { filter: brightness(.92); color: #fff; }
+.pxa .btn-ghost { border: 1px solid var(--accent); color: var(--accent); background: transparent; }
+.pxa a:not(.btn) { color: var(--accent); }
+.pxa-hero { text-align: center; padding: 2rem 1rem; border-radius: .9rem; margin-bottom: 1rem; position: relative; overflow: hidden; }
+.pxa-hero.has-cover { color: #fff; min-height: 260px; display: flex; flex-direction: column; justify-content: flex-end;
+  background-size: cover; background-position: center; }
+.pxa-hero.has-cover::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.05), rgba(0,0,0,.6)); }
+.pxa-hero > * { position: relative; }
+.pxa-hero h1 { font-size: clamp(1.7rem, 6vw, 2.8rem); margin: .2rem 0; font-weight: 600; }
+.pxa-hero .pxa-emoji { font-size: 2rem; }
+.pxa-hero .pxa-line { width: 60px; height: 3px; background: var(--accent); margin: .6rem auto; border-radius: 2px; }
+.pxa-chips { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .8rem; }
+.pxa-chips a { border: 1px solid var(--accent); border-radius: 999px; padding: .25rem .8rem; text-decoration: none; font-size: .9rem; }
+.pxa-chips a.on { background: var(--accent); color: #fff !important; }
+.pxa-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .5rem; }
+.pxa-grid figure { margin: 0; position: relative; }
+.pxa-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: .6rem; display: block; background: #0001; }
+.pxa-mosaic { columns: 3 220px; column-gap: .5rem; }
+.pxa-mosaic figure { margin: 0 0 .5rem; break-inside: avoid; position: relative; }
+.pxa-mosaic img { width: 100%; height: auto; border-radius: .6rem; display: block; background: #0001; }
+.pxa figcaption { font-size: .8rem; color: var(--muted); padding: .15rem .1rem; }
+.pxa .pxa-pending { position: absolute; top: .4rem; left: .4rem; }
+.pxa .pxa-tools { display: flex; gap: .3rem; flex-wrap: wrap; margin-top: .2rem; }
+.pxa .pxa-tools .btn { padding: .2rem .5rem; font-size: .8rem; }
+.pxa-progress { height: .6rem; }
+@media (max-width: 420px) { .pxa-grid { grid-template-columns: repeat(2, 1fr); } .pxa { padding: .6rem; } }
+</style>
+{% endblock %}
+{% block content %}
+<div class="pxa">
+  <header class="pxa-hero {% if cover %}has-cover{% endif %}"
+          {% if cover %}style="background-image: url('{{ url_for('public.view_file', file_id=cover.id, m=1) }}')"{% endif %}>
+    <div class="pxa-emoji" aria-hidden="true">{{ look.emoji }}</div>
+    <h1>{{ album.name }}</h1>
+    <div class="pxa-line"></div>
+    {% if album.description %}<p class="mb-1">{{ album.description }}</p>{% endif %}
+    <div class="small {% if not cover %}pxa-muted{% endif %}">{{ counts.active }} photo(s){% if people %} · {{ people|length }} contributeur(s){% endif %}</div>
+  </header>
+
+  {% if owner %}
+  <section class="pxa-card">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+      <div><strong>Vous êtes l'organisateur de cet album.</strong>
+        {% if counts.pending %}<span class="badge text-bg-warning">{{ counts.pending }} photo(s) en vérification</span>{% endif %}</div>
+      <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-ghost btn-sm" href="{{ url_for('album.poster', album_id=album.id) }}" target="_blank" rel="noopener">🖨️ Affiche</a>
+        <a class="btn btn-ghost btn-sm" href="{{ url_for('album.qr_png', album_id=album.id) }}">⬇️ QR code</a>
+        <a class="btn btn-ghost btn-sm" href="{{ url_for('album.mine') }}#album-{{ album.id }}">⚙️ Réglages</a>
+      </div>
+    </div>
+    <details class="mt-2" id="perso">
+      <summary class="py-1">🎨 Personnaliser la mise en page</summary>
+      <form method="post" action="{{ url_for('album.style', album_id=album.id) }}" class="row g-2 mt-1">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="col-12 col-md-6">
+          <label class="form-label small mb-0" for="st-theme">Type d'événement</label>
+          <select class="form-select" id="st-theme" name="theme">
+            {% for key, t in themes.items() %}<option value="{{ key }}" {% if look.key == key %}selected{% endif %}>{{ t.emoji }} {{ t.label }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-6 col-md-3">
+          <label class="form-label small mb-0" for="st-font">Police du titre et des textes</label>
+          <select class="form-select" id="st-font" name="font">
+            {% for key, f in fonts.items() %}<option value="{{ key }}" {% if look.font_key == key %}selected{% endif %}>{{ f[0] }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-6 col-md-3">
+          <label class="form-label small mb-0" for="st-layout">Disposition</label>
+          <select class="form-select" id="st-layout" name="layout">
+            {% for key, label in layouts.items() %}<option value="{{ key }}" {% if look.layout == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-12 d-flex flex-wrap align-items-center gap-2">
+          <div class="form-check mb-0">
+            <input class="form-check-input" type="checkbox" id="st-own" name="own_color" value="1" {% if album.accent %}checked{% endif %}>
+            <label class="form-check-label small" for="st-own">Ma couleur à la place de celle du thème :</label>
+          </div>
+          <input type="color" class="form-control form-control-color" name="accent" value="{{ look.accent }}" aria-label="Couleur principale">
+        </div>
+        <div class="col-12 small text-muted">Pour la photo de couverture, touchez « Couverture » sous la photo de votre choix.</div>
+        <div class="col-12"><button class="btn btn-accent btn-sm" type="submit">Enregistrer la mise en page</button></div>
+      </form>
+    </details>
+  </section>
+  {% endif %}
+
+  {% if can_add %}
+  <section class="pxa-card" id="ajouter">
+    <h2 class="h6">📤 {% if owner %}Ajouter des photos{% else %}Ajoutez vos photos{% endif %}</h2>
+    {% if room_left <= 0 %}
+      <p class="small text-muted mb-0">L'album est complet.</p>
+    {% else %}
+    <form method="post" action="{{ url_for('album.add', album_id=album.id) }}" enctype="multipart/form-data" id="pxa-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      {% if not owner %}
+      <label class="form-label small mb-0" for="pxa-name">Votre prénom (affiché sous vos photos, facultatif)</label>
+      <input class="form-control mb-2" id="pxa-name" name="contributor" maxlength="40" value="{{ contributor }}" autocomplete="given-name">
+      {% endif %}
+      <input class="form-control mb-2" type="file" id="pxa-files" name="files" accept="image/*" multiple required>
+      {% if need_human %}{% include "_turnstile.html" %}{% endif %}
+      <button class="btn btn-accent" type="submit" id="pxa-send">Envoyer</button>
+      <div class="small text-muted mt-1">Photos uniquement, {{ max_mb }} Mo maximum chacune. Elles apparaissent après une vérification automatique.
+        En envoyant, vous acceptez les <a href="{{ url_for('public.cgu') }}">CGU</a> : pas de nudité ni de contenu interdit.</div>
+      <div class="progress pxa-progress mt-2 d-none" id="pxa-bar" role="progressbar" aria-label="Envoi des photos"><div class="progress-bar" style="width:0%; background: var(--accent)"></div></div>
+      <div class="small mt-1" id="pxa-status" aria-live="polite"></div>
+    </form>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  {% if people|length > 1 %}
+  <nav class="pxa-chips" aria-label="Filtrer par contributeur">
+    <a href="{{ url_for('album.view', album_id=album.id) }}" class="{% if not who %}on{% endif %}">Toutes</a>
+    {% for name, n in people %}<a href="{{ url_for('album.view', album_id=album.id, par=name) }}" class="{% if who == name %}on{% endif %}">{{ name }} ({{ n }})</a>{% endfor %}
+  </nav>
+  {% endif %}
+
+  {% if photos %}
+  <div class="{{ 'pxa-mosaic' if look.layout == 'mosaique' else 'pxa-grid' }}">
+    {% for p in photos %}
+    <figure>
+      {% if p.status == "active" %}
+      <a href="{{ url_for('public.image_page', file_id=p.id) }}"><img src="{{ url_for('public.view_file', file_id=p.id, m=1) }}" alt="Photo{% if p.album_contributor %} de {{ p.album_contributor }}{% endif %}" loading="lazy" decoding="async"></a>
+      {% else %}
+      <img src="{{ url_for('account.owner_preview', file_id=p.id) if not p.album_guest else '' }}" alt="Photo en vérification" loading="lazy" onerror="this.style.visibility='hidden'">
+      <span class="badge text-bg-warning pxa-pending">En vérification</span>
+      {% endif %}
+      {% if p.album_contributor %}<figcaption>par {{ p.album_contributor }}</figcaption>{% endif %}
+      {% if owner %}
+      <div class="pxa-tools">
+        {% if p.status == "active" %}
+        <form method="post" action="{{ url_for('album.style', album_id=album.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="cover" value="{{ '' if album.cover == p.id else p.id }}">
+          <button class="btn btn-ghost" type="submit">{{ '★ Couverture' if album.cover == p.id else '☆ Couverture' }}</button>
+        </form>
+        {% endif %}
+        <form method="post" action="{{ url_for('album.delete_photo', album_id=album.id, file_id=p.id) }}" onsubmit="return confirm('Retirer cette photo de l\'album ?');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="btn btn-outline-danger" type="submit">Retirer</button>
+        </form>
+      </div>
+      {% endif %}
+    </figure>
+    {% endfor %}
+  </div>
+  {% else %}
+    <p class="text-center pxa-muted my-4">{% if who %}Aucune photo de {{ who }} pour le moment.{% else %}Aucune photo pour le moment{% if can_add %} : soyez le premier à en ajouter !{% else %}.{% endif %}{% endif %}</p>
+  {% endif %}
+
+  <section class="pxa-card mt-3">
+    <h2 class="h6">Partager l'album</h2>
+    <div class="d-flex flex-wrap gap-3 align-items-center">
+      <img src="{{ url_for('album.qr_svg', album_id=album.id) }}" alt="QR code de l'album" width="120" height="120" class="rounded border bg-white">
+      <div class="flex-grow-1" style="min-width: 220px">
+        <div class="input-group mb-2">
+          <input class="form-control" id="pxa-link" value="{{ share_url }}" readonly aria-label="Lien de l'album">
+          <button class="btn btn-accent" type="button" onclick="navigator.clipboard && navigator.clipboard.writeText(document.getElementById('pxa-link').value); this.textContent='Copié ✅'">Copier</button>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+          <a class="btn btn-ghost btn-sm" href="{{ url_for('album.slideshow', album_id=album.id) }}" target="_blank" rel="noopener">▶️ Diaporama</a>
+          {% if counts.active %}<a class="btn btn-ghost btn-sm" href="{{ url_for('album.zip', album_id=album.id) }}">⬇️ Tout télécharger (.zip)</a>{% endif %}
+        </div>
+        {% if album.password_hash %}<div class="small pxa-muted mt-1">🔒 Album protégé : donnez aussi le mot de passe aux invités.</div>{% endif %}
+      </div>
+    </div>
+  </section>
+</div>
+
+{% if can_add and room_left > 0 %}
+<script>
+(function () {
+  const form = document.getElementById("pxa-form");
+  if (!form || !window.fetch || !window.FormData) return;
+  const input = document.getElementById("pxa-files"), bar = document.getElementById("pxa-bar"),
+        fill = bar.querySelector(".progress-bar"), status = document.getElementById("pxa-status"),
+        send = document.getElementById("pxa-send");
+  form.addEventListener("submit", async function (e) {
+    const files = Array.from(input.files || []);
+    if (!files.length) return;
+    e.preventDefault();
+    send.disabled = true; bar.classList.remove("d-none");
+    let added = 0, problems = [];
+    for (let i = 0; i < files.length; i++) {
+      status.textContent = "Envoi " + (i + 1) + " / " + files.length + "…";
+      const data = new FormData(form);
+      data.delete("files"); data.append("files", files[i], files[i].name);
+      try {
+        const r = await fetch(form.action, {method: "POST", body: data, credentials: "same-origin",
+                                            headers: {"X-Requested-With": "pixshare"}});
+        const j = await r.json().catch(() => ({}));
+        if (j.added) { added += j.added; } else { problems.push(j.message || (files[i].name + " : échec de l'envoi")); }
+        if (r.status === 400 && /anti-robot/.test(j.message || "")) break;
+        if (r.status === 403 || r.status === 503 || r.status === 507) break;
+      } catch (err) { problems.push(files[i].name + " : connexion interrompue"); }
+      fill.style.width = Math.round((i + 1) * 100 / files.length) + "%";
+    }
+    status.textContent = (added ? added + " photo(s) envoyée(s) ✅ Elles apparaîtront après la vérification automatique. " : "")
+                       + problems.slice(0, 3).join(" ");
+    send.disabled = false; input.value = "";
+    if (added) setTimeout(function () { location.reload(); }, 2500);
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

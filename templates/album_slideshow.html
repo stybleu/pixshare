@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Diaporama – {{ album.name }}</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; color: #fff; font-family: {{ look.font_css }}; overflow: hidden; }
+  #stage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  #stage img { max-width: 100vw; max-height: 100vh; object-fit: contain; opacity: 0; transition: opacity 1s; position: absolute; }
+  #stage img.on { opacity: 1; }
+  #title { position: fixed; top: 0; left: 0; right: 0; padding: 14px 20px; background: linear-gradient(#000a, #0000);
+           font-size: clamp(18px, 3vw, 34px); display: flex; justify-content: space-between; align-items: center; }
+  #title .accent { color: {{ look.accent }}; }
+  #by { position: fixed; bottom: 16px; left: 20px; font-size: clamp(14px, 2vw, 22px); text-shadow: 0 1px 4px #000; }
+  #bar { position: fixed; bottom: 12px; right: 16px; display: flex; gap: 8px; }
+  #bar button, #bar a { background: #0008; color: #fff; border: 1px solid #fff5; border-radius: 8px; padding: 8px 12px; font: inherit; font-size: 15px; cursor: pointer; text-decoration: none; }
+  #empty { opacity: .8; text-align: center; padding: 20px; }
+  body.idle #bar, body.idle #title { opacity: 0; transition: opacity .6s; }
+</style>
+</head>
+<body>
+<div id="title"><span><span class="accent">{{ look.emoji }}</span> {{ album.name }}</span></div>
+<div id="stage"><div id="empty">Les photos de l'album s'afficheront ici.</div></div>
+<div id="by"></div>
+<div id="bar">
+  <button type="button" id="pause">⏸ Pause</button>
+  <button type="button" id="full">⛶ Plein écran</button>
+  <a href="{{ url_for('album.view', album_id=album.id) }}">✕</a>
+</div>
+<script>
+(function () {
+  const stage = document.getElementById("stage"), by = document.getElementById("by");
+  let list = [], index = -1, paused = false, current = null, idleTimer = null;
+  async function refresh() {
+    try {
+      const r = await fetch("{{ url_for('album.photos_json', album_id=album.id) }}", {credentials: "same-origin", cache: "no-store"});
+      const j = await r.json();
+      const fresh = j.photos || [];
+      if (fresh.length > list.length && index >= 0) index = list.length - 1; // nouvelles photos : montrées tout de suite
+      list = fresh;
+      if (list.length) { const e = document.getElementById("empty"); if (e) e.remove(); }
+    } catch (e) {}
+  }
+  function next() {
+    if (paused || !list.length) return;
+    index = (index + 1) % list.length;
+    const item = list[index], img = new Image();
+    img.alt = "";
+    img.onload = function () {
+      stage.appendChild(img);
+      requestAnimationFrame(function () { img.classList.add("on"); });
+      if (current) { const old = current; old.classList.remove("on"); setTimeout(function () { old.remove(); }, 1100); }
+      current = img;
+      by.textContent = item.by ? "📷 " + item.by : "";
+    };
+    img.src = item.src;
+  }
+  document.getElementById("pause").onclick = function () { paused = !paused; this.textContent = paused ? "▶ Reprendre" : "⏸ Pause"; };
+  document.getElementById("full").onclick = function () {
+    if (document.fullscreenElement) document.exitFullscreen(); else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+  };
+  function wake() { document.body.classList.remove("idle"); clearTimeout(idleTimer); idleTimer = setTimeout(function () { document.body.classList.add("idle"); }, 3000); }
+  document.addEventListener("mousemove", wake); document.addEventListener("touchstart", wake); wake();
+  refresh().then(next);
+  setInterval(next, 6000);
+  setInterval(refresh, 30000);
+})();
+</script>
+</body>
+</html>

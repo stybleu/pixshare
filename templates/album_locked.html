@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block robots %}<meta name="robots" content="noindex, nofollow, noarchive">{% endblock %}
+{% block content %}
+<div class="card shadow-sm mx-auto" style="max-width: 460px">
+  <div class="card-body text-center">
+    <div class="display-6">🔒</div>
+    <h1 class="h5">{{ album.name }}</h1>
+    <p class="text-muted small">Cet album est protégé par un mot de passe. Demandez-le à la personne qui vous a invité.</p>
+    <form method="post" action="{{ url_for('album.unlock', album_id=album.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label class="visually-hidden" for="album-pass">Mot de passe</label>
+      <input class="form-control form-control-lg mb-3" id="album-pass" type="password" name="password" required maxlength="128" autocomplete="current-password" placeholder="Mot de passe">
+      <button class="btn btn-primary w-100" type="submit">Ouvrir l'album</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

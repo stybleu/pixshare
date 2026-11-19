@@ -41,6 +41,8 @@ Disallow: /download/
 Disallow: /tmp/
 Disallow: /api/
 Disallow: /pub/
+Disallow: /album/
+Disallow: /mes-albums
 
 Sitemap: {base}/sitemap.xml
 """
