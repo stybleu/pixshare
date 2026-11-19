@@ -6,7 +6,7 @@ from PIL import Image
 from conftest import csrf
 from pixshare.services import json_services
 
-INDEXED = ("/", "/album-souvenir", "/cgu", "/mentions-legales", "/contact")
+INDEXED = ("/", "/album-souvenir", "/faq", "/cgu", "/mentions-legales", "/contact")
 
 
 def test_only_presentation_pages_are_indexed(make_app):

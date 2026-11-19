@@ -718,6 +718,16 @@ def cgu():
                            absent_members=bool(s.get("admin_absent_mode")) and bool(s.get("admin_absent_members")))
 
 
+@public_bp.route("/faq", endpoint="faq")
+def faq():
+    from pixshare.services.faq_service import faq as faq_sections
+    sections = faq_sections()
+    json_items = [{"@type": "Question", "name": i["q"], "acceptedAnswer": {"@type": "Answer", "text": i["a"]}}
+                  for s in sections for i in s["items"]]
+    return render_template("faq.html", sections=sections, json_items=json_items,
+                           title="Questions fréquentes – PixShare")
+
+
 @public_bp.route("/album-souvenir", endpoint="albums_info")
 def albums_info():
     """Page publique (indexée) qui présente les albums souvenirs d'événement."""
