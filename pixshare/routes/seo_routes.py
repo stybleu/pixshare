@@ -54,6 +54,7 @@ def sitemap():
     base = request.url_root.rstrip("/")
     pages = [
         {"loc": "/", "priority": "1.0", "changefreq": "daily"},
+        {"loc": "/album-souvenir", "priority": "0.9", "changefreq": "monthly"},
         {"loc": "/mentions-legales", "priority": "0.7", "changefreq": "yearly"},
         {"loc": "/cgu", "priority": "0.7", "changefreq": "yearly"},
         {"loc": "/contact", "priority": "0.6", "changefreq": "yearly"},

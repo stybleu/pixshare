@@ -129,14 +129,16 @@
             <a href="{{ url_for('account.signup') }}">Create a free account</a> to keep your images up to
             {{ limits.member.life }}, upload up to {{ limits.member.mb }} MB, find them on all your devices,
             enhance your photos, protect them with a password, have them deleted after a chosen number of views,
-            replace them without changing the link, and create photo albums shared with a QR code, where your guests add their own photos.
+            replace them without changing the link, and create photo albums shared with a QR code, where your guests add their own photos
+            (<a href="{{ url_for('public.albums_info') }}">discover memory albums</a>).
             <a href="{{ url_for('account.login') }}">Log in</a>
             {% else %}
             Sans compte : jusqu'à {{ limits.guest.life }} et {{ limits.guest.mb }} Mo par fichier.
             <a href="{{ url_for('account.signup') }}">Créez un compte gratuit</a> pour garder vos images jusqu'à
             {{ limits.member.life }}, envoyer jusqu'à {{ limits.member.mb }} Mo, les retrouver sur tous vos appareils,
             améliorer vos photos, les protéger par un mot de passe, les faire supprimer après un nombre de vues choisi,
-            les remplacer sans changer le lien, et créer des albums photo à partager par QR code, où vos invités ajoutent leurs photos.
+            les remplacer sans changer le lien, et créer des albums photo à partager par QR code, où vos invités ajoutent leurs photos
+            (<a href="{{ url_for('public.albums_info') }}">découvrir les albums souvenirs</a>).
             <a href="{{ url_for('account.login') }}">Connexion</a>
             {% endif %}
           </div>

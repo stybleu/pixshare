@@ -398,3 +398,18 @@ def test_limits_table_shows_album_limits(app):
     assert "20 album(s) de 500 photos et 200 Mo" in page
     set_settings(app, albums_enabled=False)
     assert "Albums photo à partager" not in app.test_client().get("/inscription").get_data(as_text=True)
+
+
+def test_google_preview_and_album_landing_page(app):
+    client = app.test_client()
+    home = client.get("/").get_data(as_text=True)
+    assert "<title>PixShare – Partagez vos photos et vos albums souvenirs</title>" in home
+    assert 'name="description" content="Partagez vos photos en un instant, sans inscription. Mariage, anniversaire, fête' in home
+    assert "Albums souvenirs d'événement partagés par QR code" in home                 # données structurées
+    assert 'og:description" content="Partagez vos photos' in home
+    page = client.get("/album-souvenir")
+    text = page.get_data(as_text=True)
+    assert page.status_code == 200 and "Un album souvenir pour votre événement" in text
+    assert '"@type": "FAQPage"' in text and 'content="index, follow"' in text
+    assert "/album-souvenir" in client.get("/sitemap.xml").get_data(as_text=True)
+    assert "Albums souvenirs" in home                                                  # lien dans le pied de page

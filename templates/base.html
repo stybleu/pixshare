@@ -17,17 +17,16 @@
 <link rel="icon" type="image/png" sizes="512x512" href="{{ url_for('static', filename='favicon.png') }}">
 {% block canonical %}<link rel="canonical" href="{{ _canon }}">{% endblock %}
 
-<title>{% block title %}{% if title %}{{ title }}{% if 'PixShare' not in title %} – PixShare{% endif %}{% else %}PixShare – Partage d'images et de fichiers en lien privé{% endif %}{% endblock %}</title>
+<title>{% block title %}{% if title %}{{ title }}{% if 'PixShare' not in title %} – PixShare{% endif %}{% else %}{{ _('index_meta_title') }}{% endif %}{% endblock %}</title>
 
-{% block meta_description %}<meta name="description"
-content="PixShare permet d'envoyer une image ou un fichier, de générer un lien de partage et de choisir une durée de conservation adaptée, dans une interface claire et rassurante.">{% endblock %}
+{% block meta_description %}<meta name="description" content="{{ _('meta_description') }}">{% endblock %}
 
 {% block robots %}<meta name="robots" content="index, follow">{% endblock %}
 
 {% block social %}
 <meta property="og:site_name" content="PixShare">
-<meta property="og:title" content="PixShare – Partage d'images et de fichiers en lien privé">
-<meta property="og:description" content="Un espace simple pour partager une image, une capture ou un document avec expiration configurable.">
+<meta property="og:title" content="{{ title if title else _('index_meta_title') }}">
+<meta property="og:description" content="{{ _('meta_description') }}">
 <meta property="og:image" content="https://pixshare.fr/static/images/pixshare_logo.png">
 <meta property="og:image:width" content="512">
 <meta property="og:image:height" content="512">
@@ -37,14 +36,15 @@ content="PixShare permet d'envoyer une image ou un fichier, de générer un lien
 <meta property="og:locale:alternate" content="{{ 'en_US' if current_lang=='fr' else 'fr_FR' }}">
 
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="PixShare – Partage d'images et de fichiers en lien privé">
-<meta name="twitter:description" content="Envoyez un fichier, choisissez sa durée de vie, puis partagez-le avec un lien simple et propre.">
+<meta name="twitter:title" content="{{ title if title else _('index_meta_title') }}">
+<meta name="twitter:description" content="{{ _('meta_description') }}">
 <meta name="twitter:image" content="https://pixshare.fr/static/images/pixshare_logo.png">
 {% endblock %}
 {% if request.path == "/" %}
 <script type="application/ld+json">
 {"@context": "https://schema.org", "@type": "WebApplication", "name": "PixShare", "url": "{{ request.url_root }}",
- "description": "Hébergement d'images et partage de fichiers gratuit et anonyme, avec lien privé et suppression automatique.",
+ "description": "Partagez vos photos et vos fichiers gratuitement, sans inscription, avec un lien privé et une suppression automatique. Avec un compte gratuit, créez des albums souvenirs pour vos événements (mariage, anniversaire, fête), partagés par QR code, où vos invités ajoutent leurs photos.",
+ "featureList": ["Partage d'images et de fichiers par lien privé", "Suppression automatique", "Albums souvenirs d'événement partagés par QR code", "Les invités ajoutent leurs photos sans application ni inscription", "Diaporama en direct, défis photo et livre d'or"],
  "applicationCategory": "MultimediaApplication", "operatingSystem": "Tous", "inLanguage": ["fr", "en"],
  "isAccessibleForFree": true, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "EUR"}}
 </script>
@@ -429,6 +429,7 @@ footer {
         <a href="{{ url_for('public.contact') }}">Contact</a>
         <a href="{{ url_for('public.cgu') }}">{{ _('cgu') }}</a>
         <a href="{{ url_for('public.mentions_legales') }}">{{ _('legal') }}</a>
+        <a href="{{ url_for('public.albums_info') }}">{{ _('nav_albums') }}</a>
         {% if ads and ads.google %}
         <a href="#" id="pxs-consent-link">Gérer mes choix de cookies</a>
         <script>

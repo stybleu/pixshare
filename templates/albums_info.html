@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block sr_h1 %}{% endblock %}
+{% block meta_description %}<meta name="description" content="Mariage, anniversaire, baptême, fête : rassemblez tous les souvenirs de votre événement dans un album photo partagé par QR code. Vos invités ajoutent leurs photos, sans application ni inscription.">{% endblock %}
+{% block head %}
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [
+ {"@type": "Question", "name": "Mes invités doivent-ils installer une application ou créer un compte ?",
+  "acceptedAnswer": {"@type": "Answer", "text": "Non. Ils scannent le QR code avec l'appareil photo de leur téléphone, voient l'album et ajoutent leurs photos directement depuis leur navigateur."}},
+ {"@type": "Question", "name": "Combien coûte un album souvenir ?",
+  "acceptedAnswer": {"@type": "Answer", "text": "La création d'un album est gratuite : il suffit d'un compte PixShare gratuit."}},
+ {"@type": "Question", "name": "Peut-on récupérer toutes les photos ?",
+  "acceptedAnswer": {"@type": "Answer", "text": "Oui. Un bouton permet de télécharger toutes les photos de l'album d'un coup, en qualité d'origine, dans un fichier .zip."}},
+ {"@type": "Question", "name": "L'album est-il public ?",
+  "acceptedAnswer": {"@type": "Answer", "text": "Non. Il n'apparaît pas dans les moteurs de recherche : seules les personnes qui ont le lien ou le QR code peuvent l'ouvrir, et vous pouvez ajouter un mot de passe."}}
+]}
+</script>
+<style>
+.ai-hero { text-align: center; padding: 2.2rem 1rem 1.6rem; }
+.ai-hero h1 { font-size: clamp(1.6rem, 6vw, 2.5rem); font-weight: 700; margin-bottom: .6rem; }
+.ai-hero p { font-size: 1.1rem; max-width: 640px; margin: 0 auto; }
+.ai-steps { counter-reset: step; }
+.ai-step { position: relative; padding-left: 3rem; margin-bottom: 1rem; }
+.ai-step::before { counter-increment: step; content: counter(step); position: absolute; left: 0; top: 0; width: 2.2rem; height: 2.2rem;
+  border-radius: 50%; background: #6d5efc; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+.ai-themes { display: flex; flex-wrap: wrap; gap: .5rem; justify-content: center; }
+.ai-themes span { border: 1px solid #0002; border-radius: 999px; padding: .3rem .8rem; background: #fff; }
+.ai-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: .8rem; }
+.ai-grid .card { height: 100%; }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="ai-hero">
+  <div style="font-size: 2.4rem" aria-hidden="true">📸💍🎂</div>
+  <h1>Un album souvenir pour votre événement</h1>
+  <p>Mariage, anniversaire, baptême, fête entre amis… Rassemblez toutes les photos de la journée au même endroit.
+     Vos invités scannent le QR code et ajoutent les leurs, sans application ni inscription.</p>
+  <div class="d-flex flex-wrap gap-2 justify-content-center mt-3">
+    {% if member %}
+      <a class="btn btn-primary btn-lg" href="{{ url_for('album.mine') }}">Créer mon album</a>
+    {% else %}
+      <a class="btn btn-primary btn-lg" href="{{ url_for('account.signup') }}">Créer mon album gratuitement</a>
+      <a class="btn btn-outline-secondary btn-lg" href="{{ url_for('account.login') }}">J'ai déjà un compte</a>
+    {% endif %}
+  </div>
+  {% if not albums_on %}<p class="small text-muted mt-2">La création de nouveaux albums est momentanément suspendue.</p>{% endif %}
+</section>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-body ai-steps">
+    <h2 class="h5 mb-3">Comment ça marche ?</h2>
+    <div class="ai-step"><strong>Créez votre album</strong> avec un compte gratuit : donnez-lui un nom, un petit mot d'accueil,
+      et choisissez le style de votre événement.</div>
+    <div class="ai-step"><strong>Partagez le QR code</strong> : imprimez l'affiche prête à l'emploi et posez-la sur les tables,
+      ou envoyez simplement le lien.</div>
+    <div class="ai-step"><strong>Vos invités ajoutent leurs photos</strong> depuis leur téléphone, avec leur prénom.
+      Tout le monde profite des souvenirs de chacun.</div>
+    <div class="ai-step"><strong>Gardez tout</strong> : téléchargez toutes les photos d'un coup, en qualité d'origine.</div>
+  </div>
+</div>
+
+<h2 class="h5 text-center mb-3">Un album à l'image de votre événement</h2>
+<div class="ai-themes mb-4">
+  {% for key, t in themes.items() %}<span>{{ t.emoji }} {{ t.label }}</span>{% endfor %}
+</div>
+
+<div class="ai-grid mb-4">
+  <div class="card shadow-sm"><div class="card-body"><h3 class="h6">▶️ Diaporama en direct</h3>
+    <p class="small mb-0">Projetez l'album sur un écran pendant la soirée : les nouvelles photos apparaissent toutes seules.</p></div></div>
+  <div class="card shadow-sm"><div class="card-body"><h3 class="h6">🎯 Défis photo</h3>
+    <p class="small mb-0">« Un éclat de rire », « Sur la piste de danse »… Des idées de photos pour faire participer tout le monde.</p></div></div>
+  <div class="card shadow-sm"><div class="card-body"><h3 class="h6">📖 Livre d'or</h3>
+    <p class="small mb-0">Vos invités laissent un petit mot à côté des photos, à relire longtemps après.</p></div></div>
+  <div class="card shadow-sm"><div class="card-body"><h3 class="h6">❤️ Réactions</h3>
+    <p class="small mb-0">Un cœur, un rire, une émotion : chacun réagit aux photos des autres.</p></div></div>
+  <div class="card shadow-sm"><div class="card-body"><h3 class="h6">🎨 Votre mise en page</h3>
+    <p class="small mb-0">Couleur, police, photo de couverture, grille ou mosaïque : l'album vous ressemble.</p></div></div>
+  <div class="card shadow-sm"><div class="card-body"><h3 class="h6">🔒 Privé et protégé</h3>
+    <p class="small mb-0">Invisible sur Google, mot de passe possible, et chaque photo est vérifiée avant d'apparaître.</p></div></div>
+</div>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <h2 class="h5">Questions fréquentes</h2>
+    <h3 class="h6 mt-3">Mes invités doivent-ils installer une application ou créer un compte ?</h3>
+    <p class="small">Non. Ils scannent le QR code avec l'appareil photo de leur téléphone, voient l'album et ajoutent leurs photos directement depuis leur navigateur.</p>
+    <h3 class="h6">Combien ça coûte ?</h3>
+    <p class="small">La création d'un album est gratuite : il suffit d'un compte PixShare gratuit.
+      {% if limits.albums %}Chaque compte peut créer jusqu'à {{ limits.albums.count }} album(s) de {{ limits.albums.photos }} photos et {{ limits.albums.mb }} Mo.{% endif %}</p>
+    <h3 class="h6">Combien de temps les photos restent-elles en ligne ?</h3>
+    <p class="small">Aussi longtemps que le permet votre compte ({{ limits.member.life }}). Pensez à tout télécharger avant la fin.</p>
+    <h3 class="h6">L'album est-il public ?</h3>
+    <p class="small mb-0">Non. Il n'apparaît pas dans les moteurs de recherche : seules les personnes qui ont le lien ou le QR code peuvent l'ouvrir, et vous pouvez ajouter un mot de passe.</p>
+  </div>
+</div>
+
+<div class="text-center mb-4">
+  <a class="btn btn-primary btn-lg" href="{{ url_for('album.mine') if member else url_for('account.signup') }}">Créer mon album souvenir</a>
+</div>
+{% endblock %}

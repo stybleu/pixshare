@@ -5,7 +5,7 @@
   "lang_fr": "Français",
   "lang_en": "Anglais",
   "hero_hidden_title": "Hébergez une image gratuitement et anonymement avec PixShare",
-  "hero_subtitle": "Hébergement d'images et partage de fichiers de haute qualité. Envoi rapide, lien sécurisé et suppression automatique.",
+  "hero_subtitle": "Partagez vos photos et vos fichiers en toute simplicité : lien privé, suppression automatique, et albums souvenirs pour vos événements.",
   "admin": "Admin",
   "upload_card_title": "Envoyer un fichier (suppression automatique)",
   "max_size_label": "Taille max :",
@@ -135,7 +135,7 @@
   "days_30": "30 jours",
   "days_90": "90 jours",
   "year_1": "1 an",
-  "index_meta_title": "PixShare – Hébergement d'image temporaire et partage de fichiers",
+  "index_meta_title": "PixShare – Partagez vos photos et vos albums souvenirs",
   "quick_upload_note": "Accès rapide : utilisez le bouton ci-dessus pour descendre directement vers l’outil d’envoi.",
   "enhance_strength_label": "Valeur d'amélioration",
   "enhance_strength_help": "0 = aucun changement, 10 = léger, 20 = moyen, 30 = fort. Une photo HEIC améliorée devient un JPG.",
@@ -161,5 +161,7 @@
   "option_image": "Option appliquée uniquement aux images.",
   "nav_login": "Connexion",
   "nav_account": "Mon compte",
-  "nav_terms": "CGU"
+  "nav_terms": "CGU",
+  "meta_description": "Partagez vos photos en un instant, sans inscription. Mariage, anniversaire, fête : créez un album souvenir où vos invités ajoutent leurs photos par QR code.",
+  "nav_albums": "Albums souvenirs"
 }

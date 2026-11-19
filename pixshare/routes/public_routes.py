@@ -715,6 +715,15 @@ def cgu():
                            absent_members=bool(s.get("admin_absent_mode")) and bool(s.get("admin_absent_members")))
 
 
+@public_bp.route("/album-souvenir", endpoint="albums_info")
+def albums_info():
+    """Page publique (indexée) qui présente les albums souvenirs d'événement."""
+    from pixshare.services.album_service import THEMES, enabled
+    from pixshare.services.settings_service import limits_table
+    return render_template("albums_info.html", themes=THEMES, albums_on=enabled(), limits=limits_table(),
+                           title="Album souvenir de mariage et d'événement partagé par QR code – PixShare")
+
+
 @public_bp.route("/mentions-legales", endpoint="mentions_legales")
 def mentions_legales():
     from pixshare.services.ads_service import site_info
