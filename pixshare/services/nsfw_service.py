@@ -531,7 +531,10 @@ def apply_absent_decisions(limit: int = 50) -> int:
     for file_id, meta in list(load_db().items()):
         if done >= limit:
             break
-        if not is_manual_review(meta) or meta.get("moderation_detector") != DETECTOR_NAME:
+        if not is_manual_review(meta):
+            continue
+        similar_to_banned = meta.get("moderation_label") == "deja_refusee"  # ressemble à une image interdite
+        if meta.get("moderation_detector") != DETECTOR_NAME and not similar_to_banned:
             continue
         if meta.get("moderation_label") in ("", None, "analyse_impossible", "signalement"):
             continue

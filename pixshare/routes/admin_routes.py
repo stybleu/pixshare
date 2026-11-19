@@ -426,11 +426,50 @@ def admin_thumbnails():
             item["remaining_time"] = ""
             item["remaining_h"] = ""
 
+    from pixshare.services.image_ban_service import banned_ids
     return render_template(
         "admin_thumbnails.html",
         thumbnails=thumbnails,
+        banned=banned_ids(),
         version=current_app.config["APP_VERSION"],
     )
+
+
+@admin_bp.route("/admin/interdire", methods=["POST"], endpoint="admin_ban_image")
+@admin_required
+def admin_ban_image():
+    """« Cette image n'est pas valide » : elle est supprimée si elle est en ligne, et refusée si elle revient,
+    même retouchée. Marche aussi pour une image déjà expirée ou supprimée, grâce à sa miniature."""
+    from pixshare.services.file_service import get_thumbnail_abs_path
+    from pixshare.services.image_ban_service import ban_file, ban_record
+
+    validate_csrf()
+    file_id = (request.form.get("file_id") or "").strip()
+    back = request.form.get("back") or url_for("admin.admin_thumbnails")
+    if not back.startswith("/admin"):
+        back = url_for("admin.admin_thumbnails")
+    db = load_db()
+    meta = db.get(file_id)
+    if not isinstance(meta, dict):
+        flash("Fichier introuvable.", "warning")
+        return redirect(back)
+    path = os.path.join(current_app.config["UPLOAD_FOLDER"], os.path.basename(str(meta.get("server_name") or "")))
+    status = (meta.get("status") or "").lower()
+    if status in ("active", "pending") and os.path.isfile(path):
+        if delete_by_id(file_id, reason="non_respect_cgu"):  # empreintes gardées avant l'effacement
+            create_moderation_notice(meta, file_id=file_id, reason="non_respect_cgu")
+            flash("Image supprimée et interdite 🚫 : si elle revient, même retouchée, elle sera refusée.", "success")
+        else:
+            flash("Suppression impossible.", "warning")
+    elif os.path.isfile(path) and ban_file(path, "non_respect_cgu", str(meta.get("moderation_label") or ""), file_id):
+        flash("Image interdite 🚫 : si elle revient, même retouchée, elle sera refusée.", "success")
+    elif ban_record(meta, file_id, get_thumbnail_abs_path(file_id)):
+        flash("Image interdite 🚫 à partir de sa miniature : si elle revient, elle sera refusée"
+              + (" (fichier identique) ou mise de côté, puis supprimée en ton absence (si elle a été retouchée)."
+                 if meta.get("content_sha256") else ", ou mise de côté puis supprimée en ton absence."), "success")
+    else:
+        flash("Impossible d'interdire cette image : ni le fichier ni sa miniature n'existent plus.", "warning")
+    return redirect(back)
 
 
 @admin_bp.route("/admin/thumbnails/delete", methods=["POST"], endpoint="admin_delete_thumbnail")

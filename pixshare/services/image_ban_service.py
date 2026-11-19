@@ -97,6 +97,31 @@ def ban_file(path: str, reason: str, label: str = "", file_id: str = "") -> bool
         return False
 
 
+def ban_record(meta: dict, file_id: str, thumb_path: str = "", reason: str = "non_respect_cgu") -> bool:
+    """Interdit une image dont l'original n'existe plus (expirée, supprimée) : empreinte exacte si elle
+    avait été gardée, et empreinte visuelle calculée sur sa miniature."""
+    sha = str(meta.get("content_sha256") or "")
+    vis = visual_hash(thumb_path) if thumb_path and os.path.isfile(thumb_path) else None
+    if not sha and not vis:
+        return False
+    key = sha or f"visuel-{vis}"
+    entry = {"at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "reason": reason,
+             "label": str(meta.get("moderation_label") or "")[:80], "file_id": file_id, "sha256": key,
+             "visual": vis or "", "source": "miniature" if not sha else "empreinte gardée"}
+    with _json_lock:
+        data = _load()
+        data["sha256"][key] = entry
+        if vis:
+            data["visual"][vis] = key
+        save_json(BANNED_FILE, data)
+    return True
+
+
+def banned_ids() -> set[str]:
+    """Identifiants des fichiers dont l'image est interdite (pour l'affichage dans l'admin)."""
+    return {str(e.get("file_id")) for e in _load()["sha256"].values() if isinstance(e, dict) and e.get("file_id")}
+
+
 def check_file(path: str) -> tuple[str, dict] | None:
     """("exact", infos) si le fichier est déjà interdit, ("similar", infos) si l'image y ressemble fortement."""
     try:

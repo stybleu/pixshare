@@ -149,6 +149,18 @@
           <div class="d-flex flex-wrap gap-2">
             <a class="btn btn-outline-secondary btn-sm" href="{{ f.thumb_url }}" target="_blank" rel="noopener">Ouvrir miniature</a>
 
+            {% if f.id in banned %}
+              <span class="badge text-bg-dark align-self-center">🚫 Image interdite</span>
+            {% else %}
+            <form method="post" action="{{ url_for('admin.admin_ban_image') }}" class="m-0"
+                  onsubmit="return confirm('Cette image n\'est pas valide : la {{ 'supprimer et l\'' if f.status in ('active', 'pending') else '' }}interdire ? Si elle revient, elle sera refusée.');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="file_id" value="{{ f.id }}">
+              <input type="hidden" name="back" value="{{ url_for('admin.admin_thumbnails') }}">
+              <button class="btn btn-danger btn-sm" type="submit">🚫 Image non valide</button>
+            </form>
+            {% endif %}
+
             {% if f.has_public_file and f.public_url %}
               <a class="btn btn-outline-primary btn-sm" href="{{ f.public_url }}" target="_blank" rel="noopener">Voir fichier</a>
             {% endif %}
