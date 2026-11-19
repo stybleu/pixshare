@@ -121,6 +121,19 @@ def start_lifetime_now(meta: dict) -> None:
     meta["paused_seconds"] = int(paused.total_seconds())
 
 
+def _forget_approved(meta: dict, path: str = "") -> None:
+    """Image signalée, mise en revue ou supprimée par l'admin : elle ne sera plus publiée d'office."""
+    try:
+        from pixshare.services.approved_hash_service import forget
+        sha = str(meta.get("content_sha256") or "")
+        if not sha and path:
+            from pixshare.services.image_ban_service import file_sha256
+            sha = file_sha256(path)
+        forget(sha)
+    except Exception:
+        pass
+
+
 def approve_image(database: dict, file_id: str, meta: dict, detector: str, score: float | None) -> None:
     """Publie une image en attente (utilisé par l'API de modération et par NudeNet intégré)."""
     start_lifetime_now(meta)
@@ -135,6 +148,7 @@ def approve_image(database: dict, file_id: str, meta: dict, detector: str, score
 
 def mark_image_for_review(database: dict, file_id: str, meta: dict, detector: str, score: float | None, label: str) -> None:
     """L'image reste privée (status=pending) mais sort de la file automatique : revue manuelle."""
+    _forget_approved(meta)
     meta["status"] = "pending"
     meta["moderated_at"] = _utc_now_iso()
     meta["moderation_decision"] = "manual_review"

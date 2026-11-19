@@ -42,6 +42,12 @@ CREATE TABLE IF NOT EXISTS files (
     id TEXT PRIMARY KEY,
     data TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS approved_hashes (
+    key   TEXT PRIMARY KEY,
+    fp    TEXT NOT NULL,
+    score REAL NOT NULL DEFAULT 0,
+    at    TEXT NOT NULL
+);
 """
 
 
@@ -245,6 +251,51 @@ def write_files(data_dir: str, data: dict) -> None:
 
 
 # ------------------------------------------------------------------ état, sauvegarde
+
+# ------------------------------------------------------------------ images déjà acceptées (une ligne chacune)
+
+def approved_get(data_dir: str, key: str):
+    row = _connect(db_path(data_dir)).execute(
+        "SELECT fp, score, at FROM approved_hashes WHERE key = ?", (key,)).fetchone()
+    return {"fp": row[0], "score": row[1], "at": row[2]} if row else None
+
+
+def approved_put(data_dir: str, key: str, fp: str, score: float, at: str, profile: str, max_rows: int) -> None:
+    conn = _connect(db_path(data_dir))
+    with _Tx(conn) as c:
+        c.execute("INSERT INTO approved_hashes (key, fp, score, at) VALUES (?, ?, ?, ?) "
+                  "ON CONFLICT(key) DO UPDATE SET fp = excluded.fp, score = excluded.score, at = excluded.at",
+                  (key, fp, score, at))
+        # acceptations faites avec d'anciens réglages : inutiles
+        c.execute("DELETE FROM approved_hashes WHERE substr(key, 1, length(?)) = ? AND fp <> ?",
+                  (profile, profile, fp))
+        c.execute("DELETE FROM approved_hashes WHERE key IN (SELECT key FROM approved_hashes "
+                  "ORDER BY at DESC, rowid DESC LIMIT -1 OFFSET ?)", (int(max_rows),))
+
+
+def approved_touch(data_dir: str, key: str, at: str) -> None:
+    conn = _connect(db_path(data_dir))
+    with _Tx(conn) as c:
+        c.execute("UPDATE approved_hashes SET at = ? WHERE key = ?", (at, key))
+
+
+def approved_delete(data_dir: str, keys) -> int:
+    conn = _connect(db_path(data_dir))
+    with _Tx(conn) as c:
+        return sum(c.execute("DELETE FROM approved_hashes WHERE key = ?", (k,)).rowcount for k in keys)
+
+
+def approved_purge(data_dir: str, older_than: str = "") -> int:
+    conn = _connect(db_path(data_dir))
+    with _Tx(conn) as c:
+        if older_than:
+            return c.execute("DELETE FROM approved_hashes WHERE at < ?", (older_than,)).rowcount
+        return c.execute("DELETE FROM approved_hashes").rowcount
+
+
+def approved_count(data_dir: str) -> int:
+    return _connect(db_path(data_dir)).execute("SELECT COUNT(*) FROM approved_hashes").fetchone()[0]
+
 
 def status(data_dir: str) -> dict:
     path = db_path(data_dir)

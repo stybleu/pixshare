@@ -244,9 +244,16 @@
         <span class="badge text-bg-warning">{{ st.auto_review }} mises de côté</span>
         <span class="badge text-bg-danger">{{ st.auto_rejected }} supprimées</span>
         <span class="badge text-bg-dark">{{ st.absent_deleted }} supprimées en ton absence</span>
+        <span class="badge text-bg-light border">{{ st.hash_approved }} publiées sans analyse (fichier identique déjà accepté)</span>
       </div>
       <div>Images « à vérifier » : <strong>{{ st.review_approved }}</strong> approuvées par toi (fausses alertes),
         <strong>{{ st.review_deleted }}</strong> supprimées (alertes justifiées){% if st.false_alarm_pct is not none %} → {{ st.false_alarm_pct }} % de fausses alertes{% endif %}.</div>
+      <form method="post" action="{{ url_for('admin.admin_approved_clear') }}" class="d-flex flex-wrap align-items-center gap-2 mt-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <span>Images déjà acceptées en mémoire : <strong>{{ approved_count }}</strong>
+          <span class="text-muted">(20 000 au maximum, environ 3 Mo ; oubliées après 6 mois sans resservir ; tout est oublié si tu changes un réglage)</span></span>
+        <button class="btn btn-outline-secondary btn-sm" type="submit" onclick="return confirm('Oublier toutes les images déjà acceptées ?');">Vider</button>
+      </form>
       {% if st.advice %}<div class="mt-1">💡 {{ st.advice }}</div>{% elif st.review_decided < 10 %}<div class="text-muted mt-1">Conseil de réglage après 10 décisions sur des images à vérifier.</div>{% endif %}
       <form method="post" action="{{ url_for('admin.admin_nsfw_stats_reset') }}" class="mt-2" onsubmit="return confirm('Remettre les statistiques à zéro ?');">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

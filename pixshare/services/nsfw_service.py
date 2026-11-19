@@ -16,12 +16,14 @@ Une image qui échoue plusieurs fois part en revue manuelle au lieu d'être rée
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import importlib.util
 import io
 import logging
 import os
 import tempfile
 import threading
+import time
 from typing import Any
 
 from flask import current_app
@@ -407,9 +409,25 @@ def _process_one(file_id: str, review_threshold: float, block_threshold: float, 
     if member:
         classes = member_classes(classes)
     path = os.path.join(current_app.config["UPLOAD_FOLDER"], os.path.basename(str(meta.get("server_name") or "")))
+    from pixshare.services import approved_hash_service as approved
+    fp = approved.fingerprint(DETECTOR_NAME, review_threshold, block_threshold, tiling, classes)
     try:
         with open(path, "rb") as handle:
             data = handle.read()
+        sha = hashlib.sha256(data).hexdigest()
+        already = approved.known(sha, member, fp)
+        if already:
+            # Exactement le même fichier, déjà accepté avec ces réglages : publié sans nouvelle analyse.
+            db = load_db()
+            meta = db.get(file_id)
+            if _is_waiting_image(meta):
+                meta["content_sha256"] = sha
+                meta["moderation_cached"] = True
+                approve_image(db, file_id, meta, DETECTOR_NAME, already.get("score"))
+                stats["approved"] += 1
+                bump_stat("auto_approved")
+                bump_stat("hash_approved")
+            return
         label, score = analyze_bytes(data, tiling, classes)
     except Exception as exc:
         outcome = _record_failure(file_id, f"{type(exc).__name__}: {exc}")
@@ -434,9 +452,14 @@ def _process_one(file_id: str, review_threshold: float, block_threshold: float, 
             stats["rejected"] += 1
         return
     if decision == "approve":
+        meta["content_sha256"] = sha
         approve_image(db, file_id, meta, DETECTOR_NAME, score)
         stats["approved"] += 1
         bump_stat("auto_approved")
+        try:
+            approved.remember(sha, member, fp, score)
+        except Exception:
+            _log.exception("Empreinte d'image acceptée non enregistrée")
     elif decision == "review":
         mark_image_for_review(db, file_id, meta, DETECTOR_NAME, score, label or "")
         stats["review"] += 1
@@ -627,6 +650,21 @@ def run_auto_moderation(limit: int = 10) -> dict[str, int]:
         _scan_lock.release()
 
 
+_last_approved_purge = 0.0
+
+
+def _purge_approved_hourly() -> None:
+    global _last_approved_purge
+    if time.monotonic() - _last_approved_purge < 3600:
+        return
+    _last_approved_purge = time.monotonic()
+    try:
+        from pixshare.services.approved_hash_service import purge_old
+        purge_old()
+    except Exception:
+        _log.exception("Ménage des images déjà acceptées impossible")
+
+
 def run_after_response(app) -> None:
     """Point d'entrée appelé après l'envoi de la réponse HTTP (ne ralentit pas l'utilisateur)."""
     try:
@@ -635,5 +673,6 @@ def run_after_response(app) -> None:
             if nudenet_ready():
                 run_late_checks()
                 apply_absent_decisions()
+            _purge_approved_hourly()
     except Exception:  # pragma: no cover
         _log.exception("Modération automatique interrompue")

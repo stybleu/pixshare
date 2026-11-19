@@ -1029,6 +1029,10 @@ def delete_by_id(file_id: str, reason: str = "deleted") -> bool:
                 deleted_anything = late_check = True
         except Exception:
             late_check = False
+    if reason not in ("deleted", "view_limit", "account_deleted", "expired"):
+        # Supprimée par l'admin ou par la modération : plus jamais publiée d'office sans analyse.
+        from .moderation_service import _forget_approved
+        _forget_approved(meta, path if server_name and os.path.isfile(path) else "")
     if server_name and os.path.isfile(path):
         try:  # image refusée : on garde son empreinte pour la refuser si elle revient
             from .image_ban_service import ban_file

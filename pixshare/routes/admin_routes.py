@@ -534,6 +534,7 @@ def admin_settings():
 
     return render_template(
         "admin_settings.html",
+        approved_count=_approved_count(),
         settings=settings,
         lifetime_choices=LIFETIME_CHOICES,
         max_lifetime_choices=[c for c in LIFETIME_CHOICES if c[0] in MAX_LIFETIME_CHOICES],
@@ -992,6 +993,23 @@ def admin_accounts_settings():
     save_settings(current)
     flash("Réglages des comptes enregistrés ✅ (pense à copier la sauvegarde des réglages dans Render)", "success")
     return redirect(url_for("admin.admin_accounts"))
+
+
+def _approved_count() -> int:
+    try:
+        from pixshare.services.approved_hash_service import count
+        return count()
+    except Exception:
+        return 0
+
+
+@admin_bp.route("/admin/nudenet/memoire", methods=["POST"], endpoint="admin_approved_clear")
+@admin_required
+def admin_approved_clear():
+    from pixshare.services.approved_hash_service import clear
+    validate_csrf()
+    flash(f"Mémoire vidée : {clear()} image(s) déjà acceptée(s) seront réanalysées si elles reviennent.", "success")
+    return redirect(url_for("admin.admin_settings") + "#nudenet")
 
 
 @admin_bp.route("/admin/nudenet/test", methods=["GET", "POST"], endpoint="admin_nudenet_test")
