@@ -361,7 +361,7 @@ footer {
           {{ season_hat(season_theme) }}
           <img src="{{ url_for('static', filename='images/pixshare_logo_120.webp') }}" width="44" height="44" alt="PixShare">
           <div class="brand-meta">
-            <span class="brand-kicker">Partage temporaire d'images et de fichiers</span>
+            <span class="brand-kicker">{{ "Temporary image and file sharing" if current_lang == "en" else "Partage temporaire d'images et de fichiers" }}</span>
             <span class="brand-title">
               <span>P</span><span>i</span><span>x</span><span>S</span><span>h</span><span>a</span><span>r</span><span>e</span>
             </span>
@@ -370,13 +370,13 @@ footer {
 
         <div class="header-actions">
           <nav class="header-nav" aria-label="Navigation principale">
-            <a href="{{ url_for('public.index') }}">Accueil</a>
-            <a href="{{ url_for('public.contact') }}">Contact</a>
-            <a href="{{ url_for('public.cgu') }}">CGU</a>
+            <a href="{{ url_for('public.index') }}">{{ _('home') }}</a>
+            <a href="{{ url_for('public.contact') }}">{{ _('contact') }}</a>
+            <a href="{{ url_for('public.cgu') }}">{{ _('nav_terms') }}</a>
             {% if member %}
-            <a href="{{ url_for('account.page') }}">Mon compte</a>
+            <a href="{{ url_for('account.page') }}">{{ _('nav_account') }}</a>
             {% else %}
-            <a href="{{ url_for('account.login') }}">Connexion</a>
+            <a href="{{ url_for('account.login') }}">{{ _('nav_login') }}</a>
             {% endif %}
           </nav>
 
@@ -418,8 +418,9 @@ footer {
       <div>
         <div class="footer-title">PixShare</div>
         <div class="footer-text">
-          Un service pensé pour partager rapidement une image, une capture d'écran ou un document,
-          avec une durée de conservation claire et une interface simple à comprendre.
+          {% if current_lang == "en" %}A service designed to quickly share an image, a screenshot or a document,
+          with a clear retention period and an interface that is easy to understand.{% else %}          Un service pensé pour partager rapidement une image, une capture d'écran ou un document,
+          avec une durée de conservation claire et une interface simple à comprendre.{% endif %}
         </div>
       </div>
 

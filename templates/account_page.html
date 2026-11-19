@@ -16,7 +16,7 @@
   <div class="card shadow-sm mb-3">
     <div class="card-body">
       <p class="mb-1">Connecté avec <strong class="text-break">{{ rec.email }}</strong></p>
-      <p class="small text-muted mb-3">Compte créé le {{ rec.created_at[:10] }}.</p>
+      <p class="small text-muted mb-3">Compte créé le {{ rec.created_at[:10]|day_fr }}.</p>
       <p class="mb-2">
         <strong>{{ file_count }}</strong> fichier(s) en ligne{% if pending_count %}, dont {{ pending_count }} en attente de vérification{% endif %}.
       </p>
@@ -39,7 +39,7 @@
       {{ limits_card(limits) }}
       <p class="small text-muted mt-2 mb-0">
         La pornographie et la nudité restent interdites.
-        {% if strikes_max %}Au bout de {{ strikes_max }} image(s) refusée(s) par la modération, le compte est suspendu.{% endif %}
+        {% if strikes_max %}Au bout de {{ strikes_max }} {{ 'image refusée' if strikes_max == 1 else 'images refusées' }} par la modération, le compte est suspendu.{% endif %}
       </p>
     </div>
   </div>

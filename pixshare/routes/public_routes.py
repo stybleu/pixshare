@@ -191,7 +191,7 @@ def index():
         validate_csrf()
 
         if not uploads_enabled:
-            flash("Le service d'upload est actuellement suspendu. Réessayez plus tard.", "warning")
+            flash("L'envoi de fichiers est suspendu pour le moment. Réessayez plus tard.", "warning")
             return attach_guest_cookie(redirect(url_for("public.index")))
 
         if not turnstile_ok(request.form, ip):
@@ -241,7 +241,7 @@ def index():
 
             if not allowed_file(safe_name):
                 allowed = ", ".join(sorted(current_app.config["ALLOWED_EXTENSIONS"]))
-                flash(f"Extension non autorisée. Autorisées : {allowed}", "danger")
+                flash(f"Ce type de fichier n'est pas accepté. Types acceptés : {allowed}", "danger")
                 return attach_guest_cookie(redirect(url_for("public.index")))
 
             content_length = request.content_length or 0
@@ -273,9 +273,9 @@ def index():
             if requires_image_moderation(safe_name):
                 flash("Image reçue. Elle reste privée jusqu'à la validation automatique.", "info")
             elif permanent:
-                flash("Fichier upload ✅ (sans expiration)", "success")
+                flash("Fichier envoyé ✅ (sans expiration)", "success")
             else:
-                flash(f"Fichier upload ✅ (expiration: {format_duration_minutes(lifetime)})", "success")
+                flash(f"Fichier envoyé ✅ (expiration : {format_duration_minutes(lifetime)})", "success")
                 
             return attach_guest_cookie(redirect(url_for("public.index")))
 
@@ -311,7 +311,7 @@ def index():
             elif permanent:
                 flash("Image importée ✅ (sans expiration)", "success")
             else:
-                flash(f"Image importée ✅ (expiration: {format_duration_minutes(lifetime)})", "success")
+                flash(f"Image importée ✅ (expiration : {format_duration_minutes(lifetime)})", "success")
 
             return attach_guest_cookie(redirect(url_for("public.index")))
 
@@ -399,7 +399,7 @@ def contact():
         file_url = (request.form.get("file_url") or "").strip()
 
         if not subject or not message:
-            flash("Sujet et message requis.", "warning")
+            flash("Indiquez un sujet et un message.", "warning")
             return redirect(url_for("public.contact"))
 
         if len(message) > CONTACT_MAX_MESSAGE or len(subject) > CONTACT_MAX_FIELD * 2:
@@ -686,7 +686,7 @@ def delete_own_file(file_id):
     validate_csrf()
 
     if not file_id:
-        flash("ID fichier manquant.", "warning")
+        flash("Fichier non précisé.", "warning")
         return redirect(url_for("public.index"))
 
     db = load_db()
@@ -708,7 +708,11 @@ def delete_own_file(file_id):
 
 @public_bp.route("/cgu", endpoint="cgu")
 def cgu():
-    return render_template("cgu.html", version=current_app.config["APP_VERSION"])
+    from pixshare.services.ads_service import site_info
+    from pixshare.services.settings_service import load_settings
+    s = load_settings()
+    return render_template("cgu.html", version=current_app.config["APP_VERSION"], ads_site=site_info(),
+                           absent_members=bool(s.get("admin_absent_mode")) and bool(s.get("admin_absent_members")))
 
 
 @public_bp.route("/mentions-legales", endpoint="mentions_legales")

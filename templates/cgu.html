@@ -46,7 +46,8 @@ font-size:0.85rem;
 
 <h1 class="h4 mb-3">Conditions Générales d’Utilisation (CGU)</h1>
 
-<p class="small text-muted">Dernière mise à jour : 17 novembre 2026.</p>
+<p class="small text-muted">Dernière mise à jour : 19 novembre 2026.</p>
+{% if current_lang == "en" %}<p class="alert alert-info small py-2">These terms are only available in French. The French version is the one that applies.</p>{% endif %}
 
 <div id="sommaire" class="card shadow-sm mb-4 cgu-summary">
 <div class="card-body">
@@ -102,7 +103,7 @@ Pour une image, cette durée ne commence qu’à sa publication : le temps pass�
 Une image qui n’a pas pu être vérifiée dans les 30 jours est supprimée.</li>
 <li>Une fois cette durée écoulée, le fichier est supprimé automatiquement. Aucun fichier n’est conservé sans date d’expiration.</li>
 <li>Avec un compte, l’utilisateur peut limiter le nombre de vues d’un fichier ou le protéger par un mot de passe. Une fois la limite de vues atteinte, le fichier est supprimé.</li>
-<li>L’utilisateur peut supprimer lui-même les fichiers qu’il a envoyés, depuis l’historique de son navigateur ou avec le lien de suppression fourni.</li>
+<li>L’utilisateur peut supprimer lui-même les fichiers qu’il a envoyés, depuis l’historique du navigateur utilisé pour l’envoi ou, avec un compte, depuis n’importe lequel de ses appareils.</li>
 </ul>
 
 <p>
@@ -177,13 +178,21 @@ Selon le résultat et les réglages choisis par l’éditeur, l’image est :
 
 <ul>
 <li>publiée normalement ;</li>
-<li>mise en attente et masquée jusqu’à la vérification par l’éditeur ;</li>
+<li>mise en attente et masquée jusqu’à la vérification par l’éditeur, lorsqu’elle est jugée douteuse ;</li>
 <li>ou refusée et supprimée automatiquement, sans intervention humaine.</li>
 </ul>
 
 <p>
-Pour les images envoyées avec un compte, l’analyse ne tient compte que de la nudité, et une image jugée douteuse
-n’est jamais supprimée automatiquement : elle reste privée (visible seulement par son auteur) jusqu’à la décision de l’éditeur.
+Pour les images envoyées avec un compte, l’analyse ne tient compte que de la nudité, et une image n’est jamais
+supprimée d’office pour ce seul résultat : une image jugée douteuse reste privée (visible seulement par son auteur)
+jusqu’à la décision de l’éditeur.
+</p>
+
+<p>
+Lorsque l’éditeur n’est pas disponible pour vérifier, l’outil décide seul : une image jugée douteuse est alors
+supprimée automatiquement{% if not absent_members %} (sauf pour les images envoyées avec un compte, qui attendent la vérification){% endif %}.
+Une image qui a déjà été acceptée par l’outil, avec les mêmes réglages, peut être publiée directement si exactement
+le même fichier est envoyé à nouveau.
 </p>
 
 <p>
@@ -205,7 +214,7 @@ elle est refusée automatiquement.
 
 <p><strong>Blocage des adresses IP.</strong>
 Lorsque plusieurs images envoyées depuis une même adresse IP sont refusées sur une courte période,
-cette adresse est bloquée automatiquement : d’abord 24 heures, puis 7 jours, puis 30 jours en cas de récidive.
+cette adresse est bloquée automatiquement : d’abord pour une durée courte (24 heures par défaut), puis 7 jours, puis 30 jours en cas de récidive.
 L’éditeur peut aussi bloquer une adresse IP manuellement, pour une durée de 30 minutes à définitive.
 </p>
 
@@ -384,7 +393,8 @@ La version en vigueur est celle publiée sur le site au moment de la consultatio
 <h2 id="financier" class="h6 mt-4">12. Conditions financières</h2>
 
 <p>
-Le service PixShare est actuellement proposé gratuitement, sans but lucratif et sans publicité.
+Le service PixShare est actuellement proposé gratuitement{% if ads_site.enabled %} ; il affiche de la publicité, présentée dans les mentions légales{% else %}, sans but lucratif et sans publicité{% endif %}.
+L’éditeur peut accorder à certains comptes une formule personnalisée (limites plus larges, absence de publicité).
 </p>
 
 <p>

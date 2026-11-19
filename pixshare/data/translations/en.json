@@ -140,7 +140,7 @@
   "enhance_strength_label": "Enhancement level",
   "enhance_strength_help": "0 = no change, 10 = light, 20 = medium, 30 = strong. An enhanced HEIC photo becomes a JPG.",
   "technical_cookie_notice": "A technical cookie may be used to display your file history, secure the service, and deliver a moderation notice if needed. It is not used for advertising purposes.",
-  "view_link_label": "View link",
+  "view_link_label": "Direct image link",
   "section_simple_title": "Simple and fast temporary image hosting",
   "section_simple_p1": "PixShare lets you send an image or file in seconds and immediately get a shareable link. The service is designed to stay simple, with no mandatory sign-up.",
   "section_browser_upload_title": "Fast uploads from your browser",
@@ -158,5 +158,8 @@
   "feature_metadata_removed": "GPS location and device details automatically removed from photos",
   "feature_free_account": "Optional free account: keep files longer and replace them without changing the link",
   "contact_appeal": "Appeal a moderation decision",
-  "option_image": "This option applies to images only."
+  "option_image": "This option applies to images only.",
+  "nav_login": "Log in",
+  "nav_account": "My account",
+  "nav_terms": "Terms"
 }

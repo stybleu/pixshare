@@ -478,6 +478,7 @@ def limits_table() -> dict:
                    "per_hour": get_uploads_per_hour(True)},
         "ads_free_members": _ads_free_members(),
         "absent_deletes_members": _absent_deletes_members(),
+        "absent_mode": bool(load_settings().get("admin_absent_mode")),
     }
 
 

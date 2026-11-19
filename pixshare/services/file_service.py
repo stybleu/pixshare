@@ -524,11 +524,16 @@ def file_meta(file_id: str, db: dict | None = None):
             remaining_h = f"{remaining_min:02d}:{remaining_sec:02d}"
 
     size_h = human_size(os.stat(path).st_size) if public_exists else "—"
-    mtime_h = (
-        datetime.fromtimestamp(os.stat(path).st_mtime).strftime("%Y-%m-%d %H:%M")
-        if public_exists
-        else (meta.get("deleted_at") or meta.get("uploaded_at", ""))
-    )
+    from zoneinfo import ZoneInfo
+    paris = ZoneInfo("Europe/Paris")
+    if public_exists:  # heure de Paris, au format français (le serveur est en UTC)
+        mtime_h = datetime.fromtimestamp(os.stat(path).st_mtime, paris).strftime("%d/%m/%Y à %H:%M")
+    else:
+        mtime_h = meta.get("deleted_at") or meta.get("uploaded_at", "")
+        try:
+            mtime_h = parse_dt(mtime_h).astimezone(paris).strftime("%d/%m/%Y à %H:%M")
+        except Exception:
+            pass
 
     return {
         "id": file_id,

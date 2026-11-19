@@ -369,7 +369,7 @@ def admin_set_expiration():
     expiration_value = (request.form.get("expiration") or "").strip().lower()
 
     if not file_id:
-        flash("ID fichier manquant.", "warning")
+        flash("Fichier non précisé.", "warning")
         return redirect(url_for("admin.admin_panel"))
 
     db = load_db()

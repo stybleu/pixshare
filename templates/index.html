@@ -124,18 +124,27 @@
           </div>
         {% elif not admin and accounts_open %}
           <div class="alert alert-info small py-2 mb-3">
+            {% if current_lang == "en" %}
+            Without an account: up to {{ limits.guest.life }} and {{ limits.guest.mb }} MB per file.
+            <a href="{{ url_for('account.signup') }}">Create a free account</a> to keep your images up to
+            {{ limits.member.life }}, upload up to {{ limits.member.mb }} MB, find them on all your devices,
+            enhance your photos, protect them with a password, have them deleted after a chosen number of views,
+            and replace them without changing the link.
+            <a href="{{ url_for('account.login') }}">Log in</a>
+            {% else %}
             Sans compte : jusqu'à {{ limits.guest.life }} et {{ limits.guest.mb }} Mo par fichier.
             <a href="{{ url_for('account.signup') }}">Créez un compte gratuit</a> pour garder vos images jusqu'à
             {{ limits.member.life }}, envoyer jusqu'à {{ limits.member.mb }} Mo, les retrouver sur tous vos appareils,
             améliorer vos photos, les protéger par un mot de passe, les faire supprimer après un nombre de vues choisi,
             et les remplacer sans changer le lien.
             <a href="{{ url_for('account.login') }}">Connexion</a>
+            {% endif %}
           </div>
         {% endif %}
 
         {% if not uploads_enabled %}
           <div class="alert alert-warning mb-3" role="alert">
-            Le service d'upload est temporairement suspendu. Les fichiers déjà publiés restent accessibles jusqu'à leur expiration.
+            L'envoi de fichiers est temporairement suspendu. Les fichiers déjà publiés restent accessibles jusqu'à leur expiration.
           </div>
         {% endif %}
 
@@ -260,9 +269,15 @@
                 {% if not member_options %}
                 <div class="col-12">
                   <div class="border rounded p-3 bg-light small text-muted">
+                    {% if current_lang == "en" %}
+                    🔒 <strong>Photo enhancement</strong>, <strong>deletion after a number of views</strong> and
+                    <strong>password protection</strong>: for accounts only.
+                    {% if accounts_open %}<a href="{{ url_for('account.signup') }}">Create a free account</a> or <a href="{{ url_for('account.login') }}">log in</a>.{% endif %}
+                    {% else %}
                     🔒 <strong>Améliorer la photo</strong>, <strong>supprimer après un nombre de vues</strong> et
                     <strong>protéger par un mot de passe</strong> : réservé aux comptes.
                     {% if accounts_open %}<a href="{{ url_for('account.signup') }}">Créez un compte gratuit</a> ou <a href="{{ url_for('account.login') }}">connectez-vous</a>.{% endif %}
+                    {% endif %}
                   </div>
                 </div>
                 {% else %}
@@ -279,7 +294,7 @@
                       <label class="form-label mb-1" for="maxViewsInput">Nombre maximal de vues</label>
                       <input id="maxViewsInput" class="form-control" type="number" name="max_views" min="1" max="100" step="1" value="20">
                       <div class="form-text">
-                        Option isolée par fichier : si elle est décochée, l’image garde uniquement son expiration normale.
+                        Si l’option est décochée, le fichier est simplement supprimé à la fin de la durée choisie.
                       </div>
                     </div>
                   </div>
