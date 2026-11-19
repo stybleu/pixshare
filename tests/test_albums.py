@@ -221,3 +221,87 @@ def test_without_javascript_the_form_still_works(app, mails):
     resp = add(owner, album_id, GREEN, (30, 120, 200), js=False)
     assert resp.status_code == 302
     assert "2 photo(s) ajoutée(s)" in owner.get(f"/album/{album_id}").get_data(as_text=True)
+
+
+# ------------------------------------------------------------------ défis photo, réactions, livre d'or
+
+def test_challenges_suggested_by_theme_and_answered_by_guests(app, mails):
+    owner = member(app.test_client(), mails)
+    album_id = create(owner)
+    page = app.test_client().get(f"/album/{album_id}").get_data(as_text=True)
+    assert "🎯 Défis photo" in page and "Un éclat de rire" in page                # défis proposés pour un mariage
+    guest = app.test_client()
+    data = {"csrf_token": csrf(guest, f"/album/{album_id}"), "files": [(io.BytesIO(png(GREEN)), "rire.png")],
+            "contributor": "Julie", "challenge": "0"}
+    guest.post(f"/album/{album_id}/ajouter", data=data, content_type="multipart/form-data").close()
+    page = app.test_client().get(f"/album/{album_id}?defi=0").get_data(as_text=True)
+    assert "🎯 Un éclat de rire" in page and "Un éclat de rire · 1 ✓" in page and "par Julie" in page
+    assert app.test_client().get(f"/album/{album_id}/photos.json").get_json()["photos"][0]["challenge"] == "Un éclat de rire"
+    owner.post(f"/album/{album_id}/animations", data={"csrf_token": csrf(owner, f"/album/{album_id}"),
+                                                       "challenges": "La déco\n<b>Les mariés</b>\nLa déco\n",
+                                                       "guestbook": "1", "reactions": "1"})
+    with app.app_context():
+        assert album_service.get(album_id)["challenges"] == ["La déco", "bLes mariés/b"]
+    page = app.test_client().get(f"/album/{album_id}").get_data(as_text=True)
+    assert "Un éclat de rire" not in page                                      # défi retiré : plus affiché sous la photo
+
+
+def test_reactions_toggle_and_count(app, mails):
+    owner = member(app.test_client(), mails)
+    album_id = create(owner)
+    add(owner, album_id, GREEN)
+    file_id = album_files(app, album_id)[0]["server_name"].split(".")[0]
+    a, b = app.test_client(), app.test_client()
+    for client in (a, b):
+        r = client.post(f"/album/{album_id}/reaction", data={"csrf_token": csrf(client, f"/album/{album_id}"),
+                                                              "file_id": file_id, "emoji": "❤️"})
+        assert r.status_code == 200
+    assert r.get_json() == {"counts": {"❤️": 2}, "mine": ["❤️"]}
+    r = a.post(f"/album/{album_id}/reaction", data={"csrf_token": csrf(a, f"/album/{album_id}"), "file_id": file_id, "emoji": "❤️"})
+    assert r.get_json()["counts"] == {"❤️": 1} and r.get_json()["mine"] == []  # retirée au 2e appui
+    assert a.post(f"/album/{album_id}/reaction", data={"csrf_token": csrf(a, f"/album/{album_id}"), "file_id": file_id,
+                                                         "emoji": "💩"}).status_code == 404
+    assert a.post(f"/album/{album_id}/reaction", data={"csrf_token": csrf(a, f"/album/{album_id}"), "file_id": "autre",
+                                                         "emoji": "❤️"}).status_code == 404
+    owner.post(f"/album/{album_id}/animations", data={"csrf_token": csrf(owner, f"/album/{album_id}"), "guestbook": "1"})
+    assert 'data-emoji="❤️"' not in app.test_client().get(f"/album/{album_id}").get_data(as_text=True)
+
+
+def test_guestbook_signed_moderated_and_safe(app, mails, monkeypatch):
+    owner = member(app.test_client(), mails)
+    album_id = create(owner)
+    guest = app.test_client()
+    def sign(client, text, name="Julie"):
+        return client.post(f"/album/{album_id}/livre-dor", data={"csrf_token": csrf(client, f"/album/{album_id}"),
+                                                                 "name": name, "text": text})
+    sign(guest, "Félicitations <script>alert(1)</script> aux mariés !")
+    sign(guest, "Venez sur http://spam.example")
+    page = app.test_client().get(f"/album/{album_id}").get_data(as_text=True)
+    assert "Félicitations scriptalert(1)/script aux mariés !" in page and "<script>alert" not in page
+    assert "spam.example" not in page
+    monkeypatch.setattr(album_service, "GUESTBOOK_PER_HOUR", 3)  # même adresse IP dans les tests : 2 déjà utilisés
+    other = app.test_client()
+    sign(other, "Premier")
+    sign(other, "Second")
+    page = app.test_client().get(f"/album/{album_id}").get_data(as_text=True)
+    assert "Premier" in page and "Second" not in page
+    with app.app_context():
+        entry = album_service.guestbook(album_id)[-1]
+    assert app.test_client().post(f"/album/{album_id}/livre-dor/{entry['id']}/supprimer",
+                                  data={"csrf_token": csrf(guest, f"/album/{album_id}")}).status_code in (400, 404)
+    owner.post(f"/album/{album_id}/livre-dor/{entry['id']}/supprimer", data={"csrf_token": csrf(owner, f"/album/{album_id}")})
+    with app.app_context():
+        assert all(m["id"] != entry["id"] for m in album_service.guestbook(album_id))
+    owner.post(f"/album/{album_id}/animations", data={"csrf_token": csrf(owner, f"/album/{album_id}"), "reactions": "1"})
+    assert "Signer le livre d'or" not in app.test_client().get(f"/album/{album_id}").get_data(as_text=True)
+    owner.post(f"/mes-albums/{album_id}/supprimer", data={"csrf_token": csrf(owner, "/mes-albums"), "confirm": "1"})
+    with app.app_context():
+        assert album_service.guestbook(album_id) == []                         # effacé avec l'album
+
+
+def test_site_texts_say_albums_are_for_members(app):
+    client = app.test_client()
+    assert "créer des albums photo à partager par QR code" in client.get("/").get_data(as_text=True)
+    cgu = client.get("/cgu").get_data(as_text=True)
+    assert "La création d’albums est réservée aux membres" in cgu and "livre d’or" in cgu
+    assert "Albums photo à partager par QR code" in client.get("/inscription").get_data(as_text=True)

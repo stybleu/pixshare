@@ -156,7 +156,7 @@
   "feature_api_available": "Codes prêts à coller pour forums, sites, Discord et Markdown",
   "feature_password_views": "Mot de passe et suppression après un nombre de vues choisi (avec un compte gratuit)",
   "feature_metadata_removed": "Position GPS et informations de l’appareil retirées automatiquement des photos",
-  "feature_free_account": "Compte gratuit facultatif : fichiers gardés plus longtemps et remplaçables sans changer le lien",
+  "feature_free_account": "Compte gratuit facultatif : fichiers gardés plus longtemps, remplaçables sans changer le lien, et albums photo à partager par QR code (mariage, fête…)",
   "contact_appeal": "Contester une décision de modération",
   "option_image": "Option appliquée uniquement aux images.",
   "nav_login": "Connexion",

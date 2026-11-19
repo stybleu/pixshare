@@ -35,6 +35,14 @@
 .pxa .pxa-tools { display: flex; gap: .3rem; flex-wrap: wrap; margin-top: .2rem; }
 .pxa .pxa-tools .btn { padding: .2rem .5rem; font-size: .8rem; }
 .pxa-progress { height: .6rem; }
+.pxa-react { display: flex; flex-wrap: wrap; gap: .2rem; margin-top: .15rem; }
+.pxa-react button { border: 1px solid #0002; background: transparent; border-radius: 999px; padding: .05rem .3rem;
+  font-size: .8rem; color: var(--text); line-height: 1.5; min-height: 30px; }
+.pxa-react button[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.pxa-tag { display: inline-block; font-size: .75rem; border-radius: 999px; padding: .05rem .5rem; margin-top: .15rem;
+  background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--text); }
+.pxa-book article { border-left: 3px solid var(--accent); padding: .3rem .7rem; margin-bottom: .6rem; }
+.pxa-book .who { font-weight: 600; }
 @media (max-width: 420px) { .pxa-grid { grid-template-columns: repeat(2, 1fr); } .pxa { padding: .6rem; } }
 </style>
 {% endblock %}
@@ -93,6 +101,27 @@
         <div class="col-12"><button class="btn btn-accent btn-sm" type="submit">Enregistrer la mise en page</button></div>
       </form>
     </details>
+    <details class="mt-1" id="animations">
+      <summary class="py-1">🎯 Animations : défis photo, livre d'or, réactions</summary>
+      <form method="post" action="{{ url_for('album.animations', album_id=album.id) }}" class="row g-2 mt-1">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="col-12">
+          <label class="form-label small mb-0" for="an-defis">Défis photo proposés aux invités (un par ligne, 12 au plus)</label>
+          <textarea class="form-control" id="an-defis" name="challenges" rows="5" maxlength="1100">{{ (album.challenges or [])|join("\n") }}</textarea>
+          <button class="btn btn-link btn-sm px-0" type="button" data-suggested="{{ suggested }}"
+                  onclick="document.getElementById('an-defis').value = this.dataset.suggested">Remettre les défis proposés pour ce type d'événement</button>
+        </div>
+        <div class="col-12 form-check ms-1">
+          <input class="form-check-input" type="checkbox" id="an-book" name="guestbook" value="1" {% if album.guestbook is not defined or album.guestbook %}checked{% endif %}>
+          <label class="form-check-label" for="an-book">Livre d'or : les invités peuvent laisser un message</label>
+        </div>
+        <div class="col-12 form-check ms-1">
+          <input class="form-check-input" type="checkbox" id="an-react" name="reactions" value="1" {% if album.reactions is not defined or album.reactions %}checked{% endif %}>
+          <label class="form-check-label" for="an-react">Réactions sous les photos (❤️ 😂 😍 👏 🥹)</label>
+        </div>
+        <div class="col-12"><button class="btn btn-accent btn-sm" type="submit">Enregistrer les animations</button></div>
+      </form>
+    </details>
   </section>
   {% endif %}
 
@@ -109,7 +138,14 @@
       <input class="form-control mb-2" id="pxa-name" name="contributor" maxlength="40" value="{{ contributor }}" autocomplete="given-name">
       {% endif %}
       <input class="form-control mb-2" type="file" id="pxa-files" name="files" accept="image/*" multiple required>
-      {% if need_human %}{% include "_turnstile.html" %}{% endif %}
+      {% if challenges %}
+      <label class="form-label small mb-0" for="pxa-defi">Vos photos répondent à un défi ? (facultatif)</label>
+      <select class="form-select mb-2" id="pxa-defi" name="challenge">
+        <option value="">Aucun défi</option>
+        {% for c in challenges %}<option value="{{ c.index }}" {% if defi == c.index %}selected{% endif %}>🎯 {{ c.text }}</option>{% endfor %}
+      </select>
+      {% endif %}
+      {% if need_human and turnstile_site_key %}<div class="cf-turnstile mb-2" data-sitekey="{{ turnstile_site_key }}" data-language="{{ current_lang or 'fr' }}"></div>{% endif %}
       <button class="btn btn-accent" type="submit" id="pxa-send">Envoyer</button>
       <div class="small text-muted mt-1">Photos uniquement, {{ max_mb }} Mo maximum chacune. Elles apparaissent après une vérification automatique.
         En envoyant, vous acceptez les <a href="{{ url_for('public.cgu') }}">CGU</a> : pas de nudité ni de contenu interdit.</div>
@@ -117,6 +153,19 @@
       <div class="small mt-1" id="pxa-status" aria-live="polite"></div>
     </form>
     {% endif %}
+  </section>
+  {% endif %}
+
+  {% if challenges %}
+  <section class="pxa-card" id="defis">
+    <h2 class="h6">🎯 Défis photo</h2>
+    <p class="small pxa-muted mb-2">À vous de jouer : choisissez un défi au moment d'ajouter vos photos.</p>
+    <nav class="pxa-chips mb-0" aria-label="Photos par défi">
+      {% for c in challenges %}
+      <a href="{{ url_for('album.view', album_id=album.id, defi=c.index) }}" class="{% if defi == c.index %}on{% endif %}">{{ c.text }}{% if c.count %} · {{ c.count }} ✓{% endif %}</a>
+      {% endfor %}
+      {% if defi is not none %}<a href="{{ url_for('album.view', album_id=album.id) }}">✕ Toutes les photos</a>{% endif %}
+    </nav>
   </section>
   {% endif %}
 
@@ -138,6 +187,14 @@
       <span class="badge text-bg-warning pxa-pending">En vérification</span>
       {% endif %}
       {% if p.album_contributor %}<figcaption>par {{ p.album_contributor }}</figcaption>{% endif %}
+      {% if p.challenge_text %}<span class="pxa-tag">🎯 {{ p.challenge_text }}</span>{% endif %}
+      {% if reactions and p.status == "active" %}
+      <div class="pxa-react" data-file="{{ p.id }}">
+        {% for e in reactions %}{% set n = (p.album_reactions or {}).get(e, 0) %}
+        <button type="button" data-emoji="{{ e }}" aria-pressed="{{ 'true' if e in p.my_reactions else 'false' }}" aria-label="Réagir {{ e }}">{{ e }}<span>{% if n %} {{ n }}{% endif %}</span></button>
+        {% endfor %}
+      </div>
+      {% endif %}
       {% if owner %}
       <div class="pxa-tools">
         {% if p.status == "active" %}
@@ -159,6 +216,34 @@
     <p class="text-center pxa-muted my-4">{% if who %}Aucune photo de {{ who }} pour le moment.{% else %}Aucune photo pour le moment{% if can_add %} : soyez le premier à en ajouter !{% else %}.{% endif %}{% endif %}</p>
   {% endif %}
 
+  {% if album.guestbook is not defined or album.guestbook or (owner and guestbook) %}
+  <section class="pxa-card pxa-book mt-3" id="livre-dor">
+    <h2 class="h6">📖 Livre d'or</h2>
+    {% if album.guestbook is not defined or album.guestbook %}
+    <form method="post" action="{{ url_for('album.sign', album_id=album.id) }}" class="mb-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input class="form-control mb-2" name="name" maxlength="40" value="{{ contributor }}" placeholder="Votre prénom" aria-label="Votre prénom">
+      <textarea class="form-control mb-2" name="text" rows="3" maxlength="500" required placeholder="Un petit mot pour {% if look.key == 'hommage' %}partager un souvenir{% else %}les organisateurs{% endif %}…" aria-label="Votre message"></textarea>
+      {% if need_human and turnstile_site_key %}<div class="cf-turnstile mb-2" data-sitekey="{{ turnstile_site_key }}" data-language="{{ current_lang or 'fr' }}"></div>{% endif %}
+      <button class="btn btn-accent btn-sm" type="submit">Signer le livre d'or</button>
+    </form>
+    {% else %}<p class="small pxa-muted">Le livre d'or est fermé aux invités.</p>{% endif %}
+    {% for m in guestbook %}
+    <article>
+      <div class="small"><span class="who">{{ m.name or "Un invité" }}</span> <span class="pxa-muted">· {{ m.at|date_fr }}</span></div>
+      <div>{{ m.text }}</div>
+      {% if owner %}
+      <form method="post" action="{{ url_for('album.unsign', album_id=album.id, entry_id=m.id) }}" onsubmit="return confirm('Retirer ce message ?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="btn btn-link btn-sm text-danger px-0" type="submit">Retirer</button>
+      </form>
+      {% endif %}
+    </article>
+    {% else %}
+    <p class="small pxa-muted mb-0">Aucun message pour le moment.</p>
+    {% endfor %}
+  </section>
+  {% endif %}
+
   <section class="pxa-card mt-3">
     <h2 class="h6">Partager l'album</h2>
     <div class="d-flex flex-wrap gap-3 align-items-center">
@@ -178,6 +263,35 @@
   </section>
 </div>
 
+{% if need_human and turnstile_site_key %}<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>{% endif %}
+{% if reactions %}
+<script>
+(function () {
+  const token = "{{ csrf_token }}", url = "{{ url_for('album.react', album_id=album.id) }}";
+  document.querySelectorAll(".pxa-react").forEach(function (box) {
+    box.addEventListener("click", async function (e) {
+      const btn = e.target.closest("button[data-emoji]");
+      if (!btn) return;
+      btn.disabled = true;
+      const data = new FormData();
+      data.append("csrf_token", token); data.append("file_id", box.dataset.file); data.append("emoji", btn.dataset.emoji);
+      try {
+        const r = await fetch(url, {method: "POST", body: data, credentials: "same-origin"});
+        if (r.ok) {
+          const j = await r.json();
+          box.querySelectorAll("button[data-emoji]").forEach(function (b) {
+            const n = (j.counts || {})[b.dataset.emoji] || 0;
+            b.querySelector("span").textContent = n ? " " + n : "";
+            b.setAttribute("aria-pressed", (j.mine || []).indexOf(b.dataset.emoji) >= 0 ? "true" : "false");
+          });
+        }
+      } catch (err) {}
+      btn.disabled = false;
+    });
+  });
+})();
+</script>
+{% endif %}
 {% if can_add and room_left > 0 %}
 <script>
 (function () {

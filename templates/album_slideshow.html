@@ -53,7 +53,7 @@
       requestAnimationFrame(function () { img.classList.add("on"); });
       if (current) { const old = current; old.classList.remove("on"); setTimeout(function () { old.remove(); }, 1100); }
       current = img;
-      by.textContent = item.by ? "📷 " + item.by : "";
+      by.textContent = [item.challenge ? "🎯 " + item.challenge : "", item.by ? "📷 " + item.by : ""].filter(Boolean).join("  ·  ");
     };
     img.src = item.src;
   }

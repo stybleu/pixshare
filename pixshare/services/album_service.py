@@ -91,6 +91,157 @@ def set_style(album_id: str, theme=None, accent=None, font=None, layout=None, co
         return album
 
 
+# ------------------------------------------------------------------ animations : défis, livre d'or, réactions
+
+REACTIONS = ("❤️", "😂", "😍", "👏", "🥹")
+CHALLENGES_MAX = 12
+CHALLENGE_MAX_LEN = 80
+GUESTBOOK_FILE = "album_guestbook.json"
+GUESTBOOK_MAX = 300
+GUESTBOOK_TEXT_MAX = 500
+GUESTBOOK_PER_HOUR = 5
+SUGGESTED_CHALLENGES = {
+    "mariage": ["Un éclat de rire", "Les mariés", "La plus belle tenue", "La décoration", "Sur la piste de danse",
+                "Un selfie avec les mariés", "Le gâteau", "Un moment d'émotion"],
+    "anniversaire": ["Le gâteau et les bougies", "Un fou rire", "Le plus beau cadeau", "Une photo de groupe",
+                     "Un selfie avec la personne fêtée"],
+    "naissance": ["Les petits pieds", "Un sourire", "La famille réunie", "Le doudou"],
+    "hommage": ["Un souvenir partagé", "Une photo d'autrefois", "Un lieu qu'il ou elle aimait"],
+    "fete": ["Sur la piste de danse", "La meilleure grimace", "Une photo de groupe", "Le cocktail du soir"],
+    "voyage": ["Le plus beau paysage", "Le meilleur repas", "Une photo de groupe", "Un moment insolite"],
+    "sport": ["L'action du jour", "L'équipe au complet", "La victoire", "Les supporters"],
+    "classique": ["Une photo de groupe", "Un sourire", "Un moment drôle"],
+}
+
+
+def clean_challenges(raw) -> list[str]:
+    lines = raw.splitlines() if isinstance(raw, str) else list(raw or [])
+    out = []
+    for line in lines:
+        text = _clean_text(line, CHALLENGE_MAX_LEN)
+        if text and text not in out:
+            out.append(text)
+    return out[:CHALLENGES_MAX]
+
+
+def set_animations(album_id: str, challenges=None, guestbook=None, reactions=None) -> dict:
+    with _json_lock:
+        data = _load()
+        album = data.get(album_id)
+        if not album:
+            raise AlbumError("Album introuvable.")
+        if challenges is not None:
+            album["challenges"] = clean_challenges(challenges)
+        if guestbook is not None:
+            album["guestbook"] = bool(guestbook)
+        if reactions is not None:
+            album["reactions"] = bool(reactions)
+        data[album_id] = album
+        save_json(ALBUMS_FILE, data)
+        return album
+
+
+def challenge_counts(album: dict, items: list[dict]) -> list[dict]:
+    challenges = album.get("challenges") or []
+    out = [{"index": i, "text": c, "count": 0} for i, c in enumerate(challenges)]
+    for meta in items:
+        i = meta.get("album_challenge")
+        if isinstance(i, int) and 0 <= i < len(out) and meta.get("album_challenge_text") == out[i]["text"]:
+            out[i]["count"] += 1
+    return out
+
+
+def photo_challenge(album: dict, meta: dict) -> str:
+    """Texte du défi de la photo (vide si le défi a été retiré ou modifié depuis)."""
+    challenges = album.get("challenges") or []
+    i = meta.get("album_challenge")
+    if isinstance(i, int) and 0 <= i < len(challenges) and meta.get("album_challenge_text") == challenges[i]:
+        return challenges[i]
+    return ""
+
+
+def react(album: dict, file_id: str, emoji: str) -> dict | None:
+    """Ajoute ou retire la réaction de cette personne (une par emoji et par photo). Renvoie les totaux."""
+    if emoji not in REACTIONS or not album.get("reactions", True):
+        return None
+    mine = list(session.get("album_reacted") or [])
+    key = f"{file_id}:{REACTIONS.index(emoji)}"
+    db = load_db()
+    meta = db.get(file_id)
+    if not isinstance(meta, dict) or meta.get("album_id") != album["id"] or (meta.get("status") or "") != "active":
+        return None
+    counts = {e: int(n) for e, n in (meta.get("album_reactions") or {}).items() if e in REACTIONS}
+    if key in mine:
+        counts[emoji] = max(0, counts.get(emoji, 0) - 1)
+        mine.remove(key)
+    else:
+        counts[emoji] = counts.get(emoji, 0) + 1
+        mine = (mine + [key])[-500:]
+    meta["album_reactions"] = {e: n for e, n in counts.items() if n}
+    db[file_id] = meta
+    save_db(db)
+    session["album_reacted"] = mine
+    return {"counts": meta["album_reactions"], "mine": [e for i, e in enumerate(REACTIONS) if f"{file_id}:{i}" in mine]}
+
+
+def my_reactions(file_id: str) -> list[str]:
+    mine = session.get("album_reacted") or []
+    return [e for i, e in enumerate(REACTIONS) if f"{file_id}:{i}" in mine]
+
+
+def _gb_load() -> dict:
+    data = load_json(GUESTBOOK_FILE, {})
+    return data if isinstance(data, dict) else {}
+
+
+def guestbook(album_id: str) -> list[dict]:
+    items = _gb_load().get(album_id) or []
+    return sorted([m for m in items if isinstance(m, dict)], key=lambda m: m.get("at", ""), reverse=True)
+
+
+def sign_guestbook(album: dict, name, text) -> dict:
+    if not album.get("guestbook", True):
+        raise AlbumError("Le livre d'or de cet album est fermé.")
+    name = clean_contributor(name)
+    text = " ".join(str(text or "").split())[:GUESTBOOK_TEXT_MAX]
+    text = "".join(c for c in text if c not in "<>")
+    if len(text) < 2:
+        raise AlbumError("Écrivez quelques mots avant d'envoyer.")
+    low = text.lower()
+    if "http" in low or "www." in low or ".com" in low:
+        raise AlbumError("Les liens ne sont pas acceptés dans le livre d'or.")
+    with _json_lock:
+        data = _gb_load()
+        items = data.get(album["id"]) or []
+        if len(items) >= GUESTBOOK_MAX:
+            raise AlbumError("Le livre d'or est complet.")
+        entry = {"id": secrets.token_urlsafe(6), "name": name, "text": text,
+                 "at": utcnow().isoformat(timespec="seconds")}
+        items.append(entry)
+        data[album["id"]] = items
+        save_json(GUESTBOOK_FILE, data)
+    return entry
+
+
+def remove_guestbook_entry(album_id: str, entry_id: str) -> bool:
+    with _json_lock:
+        data = _gb_load()
+        items = data.get(album_id) or []
+        kept = [m for m in items if m.get("id") != entry_id]
+        if len(kept) == len(items):
+            return False
+        data[album_id] = kept
+        save_json(GUESTBOOK_FILE, data)
+        return True
+
+
+def drop_guestbook(album_id: str) -> None:
+    with _json_lock:
+        data = _gb_load()
+        if data.pop(album_id, None) is not None:
+            save_json(GUESTBOOK_FILE, data)
+
+
 class AlbumError(Exception):
     """Message à montrer tel quel à la personne."""
 
@@ -139,6 +290,8 @@ def create(owner: dict, name, description="", password="", guests_can_add=True, 
             "password_hash": generate_password_hash(password) if password else "",
             "theme": theme if theme in THEMES else "classique",
             "accent": "", "font": "", "layout": "grille", "cover": "",
+            "challenges": list(SUGGESTED_CHALLENGES.get(theme if theme in THEMES else "classique", [])),
+            "guestbook": True, "reactions": True,
         }
         data[album_id] = album
         save_json(ALBUMS_FILE, data)
@@ -208,6 +361,7 @@ def delete(album_id: str) -> int:
         data = _load()
         data.pop(album_id, None)
         save_json(ALBUMS_FILE, data)
+    drop_guestbook(album_id)
     return removed
 
 
@@ -270,7 +424,8 @@ def contributors(items: list[dict]) -> list[tuple[str, int]]:
     return sorted(counts_by_name.items(), key=lambda kv: (-kv[1], kv[0].lower()))
 
 
-def finalize_photo(file_id: str, album: dict, owner: dict, by_owner: bool, contributor: str = "") -> None:
+def finalize_photo(file_id: str, album: dict, owner: dict, by_owner: bool, contributor: str = "",
+                   challenge: int | None = None) -> None:
     """Rattache la photo à l'album et lui donne la durée maximale du compte du membre."""
     from pixshare.services.settings_service import get_max_lifetime
     lifetime = get_max_lifetime(owner)
@@ -282,6 +437,10 @@ def finalize_photo(file_id: str, album: dict, owner: dict, by_owner: bool, contr
     meta["album_owner"] = owner["id"]
     meta["album_guest"] = not by_owner
     meta["album_contributor"] = clean_contributor(contributor)
+    challenges = album.get("challenges") or []
+    if isinstance(challenge, int) and 0 <= challenge < len(challenges):
+        meta["album_challenge"] = challenge
+        meta["album_challenge_text"] = challenges[challenge]
     try:
         start = parse_dt(meta.get("uploaded_at") or "")
         meta["expires_at"] = (start + timedelta(minutes=int(lifetime))).isoformat(timespec="seconds")

@@ -144,7 +144,16 @@ def view(album_id):
     items = albums.photos(album["id"], include_pending=owner)
     people = albums.contributors(items)
     who = request.args.get("par", "")
-    shown = [m for m in items if not who or m.get("album_contributor") == who]
+    challenges = albums.challenge_counts(album, [m for m in items if m.get("status") == "active"])
+    try:
+        defi = int(request.args.get("defi", ""))
+    except ValueError:
+        defi = None
+    shown = [m for m in items if (not who or m.get("album_contributor") == who)
+             and (defi is None or (albums.photo_challenge(album, m) and m.get("album_challenge") == defi))]
+    for m in shown:
+        m["challenge_text"] = albums.photo_challenge(album, m)
+        m["my_reactions"] = albums.my_reactions(m["id"])
     counts = albums.counts(album["id"])
     can_add = (owner or album.get("guests_can_add")) and upload_service_enabled()
     response = make_response(render_template(
@@ -153,7 +162,10 @@ def view(album_id):
         need_human=not owner and not albums.human_checked(album["id"]),
         contributor=session.get("album_name", ""),
         max_mb=get_max_upload_size_mb(accounts.get_account(album["owner"]) or True),
-        share_url=album_url(album), look=albums.style(album), themes=albums.THEMES, fonts=albums.FONTS,
+        share_url=album_url(album), look=albums.style(album), challenges=challenges, defi=defi,
+        reactions=albums.REACTIONS if album.get("reactions", True) else (),
+        guestbook=albums.guestbook(album["id"]) if album.get("guestbook", True) or owner else [],
+        suggested="\n".join(albums.SUGGESTED_CHALLENGES.get(albums.style(album)["key"], [])), themes=albums.THEMES, fonts=albums.FONTS,
         layouts=albums.LAYOUTS, cover=next((m for m in items if m["id"] == album.get("cover")
                                             and m.get("status") == "active"), None),
         title=f"{album['name']} – PixShare"))
@@ -180,7 +192,8 @@ def photos_json(album_id):
         abort(404)
     data = [{"src": url_for("public.view_file", file_id=m["id"], m=1) if os.path.isfile(medium_path(m["id"]))
              else url_for("public.view_file", file_id=m["id"], raw=1),
-             "by": m.get("album_contributor") or ""} for m in albums.photos(album["id"])]
+             "by": m.get("album_contributor") or "", "challenge": albums.photo_challenge(album, m)}
+            for m in albums.photos(album["id"])]
     return _noindex(jsonify(photos=data))
 
 
@@ -228,6 +241,10 @@ def add(album_id):
         return done("Le stockage est plein pour le moment. Réessayez un peu plus tard.", "warning", 507)
 
     contributor = "" if by_owner else albums.clean_contributor(request.form.get("contributor"))
+    try:
+        challenge = int(request.form.get("challenge", ""))
+    except ValueError:
+        challenge = None
     if contributor:
         session["album_name"] = contributor
     files = [f for f in request.files.getlist("files") + request.files.getlist("file") if f and f.filename]
@@ -259,7 +276,7 @@ def add(album_id):
             current_app.logger.info("Photo d'album refusée (%s) : %s", type(exc).__name__, exc)
             errors.append(f"{name} : fichier refusé (trop lourd, {get_max_upload_size_mb(owner_rec)} Mo maximum, ou illisible).")
             continue
-        albums.finalize_photo(file_id, album, owner_rec, by_owner, contributor)
+        albums.finalize_photo(file_id, album, owner_rec, by_owner, contributor, challenge)
         added += 1
     if added and not errors:
         return done(f"{added} photo(s) ajoutée(s) ✅ Elles apparaissent dans l'album après la vérification automatique.",
@@ -267,6 +284,73 @@ def add(album_id):
     if added:
         return done(f"{added} photo(s) ajoutée(s), mais : " + " ".join(errors[:3]), "warning", added=added)
     return done(" ".join(errors[:3]) or "Aucune photo ajoutée.", "warning", 400, added=0)
+
+
+# ------------------------------------------------------------------ animations : défis, réactions, livre d'or
+
+@album_bp.route("/album/<album_id>/animations", methods=["POST"], endpoint="animations")
+def animations(album_id):
+    validate_csrf()
+    album, _me = _owner_album_or_404(album_id)
+    albums.set_animations(album["id"], challenges=request.form.get("challenges", ""),
+                          guestbook=request.form.get("guestbook") == "1",
+                          reactions=request.form.get("reactions") == "1")
+    flash("Animations enregistrées ✅", "success")
+    return redirect(url_for("album.view", album_id=album["id"]) + "#animations")
+
+
+@album_bp.route("/album/<album_id>/reaction", methods=["POST"], endpoint="react")
+def react(album_id):
+    validate_csrf()
+    album = _album_or_404(album_id)
+    if not albums.unlocked(album, accounts.current_account()):
+        abort(404)
+    rate = check_upload_rate(f"albumreact:{get_client_ip()}", limit=600)
+    if not rate.allowed:
+        return jsonify(message="Trop de réactions, réessayez plus tard."), 429
+    result = albums.react(album, request.form.get("file_id", ""), request.form.get("emoji", ""))
+    if result is None:
+        abort(404)
+    return _noindex(jsonify(result))
+
+
+@album_bp.route("/album/<album_id>/livre-dor", methods=["POST"], endpoint="sign")
+def sign(album_id):
+    validate_csrf()
+    album = _album_or_404(album_id)
+    me = accounts.current_account()
+    ip = get_client_ip()
+    back = redirect(url_for("album.view", album_id=album["id"]) + "#livre-dor")
+    if not albums.unlocked(album, me) or (ip and ip in load_blocked()):
+        abort(404)
+    if not albums.is_owner(album, me) and not albums.human_checked(album["id"]):
+        if not turnstile_ok(request.form, ip):
+            flash("Vérification anti-robot échouée : cochez la case puis réessayez.", "warning")
+            return back
+        albums.mark_human(album["id"])
+    rate = check_upload_rate(f"albumbook:{album['id']}:{ip}", exempt=albums.is_owner(album, me),
+                             limit=albums.GUESTBOOK_PER_HOUR)
+    if not rate.allowed:
+        flash("Vous avez déjà écrit plusieurs messages : réessayez dans une heure.", "warning")
+        return back
+    try:
+        name = request.form.get("name") or session.get("album_name", "")
+        albums.sign_guestbook(album, name, request.form.get("text"))
+        if name and not albums.is_owner(album, me):
+            session["album_name"] = albums.clean_contributor(name)
+        flash("Merci pour votre message ✅", "success")
+    except albums.AlbumError as exc:
+        flash(str(exc), "warning")
+    return back
+
+
+@album_bp.route("/album/<album_id>/livre-dor/<entry_id>/supprimer", methods=["POST"], endpoint="unsign")
+def unsign(album_id, entry_id):
+    validate_csrf()
+    album, _me = _owner_album_or_404(album_id)
+    if albums.remove_guestbook_entry(album["id"], entry_id):
+        flash("Message retiré du livre d'or.", "success")
+    return redirect(url_for("album.view", album_id=album["id"]) + "#livre-dor")
 
 
 # ------------------------------------------------------------------ partage : QR code, affiche, zip
