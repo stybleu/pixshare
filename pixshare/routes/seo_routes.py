@@ -37,10 +37,10 @@ Disallow: /admin
 Disallow: /admin_panel
 Disallow: /admin_login
 Disallow: /file/
+Disallow: /view/
 Disallow: /download/
 Disallow: /tmp/
 Disallow: /api/
-Disallow: /pub/
 Disallow: /album/
 Disallow: /mes-albums
 

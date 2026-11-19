@@ -442,7 +442,10 @@ def view_file(file_id):
     if bool(meta.get("view_limit_enabled", False)):
         if not _limited_access_allowed(file_id, meta):
             abort(404)
-        return send_from_directory(current_app.config["UPLOAD_FOLDER"], server_name, as_attachment=False)
+        response = make_response(send_from_directory(current_app.config["UPLOAD_FOLDER"], server_name,
+                                                     as_attachment=False))
+        response.headers["X-Robots-Tag"] = "noindex, noimageindex"
+        return response
 
     # Lien /view/ ouvert directement dans le navigateur : petite page avec l'image et un bouton « Signaler ».
     # Intégrée ailleurs (<img>, forums, aperçus WhatsApp/Discord), l'image reste servie telle quelle.
@@ -478,6 +481,7 @@ def view_file(file_id):
     ))
     response.headers["Cache-Control"] = "private, max-age=600"
     response.headers["Vary"] = "Sec-Fetch-Dest"  # même adresse : page (navigateur) ou image (intégration)
+    response.headers["X-Robots-Tag"] = "noindex, noimageindex"  # jamais dans Google Images
 
     if must_set_cookie:
         response.set_cookie(
