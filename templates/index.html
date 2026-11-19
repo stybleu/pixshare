@@ -127,7 +127,8 @@
             Sans compte : jusqu'à {{ limits.guest.life }} et {{ limits.guest.mb }} Mo par fichier.
             <a href="{{ url_for('account.signup') }}">Créez un compte gratuit</a> pour garder vos images jusqu'à
             {{ limits.member.life }}, envoyer jusqu'à {{ limits.member.mb }} Mo, les retrouver sur tous vos appareils,
-            améliorer vos photos, les protéger par un mot de passe ou un nombre de vues, et les remplacer sans changer le lien.
+            améliorer vos photos, les protéger par un mot de passe, les faire supprimer après un nombre de vues choisi,
+            et les remplacer sans changer le lien.
             <a href="{{ url_for('account.login') }}">Connexion</a>
           </div>
         {% endif %}

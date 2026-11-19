@@ -9,7 +9,7 @@ from pixshare.services import json_services
 def test_homepage_mentions_only_existing_features(make_app):
     html = make_app().test_client().get("/").get_data(as_text=True)
     assert "API" not in html and "qualitée" not in html
-    for text in ("Codes prêts à coller", "Position GPS", "Mot de passe et nombre de vues", "Compte gratuit facultatif",
+    for text in ("Codes prêts à coller", "Position GPS", "Mot de passe et suppression après un nombre de vues", "Compte gratuit facultatif",
                  "Glissez-déposez", "utilisez le bouton"):
         assert text in html, text
     assert "Toi, tu" not in html and "note-le" not in html
