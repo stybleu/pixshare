@@ -15,6 +15,9 @@ def test_only_presentation_pages_are_indexed(make_app):
     robots = client.get("/robots.txt").get_data(as_text=True)
     for path in ("/admin", "/file/", "/view/", "/download/", "/album/", "/mes-albums"):
         assert f"Disallow: {path}" in robots
+    for gone in ("/api/", "/admin_panel", "/admin_login", "/tmp/"):  # adresses supprimées : Google doit voir la 404
+        assert f"Disallow: {gone}" not in robots
+        assert client.get(gone + "x" if gone.endswith("/") else gone).status_code == 404
     sitemap = client.get("/sitemap.xml").get_data(as_text=True)
     for page in INDEXED:
         assert 'content="index, follow"' in client.get(page).get_data(as_text=True), page

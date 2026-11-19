@@ -34,13 +34,9 @@ def robots():
 Allow: /
 
 Disallow: /admin
-Disallow: /admin_panel
-Disallow: /admin_login
 Disallow: /file/
 Disallow: /view/
 Disallow: /download/
-Disallow: /tmp/
-Disallow: /api/
 Disallow: /album/
 Disallow: /mes-albums
 
