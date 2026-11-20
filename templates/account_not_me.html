@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block sr_h1 %}{% endblock %}
+{% block robots %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 480px;">
+  <h1 class="h4 mb-3">🛡️ Ce n'était pas moi</h1>
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <p>Quelqu'un a tapé le bon mot de passe du compte <strong>{{ email }}</strong> depuis un appareil inconnu.
+        Sans le code reçu par mail, il n'a pas pu entrer.</p>
+      <p class="mb-3">Le bouton ci-dessous déconnecte <strong>tous</strong> les appareils (le vôtre aussi), annule les codes en cours,
+        et vous envoie un lien pour choisir un nouveau mot de passe.</p>
+      <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="btn btn-danger w-100" type="submit">Protéger mon compte</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -11,7 +11,7 @@ from pixshare.security.csrf import validate_csrf
 from pixshare.services import account_service as accounts
 from pixshare.services import album_service as albums
 from pixshare.services import qr_service
-from pixshare.services.auth_service import is_admin
+from pixshare.services.auth_service import is_admin, is_locked, register_fail
 from pixshare.services.file_service import (attach_guest_cookie, delete_by_id, get_guest_token,
                                             is_image_filename, medium_path, save_uploaded_file)
 from pixshare.services.image_ban_service import BannedImageError
@@ -22,6 +22,7 @@ from pixshare.services.system_service import has_room_for
 from pixshare.services.turnstile_service import turnstile_ok
 from pixshare.services.upload_limit_service import check_upload_rate
 
+ALBUM_PASSWORD_FAILS = 30
 album_bp = Blueprint("album", __name__)
 
 
@@ -180,10 +181,16 @@ def view(album_id):
 def unlock(album_id):
     validate_csrf()
     album = _album_or_404(album_id)
+    # Deux protections contre les essais en série : par adresse IP (20 essais par heure), et par album,
+    # toutes adresses confondues (30 erreurs en 10 min = album fermé aux nouveaux essais 15 min).
+    album_key = f"albumpw-all:{album['id']}"
     rate = check_upload_rate(f"albumpw:{get_client_ip()}", limit=20)
     if not rate.allowed:
         flash("Trop d'essais. Réessayez dans une heure.", "warning")
+    elif is_locked(album_key)[0]:
+        flash("Trop d'essais sur cet album. Réessayez dans un quart d'heure.", "warning")
     elif not albums.unlock(album, request.form.get("password", "")):
+        register_fail(album_key, max_failures=ALBUM_PASSWORD_FAILS)
         flash("Mot de passe incorrect.", "warning")
     return redirect(url_for("album.view", album_id=album["id"]))
 
@@ -390,6 +397,8 @@ def qr_png(album_id):
 @album_bp.route("/album/<album_id>/affiche", methods=["GET"], endpoint="poster")
 def poster(album_id):
     album = _album_or_404(album_id)
+    if not albums.unlocked(album, accounts.current_account()):
+        return redirect(url_for("album.view", album_id=album["id"]))  # album protégé : rien de son contenu
     return _noindex(make_response(render_template("album_poster.html", album=album, share_url=album_url(album),
                                                   look=albums.style(album),
                                                   qr=qr_service.svg(album_url(album), scale=10))))

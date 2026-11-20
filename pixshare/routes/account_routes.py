@@ -6,11 +6,12 @@ import os
 import time
 
 from flask import (Blueprint, abort, current_app, flash, make_response, redirect, render_template, request,
-                   send_from_directory, url_for)
+                   send_from_directory, session, url_for)
 from werkzeug.utils import secure_filename
 
 from pixshare.security.csrf import validate_csrf
 from pixshare.services import account_service as accounts
+from pixshare.services import device_service
 from pixshare.services.auth_service import is_admin, is_locked, register_fail, reset_fail
 from pixshare.services.file_service import (
     FileTooLargeError,
@@ -195,18 +196,95 @@ def login():
                 status = 403
             else:
                 reset_fail("acct:" + ip)
-                accounts.login(rec)
-                get_guest_token()
-                claimed = claim_device_files(rec["id"])
-                flash("Connecté ✅" + (f" {claimed} fichier(s) de ce navigateur ajouté(s) à votre compte." if claimed else ""),
-                      "success")
-                target = request.args.get("next") or ""
-                if not target.startswith("/") or target.startswith("//"):
-                    target = url_for("public.index")
-                return attach_guest_cookie(redirect(target))
+                known = device_service.current_device_id(rec)
+                if known or not accounts.mail_ready():
+                    # Appareil déjà reconnu (ou envoi de mails en panne : on ne bloque pas les membres dehors).
+                    return _finish_login(rec, known)
+                ok, message = device_service.start_challenge(rec)
+                if ok:
+                    return redirect(url_for("account.verify", next=_safe_next()))
+                flash(message, "warning")
+                status = 429
     response = _page("account_login.html", title="Connexion", email=email, accounts_on=accounts_enabled())
     response.status_code = status
     return response
+
+
+def _safe_next() -> str:
+    target = request.args.get("next") or ""
+    return target if target.startswith("/") and not target.startswith("//") else ""
+
+
+def _finish_login(rec: dict, device_id: str = ""):
+    accounts.login(rec, device_id)
+    get_guest_token()
+    claimed = claim_device_files(rec["id"])
+    flash("Connecté ✅" + (f" {claimed} fichier(s) de ce navigateur ajouté(s) à votre compte." if claimed else ""),
+          "success")
+    return attach_guest_cookie(redirect(_safe_next() or url_for("public.index")))
+
+
+@account_bp.after_app_request
+def _device_cookie(response):
+    return device_service.set_cookie_if_needed(response)
+
+
+@account_bp.route("/connexion/verification", methods=["GET", "POST"], endpoint="verify")
+def verify():
+    """Nouvel appareil : le code à 6 chiffres reçu par mail."""
+    rec, _cid = device_service.pending()
+    if not rec:
+        flash("La vérification a expiré. Reconnectez-vous.", "warning")
+        return redirect(url_for("account.login"))
+    status = 200
+    if request.method == "POST":
+        validate_csrf()
+        ok_rec, message = device_service.check_code(request.form.get("code") or "")
+        if ok_rec:
+            if ok_rec.get("status") != "active":
+                flash("Ce compte est suspendu.", "danger")
+                return redirect(url_for("account.login"))
+            device_id = device_service.trust_current(ok_rec["id"])
+            return _finish_login(ok_rec, device_id)
+        flash(message, "danger")
+        if not device_service.pending()[0]:
+            return redirect(url_for("account.login"))
+        status = 401
+    response = _page("account_verify.html", title="Vérification", email=device_service.mask_email(rec.get("email", "")),
+                     minutes=device_service.CODE_MINUTES, next=_safe_next())
+    response.status_code = status
+    return response
+
+
+@account_bp.route("/connexion/verification/renvoyer", methods=["POST"], endpoint="verify_resend")
+def verify_resend():
+    validate_csrf()
+    rec, _cid = device_service.pending()
+    if not rec:
+        return redirect(url_for("account.login"))
+    ok, message = device_service.start_challenge(rec)
+    flash("Nouveau code envoyé ✅" if ok else message, "success" if ok else "warning")
+    return redirect(url_for("account.verify", next=_safe_next()))
+
+
+@account_bp.route("/compte/pas-moi/<token>", methods=["GET", "POST"], endpoint="not_me")
+def not_me(token):
+    """Lien « Ce n'était pas moi » du mail de code : tout le monde est déconnecté, un lien de nouveau mot de passe part."""
+    rec, error = accounts.read_token("notme", token)
+    if not rec:
+        return _page("account_message.html", title="Lien invalide", heading="Lien invalide", text=error), 400
+    if request.method == "POST":
+        validate_csrf()
+        rec = accounts.lock_out_everyone(rec["id"])
+        accounts.logout()
+        session.pop(device_service.CHALLENGE_SESSION, None)
+        sent = accounts.send_reset(rec)
+        return _page("account_message.html", title="Compte protégé", heading="Votre compte est protégé ✅",
+                     text="Tous les appareils sont déconnectés et ne sont plus reconnus. "
+                          + ("Un lien pour choisir un nouveau mot de passe vient de partir dans votre boîte mail : "
+                             "utilisez-le maintenant, car la personne connaît votre mot de passe actuel."
+                             if sent else "Choisissez maintenant un nouveau mot de passe avec « Mot de passe oublié »."))
+    return _page("account_not_me.html", title="Ce n'était pas moi", email=device_service.mask_email(rec.get("email", "")))
 
 
 @account_bp.route("/deconnexion", methods=["POST"], endpoint="logout")
@@ -256,7 +334,8 @@ def reset(token):
                 flash(str(exc), "warning")
             else:
                 if rec.get("status") == "active":
-                    accounts.login(rec)
+                    accounts.login(rec)   # ce navigateur a prouvé l'accès à la boîte mail : il est reconnu
+                    device_service.remove_all_but(rec["id"], session[accounts.SESSION_KEY]["d"])
                     flash("Nouveau mot de passe enregistré ✅ Les autres appareils sont déconnectés.", "success")
                     return redirect(url_for("account.page"))
                 flash("Nouveau mot de passe enregistré.", "success")
@@ -273,7 +352,9 @@ def _account_page(rec: dict, new_key: str = ""):
     return _page("account_page.html", title="Mon compte", rec=rec, file_count=len(files),
                  pending_count=sum(1 for m in files if (m.get("status") or "").lower() == "pending"),
                  limits=limits_table(), password_min=accounts.PASSWORD_MIN, new_key=new_key,
-                 plan=plan_limits(rec), strikes_max=accounts.strikes_max())
+                 plan=plan_limits(rec), strikes_max=accounts.strikes_max(),
+                 devices=sorted(device_service.devices(rec), key=lambda d: d.get("seen") or "", reverse=True),
+                 this_device=device_service.current_device_id(rec))
 
 
 @account_bp.route("/compte", methods=["GET"], endpoint="page")
@@ -282,6 +363,21 @@ def page():
     if not rec:
         return redirect(url_for("account.login", next="/compte"))
     return _account_page(rec)
+
+
+@account_bp.route("/compte/appareils/retirer", methods=["POST"], endpoint="device_remove")
+def device_remove():
+    """Retire un appareil reconnu : il est déconnecté aussitôt et devra être vérifié par mail."""
+    validate_csrf()
+    rec = accounts.current_account()
+    if not rec:
+        return redirect(url_for("account.login"))
+    if request.form.get("all_others") == "1":
+        n = device_service.remove_all_but(rec["id"], device_service.current_device_id(rec))
+        flash(f"{n} autre(s) appareil(s) déconnecté(s) ✅", "success")
+    elif device_service.remove(rec["id"], request.form.get("device_id") or ""):
+        flash("Appareil retiré et déconnecté ✅", "success")
+    return redirect(url_for("account.page") + "#appareils")
 
 
 @account_bp.route("/compte/extension/cle", methods=["POST"], endpoint="extension_key")
@@ -322,8 +418,10 @@ def change_password():
         except accounts.AccountError as exc:
             flash(str(exc), "warning")
         else:
-            accounts.login(rec)
-            flash("Mot de passe changé ✅ Les autres appareils sont déconnectés.", "success")
+            here = device_service.current_device_id(rec)
+            accounts.login(rec, here)
+            device_service.remove_all_but(rec["id"], session[accounts.SESSION_KEY]["d"])
+            flash("Mot de passe changé ✅ Les autres appareils sont déconnectés et devront être vérifiés.", "success")
     return redirect(url_for("account.page"))
 
 

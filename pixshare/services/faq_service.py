@@ -78,6 +78,12 @@ def faq() -> list[dict]:
         ("Comment signaler un contenu ?",
          "Avec le bouton « Signaler » sous chaque image, ou par le formulaire de contact. Les signalements sont "
          "vérifiés, et une image signalée peut être masquée en attendant la vérification.", [("Formulaire de contact", "public.contact")]),
+        ("Pourquoi me demande-t-on un code par mail à la connexion ?",
+         "Pour protéger votre compte et vos albums : sur un appareil ou un navigateur que le site ne connaît pas encore, "
+         "le bon mot de passe ne suffit pas, il faut aussi le code à 6 chiffres reçu par mail. Ensuite, cet appareil est "
+         "reconnu et le code n'est plus demandé. Vous pouvez voir et retirer vos appareils dans « Mon compte ». "
+         "Si vous recevez un code sans l'avoir demandé, quelqu'un connaît votre mot de passe : utilisez le bouton "
+         "« Ce n'était pas moi » du mail.", []),
         ("Le site utilise-t-il des cookies de pistage ?",
          "Non. PixShare n'utilise que des cookies techniques, nécessaires au fonctionnement du site (sécurité, "
          "connexion, historique de vos fichiers), sans publicité ni mesure d'audience.",

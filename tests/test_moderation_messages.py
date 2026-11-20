@@ -6,7 +6,7 @@ import pytest
 from PIL import Image
 
 from conftest import csrf
-from test_accounts import PASSWORD, form_post, mails, member, png, records, upload  # noqa: F401
+from test_accounts import PASSWORD, form_post, login_new_device, mails, member, png, records, upload  # noqa: F401
 
 from pixshare.services.json_services import load_db, save_db
 from pixshare.services.moderation_service import create_moderation_notice, pop_pending_notice, removal_message
@@ -107,7 +107,7 @@ def test_member_end_to_end_other_device(make_app, mails):
     assert records(app)[file_id]["status"] == "deleted"
 
     tablet = app.test_client()  # l'autre appareil : se connecte au même compte
-    form_post(tablet, "/connexion", email="alice@example.com", password=PASSWORD)
+    login_new_device(tablet, mails)
     page = tablet.get("/").get_data(as_text=True)
     assert "« vacances.png » a été retirée par la modération : nudité détectée" in page   # le message
     assert "retirée par la modération" in page and "Remplacer (même lien)" in page        # la trace dans Mes fichiers

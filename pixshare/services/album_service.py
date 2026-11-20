@@ -8,6 +8,7 @@
 """
 from __future__ import annotations
 
+import hashlib
 import secrets
 from datetime import timedelta
 
@@ -20,7 +21,7 @@ from pixshare.services.time_service import parse_dt, utcnow
 ALBUMS_FILE = "albums.json"
 NAME_MAX = 80
 DESCRIPTION_MAX = 300
-PASSWORD_MIN, PASSWORD_MAX = 4, 128
+PASSWORD_MIN, PASSWORD_MAX = 6, 128
 OWNER_UPLOADS_PER_HOUR = 300    # le membre qui remplit son album
 HUMAN_CHECK_HOURS = 3           # anti-robot validé une fois pour une série d'envois
 
@@ -418,20 +419,24 @@ def is_owner(album: dict, account: dict | None) -> bool:
     return bool(account and album and account.get("id") == album.get("owner"))
 
 
+def _unlock_mark(album: dict) -> str:
+    """Marque « album ouvert » liée au mot de passe actuel : le changer referme l'album à tous les invités."""
+    return album["id"] + ":" + hashlib.sha256(str(album.get("password_hash") or "").encode()).hexdigest()[:12]
+
+
 def unlocked(album: dict, account: dict | None = None) -> bool:
     from pixshare.services.auth_service import is_admin
     if not album.get("password_hash") or is_owner(album, account) or is_admin():
         return True
-    return album["id"] in (session.get("albums_ok") or [])
+    return _unlock_mark(album) in (session.get("albums_ok") or [])
 
 
 def unlock(album: dict, password: str) -> bool:
     if not album.get("password_hash") or not check_password_hash(album["password_hash"], password or ""):
         return False
-    ok = list(session.get("albums_ok") or [])
-    if album["id"] not in ok:
-        ok = (ok + [album["id"]])[-50:]
-    session["albums_ok"] = ok
+    mark = _unlock_mark(album)
+    ok = [m for m in (session.get("albums_ok") or []) if not str(m).startswith(album["id"] + ":") and m != album["id"]]
+    session["albums_ok"] = (ok + [mark])[-50:]
     return True
 
 

@@ -31,6 +31,7 @@ PASSWORD_MAX = 128
 EMAIL_MAX = 254
 CONFIRM_MAX_AGE = 48 * 3600
 RESET_MAX_AGE = 3600
+NOTME_MAX_AGE = 7 * 86400
 UNCONFIRMED_DAYS = 7
 ACCOUNT_STRIKES = 3
 _SALT = "pixshare-account-v1"
@@ -336,8 +337,11 @@ def delete_account(account_id: str) -> int:
 
 # ------------------------------------------------------------------ session
 
-def login(rec: dict) -> None:
-    session[SESSION_KEY] = {"id": rec["id"], "v": int(rec.get("pw_ver") or 0)}
+def login(rec: dict, device_id: str = "") -> None:
+    """Ouvre la session sur CET appareil (déjà reconnu, ou qui vient d'être vérifié)."""
+    from pixshare.services import device_service
+    device_id = device_id or device_service.trust_current(rec["id"])
+    session[SESSION_KEY] = {"id": rec["id"], "v": int(rec.get("pw_ver") or 0), "d": device_id}
     session.permanent = True
     g.pop("pixshare_account", None)
     _update(rec["id"], last_login_at=_now_iso())
@@ -355,10 +359,13 @@ def current_account() -> dict | None:
     rec = None
     info = session.get(SESSION_KEY)
     if isinstance(info, dict) and info.get("id"):
+        from pixshare.services import device_service
         found = get_account(str(info["id"]))
         if (found and found.get("confirmed_at") and found.get("status") == "active"
-                and int(found.get("pw_ver") or 0) == int(info.get("v") or -1)):
+                and int(found.get("pw_ver") or 0) == int(info.get("v") or -1)
+                and device_service.has_device(found, str(info.get("d") or ""))):  # appareil retiré = déconnecté
             rec = found
+            device_service.touch(found["id"], str(info["d"]))
         else:
             session.pop(SESSION_KEY, None)
     g.pixshare_account = rec
@@ -431,7 +438,7 @@ def make_token(kind: str, rec: dict) -> str:
 
 def read_token(kind: str, token: str) -> tuple[dict | None, str]:
     """(compte, "") si le lien est bon, sinon (None, message)."""
-    max_age = CONFIRM_MAX_AGE if kind == "confirm" else RESET_MAX_AGE
+    max_age = {"confirm": CONFIRM_MAX_AGE, "notme": NOTME_MAX_AGE}.get(kind, RESET_MAX_AGE)
     try:
         data = _serializer().loads(token, max_age=max_age)
     except SignatureExpired:
@@ -496,3 +503,22 @@ def send_reset(rec: dict) -> bool:
                  "Vous avez demandé à changer le mot de passe de votre compte PixShare. Le lien est valable 1 heure "
                  "et ne sert qu'une fois.\n\nSi ce n'est pas vous, ignorez ce message : votre mot de passe ne change pas.",
                  "Choisir un nouveau mot de passe", link)
+
+
+def send_login_code(rec: dict, code: str, device_label: str) -> bool:
+    link = url_for("account.not_me", token=make_token("notme", rec), _external=True)
+    return _send(rec, f"PixShare : votre code de connexion {code}",
+                 f"Votre code : {code}\n\nIl est valable 10 minutes. Il a été demandé pour une connexion à votre compte "
+                 f"depuis un nouvel appareil : {device_label}.\n\nSi ce n'est pas vous, ne donnez ce code à personne : "
+                 "quelqu'un connaît votre mot de passe. Le bouton ci-dessous déconnecte tous les appareils et vous "
+                 "envoie un lien pour choisir un nouveau mot de passe.",
+                 "Ce n'était pas moi", link)
+
+
+def lock_out_everyone(account_id: str) -> dict | None:
+    """« Ce n'était pas moi » : toutes les connexions sont fermées, plus aucun appareil reconnu, codes annulés."""
+    rec = get_account(account_id)
+    if not rec:
+        return None
+    return _update(account_id, pw_ver=int(rec.get("pw_ver") or 0) + 1, devices=[], login_challenges={},
+                   ext_key_hash="", ext_key_created="", ext_key_last_used="")

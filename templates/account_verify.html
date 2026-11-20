@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block sr_h1 %}{% endblock %}
+{% block robots %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 480px;">
+  <h1 class="h4 mb-3">📩 Vérification du nouvel appareil</h1>
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <p class="mb-3">Pour protéger votre compte, nous venons d'envoyer un code à 6 chiffres à <strong>{{ email }}</strong>.
+        Il est valable {{ minutes }} minutes.</p>
+      <form method="post" class="row g-3" action="{{ url_for('account.verify', next=next or None) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="col-12">
+          <label class="form-label" for="loginCode">Code reçu par mail</label>
+          <input id="loginCode" class="form-control form-control-lg text-center" style="letter-spacing:.35em; font-variant-numeric: tabular-nums;"
+                 name="code" inputmode="numeric" pattern="[0-9 ]{6,7}" maxlength="7" autocomplete="one-time-code" required autofocus
+                 placeholder="••••••">
+        </div>
+        <div class="col-12">
+          <button class="btn btn-primary w-100" type="submit">Valider</button>
+        </div>
+      </form>
+      <div class="small text-muted mt-3">Cet appareil sera ensuite reconnu : le code ne sera plus demandé ici.
+        Pensez à regarder dans les courriers indésirables.</div>
+      <form method="post" action="{{ url_for('account.verify_resend', next=next or None) }}" class="mt-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="btn btn-link btn-sm p-0" type="submit">Je n'ai rien reçu : renvoyer un code</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

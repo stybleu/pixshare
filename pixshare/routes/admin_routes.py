@@ -1331,6 +1331,7 @@ def admin_db_backup():
 @admin_bp.route("/admin/sauvegarde/lancer", methods=["POST"], endpoint="admin_backup_now")
 @admin_required
 def admin_backup_now():
+    validate_csrf()
     from pixshare.services import backup_service
     if not backup_service.is_configured():
         flash("Sauvegarde non configurée : ajoute les 4 variables R2_* sur Render.", "warning")
@@ -1344,6 +1345,7 @@ def admin_backup_now():
 @admin_bp.route("/admin/sauvegarde/restaurer", methods=["POST"], endpoint="admin_backup_restore")
 @admin_required
 def admin_backup_restore():
+    validate_csrf()
     from pixshare.services import backup_service
     if (request.form.get("confirm") or "").strip().upper() != "RESTAURER":
         flash("Restauration annulée : écris RESTAURER pour confirmer.", "warning")

@@ -27,7 +27,7 @@
       </div>
       <div class="col-12 col-md-6">
         <label class="form-label small mb-0" for="al-pass">Mot de passe (facultatif)</label>
-        <input class="form-control" id="al-pass" name="password" type="password" minlength="4" maxlength="128" autocomplete="new-password" placeholder="Laissez vide : le lien suffit">
+        <input class="form-control" id="al-pass" name="password" type="password" minlength="6" maxlength="128" autocomplete="new-password" placeholder="Laissez vide : le lien suffit">
       </div>
       <div class="col-12">
         <label class="form-label small mb-0" for="al-theme">Type d'événement (mise en page, modifiable ensuite)</label>
@@ -88,7 +88,7 @@
         </div>
         <div class="col-12 col-md-6">
           <label class="form-label small mb-0" for="pass-{{ a.id }}">{% if a.password_hash %}Nouveau mot de passe{% else %}Ajouter un mot de passe{% endif %}</label>
-          <input class="form-control" id="pass-{{ a.id }}" name="password" type="password" minlength="4" maxlength="128" autocomplete="new-password" placeholder="Laissez vide pour ne rien changer">
+          <input class="form-control" id="pass-{{ a.id }}" name="password" type="password" minlength="6" maxlength="128" autocomplete="new-password" placeholder="Laissez vide pour ne rien changer">
         </div>
         <div class="col-12">
           <label class="form-label small mb-0" for="desc-{{ a.id }}">Petit mot</label>

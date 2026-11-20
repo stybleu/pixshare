@@ -673,8 +673,12 @@ def unlock_file(file_id):
         return target
 
     # Contre les essais en série : 8 erreurs = 15 minutes d'attente (par IP).
+    # … et par fichier, toutes adresses confondues (contre un réseau de machines) : 30 erreurs = 15 minutes.
     key = "filepw:" + (get_client_ip() or "?")
+    file_key = "filepw-all:" + file_id
     locked, seconds = is_locked(key)
+    if not locked:
+        locked, seconds = is_locked(file_key)
     if locked:
         flash(f"Trop d'essais. Réessayez dans {max(1, seconds // 60)} min.", "warning")
         return target
@@ -685,6 +689,7 @@ def unlock_file(file_id):
         return target
 
     register_fail(key, max_failures=8)
+    register_fail(file_key, max_failures=30)
     flash("Mot de passe incorrect.", "danger")
     return target
 

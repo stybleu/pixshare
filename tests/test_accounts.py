@@ -56,6 +56,16 @@ def member(client, mails, email="alice@example.com"):
     return client
 
 
+def login_new_device(client, mails, email="alice@example.com", password=PASSWORD):
+    """Connexion depuis un autre appareil : mot de passe, puis code reçu par mail."""
+    resp = form_post(client, "/connexion", email=email, password=password)
+    assert resp.status_code == 302 and "/connexion/verification" in resp.headers["Location"], resp.status_code
+    code = re.search(r"Votre code : (\d{6})", mails[-1]["body"]).group(1)
+    resp = form_post(client, "/connexion/verification", code=code)
+    assert resp.status_code == 302, resp.status_code
+    return client
+
+
 def upload(client, name="a.png", data=None, **extra):
     resp = client.post("/", data={"csrf_token": csrf(client), "file": (io.BytesIO(data or png()), name), **extra},
                        content_type="multipart/form-data")
@@ -170,7 +180,7 @@ def test_my_images_on_every_device_with_private_preview(make_app, mails):
     member(phone, mails)                             # à l'inscription, il rejoint le compte
     upload(phone, "apres.png")
     pc = app.test_client()
-    form_post(pc, "/connexion", email="alice@example.com", password=PASSWORD)
+    login_new_device(pc, mails)
     html = pc.get("/").get_data(as_text=True)
     assert "avant.png" in html and "apres.png" in html and "tous vos appareils" in html
     file_id = next(fid for fid, m in records(app).items() if m["original_name"] == "apres.png")

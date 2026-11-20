@@ -54,6 +54,38 @@
     </div>
   </div>
 
+  <div class="card shadow-sm mb-3" id="appareils">
+    <div class="card-body">
+      <h2 class="h6">🔐 Appareils reconnus</h2>
+      <p class="small text-muted">Un nouvel appareil doit taper un code reçu par mail avant d'accéder à votre compte.
+        Un appareil que vous ne reconnaissez pas ? Retirez-le : il est déconnecté aussitôt.</p>
+      <ul class="list-unstyled mb-2">
+        {% for d in devices %}
+        <li class="d-flex justify-content-between align-items-center gap-2 py-2 {% if not loop.last %}border-bottom{% endif %}">
+          <div>
+            <div class="fw-semibold">{{ d.label }} {% if d.id == this_device %}<span class="badge text-bg-success">cet appareil</span>{% endif %}</div>
+            <div class="small text-muted">Ajouté le {{ d.added|date_fr }} · vu le {{ d.seen|date_fr }}</div>
+          </div>
+          {% if d.id != this_device %}
+          <form method="post" action="{{ url_for('account.device_remove') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="device_id" value="{{ d.id }}">
+            <button class="btn btn-outline-danger btn-sm" type="submit">Retirer</button>
+          </form>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% if devices|length > 1 %}
+      <form method="post" action="{{ url_for('account.device_remove') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="all_others" value="1">
+        <button class="btn btn-outline-danger btn-sm" type="submit">Déconnecter tous les autres appareils</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+
   <div class="card shadow-sm mb-3" id="extension">
     <div class="card-body">
       <h2 class="h6">Extension de navigateur</h2>
