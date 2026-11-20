@@ -309,7 +309,7 @@ def test_guestbook_signed_moderated_and_safe(app, mails, monkeypatch):
 
 def test_site_texts_say_albums_are_for_members(app):
     client = app.test_client()
-    assert "créer des albums photo à partager par QR code" in client.get("/").get_data(as_text=True)
+    assert "Créez un album souvenir" in client.get("/").get_data(as_text=True)
     cgu = client.get("/cgu").get_data(as_text=True)
     assert "La création d’albums est réservée aux membres" in cgu and "livre d’or" in cgu
     assert "Albums photo à partager par QR code" in client.get("/inscription").get_data(as_text=True)

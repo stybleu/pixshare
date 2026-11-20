@@ -123,7 +123,7 @@ def test_guest_and_member_limits(make_app, mails):
     html = guest.get("/").get_data(as_text=True)
     values = [int(v) for v in re.findall(r'<option value="(\d+)"', html.split('id="lifetimeSelect"')[1].split("</select>")[0])]
     assert values[0] == 2 and max(values) == 120  # 2 min à 2 h sans compte
-    assert "Créez un compte gratuit" in html
+    assert "Compte gratuit : plus de temps" in html
 
     user = member(app.test_client(), mails)
     html = user.get("/").get_data(as_text=True)
@@ -374,7 +374,7 @@ def test_password_and_view_limit_are_for_members_only(make_app, mails):
     guest = app.test_client()
     html = guest.get("/").get_data(as_text=True)
     assert 'name="file_password"' not in html and 'name="view_limit_enabled"' not in html
-    assert "réservé aux comptes" in html
+    assert "Mot de passe, limite de vues et amélioration de la photo : avec un" in html
     upload(guest, "invite.png", file_password="secret123", view_limit_enabled="1", max_views="3")
 
     user = member(app.test_client(), mails)

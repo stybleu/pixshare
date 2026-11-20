@@ -251,7 +251,7 @@ def index():
                 return attach_guest_cookie(redirect(url_for("public.index")))
 
             try:
-                _, lifetime, permanent = save_uploaded_file(
+                new_id, lifetime, permanent = save_uploaded_file(
                     f,
                     original_name=original,
                     client_ip=ip,
@@ -276,8 +276,9 @@ def index():
                 flash("Fichier envoyé ✅ (sans expiration)", "success")
             else:
                 flash(f"Fichier envoyé ✅ (expiration : {format_duration_minutes(lifetime)})", "success")
-                
-            return attach_guest_cookie(redirect(url_for("public.index")))
+
+            # On arrive directement sur le fichier envoyé, avec son lien à copier.
+            return attach_guest_cookie(redirect(url_for("public.index", nouveau=new_id, _anchor=f"file-{new_id}")))
 
         if not rate_limited and image_url:
             try:
@@ -286,7 +287,7 @@ def index():
                     current_app.config["UPLOAD_FOLDER"],
                     max_size_bytes,
                 )
-                _, lifetime, permanent = save_saved_local_file(
+                new_id, lifetime, permanent = save_saved_local_file(
                     temp_path,
                     original_name=original_name,
                     client_ip=ip,
@@ -313,7 +314,8 @@ def index():
             else:
                 flash(f"Image importée ✅ (expiration : {format_duration_minutes(lifetime)})", "success")
 
-            return attach_guest_cookie(redirect(url_for("public.index")))
+            # On arrive directement sur le fichier envoyé, avec son lien à copier.
+            return attach_guest_cookie(redirect(url_for("public.index", nouveau=new_id, _anchor=f"file-{new_id}")))
 
         if not rate_limited:
             flash("Choisissez un fichier ou collez une URL d'image directe.", "warning")
