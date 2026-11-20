@@ -180,5 +180,6 @@
   "teaser_albums_title": "A wedding, a party? Create a memory album",
   "teaser_albums_text": "Your guests add their photos with a QR code.",
   "home_faq_link": "A question? See the FAQ",
-  "optional": "optional"
+  "optional": "optional",
+  "enter_to_send": "Press <kbd>Enter</kbd> to upload"
 }

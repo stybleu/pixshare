@@ -180,5 +180,6 @@
   "teaser_albums_title": "Un mariage, une fête ? Créez un album souvenir",
   "teaser_albums_text": "Vos invités ajoutent leurs photos grâce à un QR code.",
   "home_faq_link": "Une question ? Consultez les questions fréquentes",
-  "optional": "facultatif"
+  "optional": "facultatif",
+  "enter_to_send": "Appuyez sur <kbd>Entrée</kbd> pour envoyer"
 }

@@ -71,6 +71,8 @@
   .df .hero-min h1 { font-size: clamp(1.5rem, 5.5vw, 2.2rem); font-weight: 700; margin-bottom: .35rem; }
   .df .dropzone { padding: 34px 18px; min-height: 170px; display: flex; flex-direction: column; justify-content: center; }
   .df .dropzone:focus-visible { outline: 3px solid rgba(13,110,253,.5); outline-offset: 2px; }
+  .enter-hint kbd { font-size: .75em; }
+  @media (hover: none), (pointer: coarse) { .enter-hint { display: none !important; } }  /* téléphone : pas de touche Entrée */
   .df .dz-icon { font-size: 2.2rem; line-height: 1; margin-bottom: .4rem; }
   .df .dz-title { font-size: 1.1rem; }
   .df .url-import summary, .df .resize-details summary { cursor: pointer; padding: .4rem 0; }
@@ -308,6 +310,7 @@
             <button id="submitBtn" class="btn btn-primary btn-lg w-100" type="submit" {% if not uploads_enabled %}disabled{% endif %}>
               {% if uploads_enabled %}{{ _("upload") }}{% else %}{{ _("upload_suspended") }}{% endif %}
             </button>
+            <div id="enterHint" class="enter-hint small text-muted text-center mt-1" hidden>⌨️ {{ _("enter_to_send")|replace("&lt;kbd&gt;", "<kbd>")|replace("&lt;/kbd&gt;", "</kbd>")|safe }}</div>
             <div class="small text-muted text-center mt-2">
               {% if account %}✔ {{ _("limits_member_line")|format(limits.member.life, limits.member.mb) }} · <a href="{{ url_for('account.page') }}">{{ _("nav_account") }}</a>
               {% else %}{{ _("limits_guest_line")|format(limits.guest.life, limits.guest.mb) }}{% if accounts_open and not admin %} · <a href="{{ url_for('account.signup') }}">{{ _("free_account_more") }}</a>{% endif %}{% endif %}
@@ -831,11 +834,32 @@ function copyById(id){
 
   dz.addEventListener("click", () => input.click());
 
+  // Clavier : Espace ouvre le choix du fichier. Entrée ouvre le choix tant qu'aucun fichier n'est choisi,
+  // puis envoie l'image (sur ordinateur, après avoir choisi un fichier, on appuie juste sur Entrée).
   dz.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" || e.key === " ") {
+    if (e.key === " ") {
       e.preventDefault();
       input.click();
     }
+  });
+
+  function fileChosen() {
+    const url = imageUrlInput;
+    return !!(input.files && input.files.length) || !!(url && url.value.trim());
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" || e.isComposing || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey || e.repeat) return;
+    const a = document.activeElement;
+    const neutral = !a || a === document.body || a === document.documentElement || a === dz || a === input;
+    if (!neutral) return;                       // un champ, un bouton ou un lien garde son comportement normal
+    if (!fileChosen()) {
+      if (a === dz) { e.preventDefault(); input.click(); }
+      return;
+    }
+    e.preventDefault();
+    if (!submitBtn || submitBtn.disabled) return;
+    if (form.requestSubmit) form.requestSubmit(submitBtn); else submitBtn.click();
   });
 
   ["dragenter", "dragover"].forEach(evt => {
@@ -861,6 +885,7 @@ function copyById(id){
       input.files = files;
       if (imageUrlInput) imageUrlInput.value = "";
       showName();
+      updateEnterHint();
       return;
     }
 
@@ -872,11 +897,17 @@ function copyById(id){
     }
   });
 
+  const enterHint = document.getElementById("enterHint");
+  function updateEnterHint() {
+    if (enterHint) enterHint.hidden = !fileChosen();
+  }
+
   input.addEventListener("change", () => {
     if (input.files && input.files.length && imageUrlInput) {
       imageUrlInput.value = "";
     }
     showName();
+    updateEnterHint();
   });
 
   if (imageUrlInput) {
