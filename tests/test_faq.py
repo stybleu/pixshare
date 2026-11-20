@@ -29,3 +29,15 @@ def test_faq_follows_settings(make_app):
     page = app.test_client().get("/faq").get_data(as_text=True)
     assert "7 Mo sans compte" in page
     assert "Comment créer un album" not in page and "albums souvenirs à partager" not in page
+
+
+def test_faq_google_answer_is_clear_and_donation_is_linked(make_app):
+    from pixshare.services.settings_service import get_support_url
+    app = make_app()
+    page = app.test_client().get("/faq").get_data(as_text=True)
+    assert "apparaissent pas dans les résultats de Google" in page
+    assert "signalés à Google" not in page
+    with app.app_context():
+        url = get_support_url()
+    if url:
+        assert f'href="{url}" target="_blank" rel="noopener noreferrer">☕ Soutenir PixShare' in page

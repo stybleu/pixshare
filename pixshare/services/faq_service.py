@@ -65,12 +65,13 @@ def faq() -> list[dict]:
         ("Qui peut voir mes images ?",
          "Uniquement les personnes à qui vous donnez le lien. Vos images ne sont listées nulle part sur le site.", []),
         ("Mes images apparaissent-elles sur Google ?",
-         "Non. Les pages des fichiers, les images et les albums sont signalés à Google comme ne devant pas "
-         "être indexés.", []),
+         "Non. Vos images, vos fichiers et vos albums n'apparaissent pas dans les résultats de Google : le site "
+         "demande aux moteurs de recherche de ne pas les référencer. Seules les personnes qui ont le lien peuvent "
+         "les voir.", []),
         ("Pourquoi mon image a-t-elle été refusée ou supprimée ?",
          "Les images sont vérifiées automatiquement : la nudité, la pornographie et les contenus illégaux sont "
          "interdits par les conditions d'utilisation. Une image douteuse peut être mise de côté pour vérification, "
-         "ou supprimée. Dans ce cas, un message vous indique laquelle et pourquoi, et elle reste signalée "
+         "ou supprimée. Dans ce cas, un message vous indique laquelle et pourquoi, et elle reste indiquée "
          "7 jours dans « Mes fichiers ». Avec un compte, ce message vous suit sur tous vos appareils, et vous "
          "pouvez remplacer l'image par une autre en gardant le même lien. Une image déjà interdite (même "
          "renommée ou redimensionnée) ne peut pas être republiée.", [("Lire les conditions d'utilisation", "public.cgu")]),
@@ -83,8 +84,8 @@ def faq() -> list[dict]:
          [("Mentions légales", "public.mentions_legales")]),
         ("Le service est-il payant ?",
          "Non, PixShare est gratuit et sans publicité."
-         + (" Si vous souhaitez soutenir le site, un bouton de don se trouve en bas des pages." if get_support_url() else ""),
-         []),
+         + (" Si vous souhaitez soutenir le site, vous pouvez faire un don." if get_support_url() else ""),
+         [("☕ Soutenir PixShare", get_support_url())] if get_support_url() else []),
     ]))
     return [{"title": title, "items": [{"q": q, "a": a, "links": links} for q, a, links in items]}
             for title, items in sections]

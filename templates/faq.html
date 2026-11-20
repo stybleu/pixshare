@@ -28,7 +28,7 @@
         <summary>{{ item.q }}</summary>
         <div class="answer">
           {{ item.a }}
-          {% for label, endpoint in item.links %}<br><a href="{{ url_for(endpoint) }}">{{ label }} →</a>{% endfor %}
+          {% for label, endpoint in item.links %}<br>{% if endpoint.startswith("http") %}<a href="{{ endpoint }}" target="_blank" rel="noopener noreferrer">{{ label }} →</a>{% else %}<a href="{{ url_for(endpoint) }}">{{ label }} →</a>{% endif %}{% endfor %}
         </div>
       </details>
       {% endfor %}
