@@ -45,19 +45,66 @@ def build_notice_message(reason: str) -> str:
     return "Un de vos fichiers a été supprimé par l’administration de PixShare."
 
 
+# Suppressions qui ne viennent pas de la modération (l'auteur, la fin de vie, la limite de vues…).
+NOT_MODERATION = ("deleted", "view_limit", "account_deleted", "expired", "album_deleted", "")
+REMOVED_VISIBLE_DAYS = 7
+
+
+def is_moderation_removal(meta: dict) -> bool:
+    return (meta.get("status") or "") == "deleted" and (meta.get("delete_reason") or "") not in NOT_MODERATION
+
+
+def removal_cause(meta: dict, reason: str | None = None) -> str:
+    """Pourquoi l'image a été retirée, en mots simples (sans détailler ce que le filtre a vu)."""
+    reason = (reason or meta.get("delete_reason") or "").strip().lower()
+    label = (meta.get("moderation_label") or "").strip().lower()
+    if reason == "contenu_illicite":
+        return "contenu contraire à la loi"
+    if reason == "spam_abus":
+        return "usage abusif du service"
+    if label == "deja_refusee":
+        return "image identique ou très proche d'une image déjà interdite"
+    if label == "signalement":
+        return "image signalée par des visiteurs, puis vérifiée"
+    if label and label not in ("analyse_impossible", "admin"):
+        if reason == "auto:admin_absent":
+            return "nudité possible détectée par le filtre automatique"
+        return "nudité détectée"
+    return "contenu contraire aux conditions d'utilisation"
+
+
+def removal_message(meta: dict, reason: str | None = None) -> str:
+    name = (meta.get("original_name") or "").strip()
+    image = str(meta.get("server_name") or name).lower().endswith(
+        (".png", ".jpg", ".jpeg", ".gif", ".webp", ".tif", ".tiff", ".bmp", ".jfif", ".jpe", ".apng", ".heic", ".heif"))
+    if image:
+        text = f"Votre image « {name} » a été retirée" if name else "Une de vos images a été retirée"
+    else:
+        text = f"Votre fichier « {name} » a été retiré" if name else "Un de vos fichiers a été retiré"
+    text += f" par la modération : {removal_cause(meta, reason)}."
+    if meta.get("account_id"):
+        text += (" Vous pouvez la remplacer par une autre" if image else " Vous pouvez le remplacer par un autre") + \
+            " en gardant le même lien, depuis « Mes fichiers »."
+    return text
+
+
 def create_moderation_notice(meta: dict, file_id: str, reason: str = "non_respect_cgu", message: str | None = None) -> bool:
     guest_token = (meta.get("guest_token") or "").strip()
-    if not guest_token or guest_token.startswith("api:"):
+    account_id = (meta.get("account_id") or "").strip()
+    if guest_token.startswith("api:"):
+        guest_token = ""
+    if not guest_token and not account_id:
         return False
 
     notices = _cleanup_notices(load_moderation_notices())
     notices.append({
         "id": secrets.token_urlsafe(12).replace("-", "").replace("_", ""),
         "guest_token": guest_token,
+        "account_id": account_id,  # un membre le voit sur n'importe lequel de ses appareils
         "ip": (meta.get("ip") or "").strip(),
         "file_id": file_id,
         "reason": (reason or "non_respect_cgu").strip(),
-        "message": (message or build_notice_message(reason)).strip(),
+        "message": (message or removal_message(meta, reason)).strip(),
         "level": "warning",
         "created_at": utcnow().isoformat(timespec="seconds"),
         "shown": False,
@@ -67,9 +114,10 @@ def create_moderation_notice(meta: dict, file_id: str, reason: str = "non_respec
     return True
 
 
-def pop_pending_notice(guest_token: str) -> dict | None:
+def pop_pending_notice(guest_token: str, account_id: str = "") -> dict | None:
     guest_token = (guest_token or "").strip()
-    if not guest_token:
+    account_id = (account_id or "").strip()
+    if not guest_token and not account_id:
         return None
 
     notices = _cleanup_notices(load_moderation_notices())
@@ -79,7 +127,9 @@ def pop_pending_notice(guest_token: str) -> dict | None:
     for item in notices:
         if bool(item.get("shown", False)):
             continue
-        if (item.get("guest_token") or "").strip() != guest_token:
+        mine = (guest_token and (item.get("guest_token") or "").strip() == guest_token) or \
+            (account_id and (item.get("account_id") or "").strip() == account_id)
+        if not mine:
             continue
 
         item["shown"] = True

@@ -28,6 +28,7 @@ from pixshare.services.file_service import (
     is_image_filename,
     is_video_filename,
     list_guest_files,
+    list_removed_files,
     register_unique_view,
     requires_image_moderation,
     save_saved_local_file,
@@ -159,10 +160,11 @@ def _read_file_password():
 @public_bp.before_request
 def flash_pending_moderation_notice():
     guest_token = get_existing_guest_token()
-    if not guest_token:
+    account = current_account()
+    if not guest_token and not account:
         return
 
-    notice = pop_pending_notice(guest_token)
+    notice = pop_pending_notice(guest_token, (account or {}).get("id", ""))
     if not notice:
         return
 
@@ -340,6 +342,7 @@ def index():
     response = make_response(render_template(
         "index.html",
         guest_files=guest_files,
+        removed_files=list_removed_files(),
         max_mb=get_max_upload_size_mb(),
         admin=is_admin(),
         version=current_app.config["APP_VERSION"],

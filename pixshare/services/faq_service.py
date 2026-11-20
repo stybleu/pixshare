@@ -70,7 +70,10 @@ def faq() -> list[dict]:
         ("Pourquoi mon image a-t-elle été refusée ou supprimée ?",
          "Les images sont vérifiées automatiquement : la nudité, la pornographie et les contenus illégaux sont "
          "interdits par les conditions d'utilisation. Une image douteuse peut être mise de côté pour vérification, "
-         "ou supprimée.", [("Lire les conditions d'utilisation", "public.cgu")]),
+         "ou supprimée. Dans ce cas, un message vous indique laquelle et pourquoi, et elle reste signalée "
+         "7 jours dans « Mes fichiers ». Avec un compte, ce message vous suit sur tous vos appareils, et vous "
+         "pouvez remplacer l'image par une autre en gardant le même lien. Une image déjà interdite (même "
+         "renommée ou redimensionnée) ne peut pas être republiée.", [("Lire les conditions d'utilisation", "public.cgu")]),
         ("Comment signaler un contenu ?",
          "Avec le bouton « Signaler » sous chaque image, ou par le formulaire de contact. Les signalements sont "
          "vérifiés, et une image signalée peut être masquée en attendant la vérification.", [("Formulaire de contact", "public.contact")]),

@@ -321,7 +321,7 @@
     </div>
   </div>
 
-  <div class="col-12 col-lg-8 mx-auto {% if not guest_files %}d-none{% endif %}">
+  <div class="col-12 col-lg-8 mx-auto {% if not guest_files and not removed_files %}d-none{% endif %}">
     <div class="card shadow-sm">
       <div class="card-body">
 
@@ -335,6 +335,22 @@
 
         <hr class="my-3">
 
+        {% for r in removed_files %}
+          <div class="mb-3 p-2 border border-danger-subtle rounded small" id="file-{{ r.id }}" style="scroll-margin-top: 90px">
+            <div class="fw-semibold">🚫 « {{ r.original_name }} » retirée par la modération</div>
+            <div class="text-muted">Raison : {{ r.cause }} · {{ r.deleted_at|date_fr }}.
+              <a href="{{ url_for('public.faq') }}">Pourquoi ?</a></div>
+            {% if r.replaceable %}
+            <form method="post" enctype="multipart/form-data" action="{{ url_for('account.replace', file_id=r.id) }}"
+                  class="d-flex flex-wrap gap-2 align-items-center mt-2">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <label class="visually-hidden" for="restore_{{ r.id }}">Nouvelle image</label>
+              <input id="restore_{{ r.id }}" class="form-control form-control-sm" style="max-width:260px" type="file" name="file" accept="image/*,video/*" required>
+              <button class="btn btn-sm btn-outline-primary" type="submit">Remplacer (même lien)</button>
+            </form>
+            {% endif %}
+          </div>
+        {% endfor %}
         {% if guest_files and guest_files|length > 0 %}
           {% for f in guest_files %}
             {% set open_url = f.raw_url if f.previewable else f.download_url %}

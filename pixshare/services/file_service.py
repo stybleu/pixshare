@@ -637,6 +637,47 @@ def list_guest_files():
     return items
 
 
+def list_removed_files():
+    """Fichiers retirés par la modération ces derniers jours : on garde une trace dans « Mes fichiers »,
+    pour que la personne sache pourquoi (et, pour un membre, puisse la remplacer en gardant le lien)."""
+    from .moderation_service import REMOVED_VISIBLE_DAYS, is_moderation_removal, removal_cause
+    db = load_db()
+    guest_token = get_guest_token()
+    account_id = _account_id()
+    now = utcnow()
+    items = []
+    for file_id, meta in db.items():
+        if not isinstance(meta, dict) or not is_moderation_removal(meta):
+            continue
+        if meta.get("guest_token") != guest_token and not (account_id and meta.get("account_id") == account_id):
+            continue
+        try:
+            if now - parse_dt(meta.get("deleted_at") or "") > timedelta(days=REMOVED_VISIBLE_DAYS):
+                continue
+        except Exception:
+            continue
+        items.append({"id": file_id, "original_name": meta.get("original_name") or "fichier",
+                      "cause": removal_cause(meta), "deleted_at": meta.get("deleted_at") or "",
+                      "replaceable": can_replace_removed(meta, account_id)})
+    return sorted(items, key=lambda m: m["deleted_at"], reverse=True)
+
+
+def can_replace_removed(meta: dict, account_id: str | None) -> bool:
+    """Un membre peut remplacer une image retirée par la modération (même lien), tant qu'elle n'a pas expiré."""
+    from .moderation_service import REMOVED_VISIBLE_DAYS, is_moderation_removal
+    if not account_id or meta.get("account_id") != account_id or not is_moderation_removal(meta):
+        return False
+    now = utcnow()
+    try:
+        if now - parse_dt(meta.get("deleted_at") or "") > timedelta(days=REMOVED_VISIBLE_DAYS):
+            return False
+        if meta.get("expires_at") and parse_dt(meta["expires_at"]) <= now:
+            return False
+    except Exception:
+        return False
+    return True
+
+
 def can_keep_uploads() -> bool:
     if not permanent_files_enabled():
         return False
@@ -1099,7 +1140,12 @@ def replace_file(file_id: str, file_storage, original_name: str, client_ip: str,
     """
     db = load_db()
     meta = db.get(file_id)
-    if not isinstance(meta, dict) or (meta.get("status") or "active").lower() not in ("active", "pending"):
+    if not isinstance(meta, dict):
+        raise FileNotFoundError(file_id)
+    restoring = (meta.get("status") or "").lower() == "deleted"
+    if restoring and not can_replace_removed(meta, meta.get("account_id")):
+        raise FileNotFoundError(file_id)
+    if not restoring and (meta.get("status") or "active").lower() not in ("active", "pending"):
         raise FileNotFoundError(file_id)
 
     _tmp_id, tmp_name, tmp_dest, ext = _prepare_file_destination(original_name)
@@ -1162,6 +1208,10 @@ def replace_file(file_id: str, file_storage, original_name: str, client_ip: str,
         "replace_count": int(meta.get("replace_count") or 0) + 1,
         "ip": client_ip,
     })
+    if restoring:  # image retirée par la modération, remplacée par une autre : le lien reprend vie
+        for key in ("deleted_at", "delete_reason", "status_before_delete"):
+            meta.pop(key, None)
+        meta["restored_after_removal"] = now
     if thumb_path:
         meta["thumb_delete_at"] = get_expected_thumb_delete_at(meta)
     db[file_id] = meta

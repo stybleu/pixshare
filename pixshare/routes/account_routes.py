@@ -374,7 +374,12 @@ def replace(file_id):
     meta = load_db().get(file_id)
     if not isinstance(meta, dict) or meta.get("account_id") != rec["id"]:
         abort(404)
-    if (meta.get("status") or "active").lower() not in ("active", "pending"):
+    restoring = (meta.get("status") or "").lower() == "deleted"
+    if restoring:
+        from pixshare.services.file_service import can_replace_removed
+        if not can_replace_removed(meta, rec["id"]):
+            abort(404)
+    elif (meta.get("status") or "active").lower() not in ("active", "pending"):
         abort(404)
     if _blocked():
         abort(403)
