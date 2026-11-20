@@ -312,7 +312,7 @@
             {% endfor %}
           </div>
         {% endfor %}
-        <div class="form-text mt-2">Les zones couvertes et les « autres zones » donnent bien plus de fausses alertes (plage, sport). NudeNet ne reconnaît pas les cuisses. Après un redéploiement, la sélection revient à la variable NSFW_CLASSES de Render, ou aux 5 zones exposées.</div>
+        <div class="form-text mt-2">Les zones couvertes et les « autres zones » donnent bien plus de fausses alertes (plage, sport). NudeNet ne reconnaît pas les cuisses. Ton choix est gardé, même après un déploiement. Sans choix de ta part, ce sont les 5 zones exposées.</div>
       </div>
 
       <div class="col-12 d-flex flex-wrap gap-2">
@@ -330,10 +330,15 @@
 
 <div class="card shadow-sm mt-4" id="sauvegarde">
   <div class="card-body">
-    <h2 class="h5">Garder mes réglages après un déploiement</h2>
     {% if config.PERSISTENT_DIR %}
-      <div class="mb-2"><span class="badge text-bg-success">Disque persistant : tes réglages sont déjà gardés ✅</span>
-        <span class="small text-muted">Cette copie dans Render reste une sauvegarde de secours, facultative.</span></div>
+    <div class="small text-muted">✅ Tes réglages sont gardés sur le disque, même après un déploiement, et copiés chaque nuit avec la
+      <a href="{{ url_for('admin.admin_system') }}#sauvegarde">sauvegarde de secours</a>.</div>
+    <details class="mt-2">
+      <summary class="small text-muted">Copie dans une variable Render (facultatif, inutile avec le disque)</summary>
+    {% else %}
+    <h2 class="h5">Garder mes réglages après un déploiement</h2>
+    {% endif %}
+    {% if config.PERSISTENT_DIR %}
     {% elif settings_export_saved %}
       <div class="mb-2"><span class="badge text-bg-success">Réglages actuels déjà sauvegardés dans Render ✅</span></div>
     {% else %}
@@ -361,6 +366,7 @@
         });
       })();
     </script>
+    {% if config.PERSISTENT_DIR %}</details>{% endif %}
   </div>
 </div>
 

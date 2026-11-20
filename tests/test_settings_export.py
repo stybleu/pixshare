@@ -34,3 +34,12 @@ def test_bad_variable_is_ignored(make_app, monkeypatch):
     app = make_app()
     with app.app_context():
         assert settings_service.load_settings()["max_upload_size_mb"] == 100
+
+
+def test_settings_card_is_discreet_with_persistent_disk(make_app):
+    from conftest import login
+    app = make_app(PERSISTENT_DIR="/var/data")
+    page = login(app.test_client()).get("/admin/settings").get_data(as_text=True)
+    assert "Tes réglages sont gardés sur le disque" in page
+    assert "Copie dans une variable Render (facultatif" in page   # repliée
+    assert "revient à la variable NSFW_CLASSES" not in page and "Ton choix est gardé" in page
