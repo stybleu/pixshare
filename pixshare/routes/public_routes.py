@@ -1,4 +1,4 @@
-from flask import Blueprint, abort, current_app, flash, make_response, redirect, render_template, request, send_from_directory, session, url_for
+from flask import Blueprint, abort, current_app, flash, jsonify, make_response, redirect, render_template, request, send_from_directory, session, url_for
 from werkzeug.utils import secure_filename
 
 import os
@@ -273,7 +273,7 @@ def index():
                 return attach_guest_cookie(redirect(url_for("public.index")))
 
             if requires_image_moderation(safe_name):
-                flash("Image reçue. Elle reste privée jusqu'à la validation automatique.", "info")
+                flash("Image reçue ✅ Vérification automatique en cours : son lien s'affiche dès qu'elle est validée.", "info")
             elif permanent:
                 flash("Fichier envoyé ✅ (sans expiration)", "success")
             else:
@@ -310,7 +310,7 @@ def index():
                 return attach_guest_cookie(redirect(url_for("public.index")))
 
             if requires_image_moderation(original_name):
-                flash("Image reçue. Elle reste privée jusqu'à la validation automatique.", "info")
+                flash("Image reçue ✅ Vérification automatique en cours : son lien s'affiche dès qu'elle est validée.", "info")
             elif permanent:
                 flash("Image importée ✅ (sans expiration)", "success")
             else:
@@ -747,3 +747,24 @@ def mentions_legales():
     from pixshare.services.backup_service import is_configured
     return render_template("mentions_legales.html", version=current_app.config["APP_VERSION"],
                            backup_on=is_configured())
+
+
+@public_bp.route("/mes-fichiers/statut", endpoint="files_status")
+def files_status():
+    """État des fichiers en cours de vérification (seulement ceux de ce visiteur ou de son compte)."""
+    wanted = [i for i in (request.args.get("ids") or "").split(",") if i][:20]
+    mine = {f["id"]: f for f in list_guest_files()}
+    out = {}
+    for file_id in wanted:
+        f = mine.get(file_id)
+        if not f:
+            out[file_id] = "gone"
+        elif f.get("status") != "pending":
+            out[file_id] = "active"
+        elif f.get("moderation_decision") == "manual_review":
+            out[file_id] = "review"
+        else:
+            out[file_id] = "checking"
+    response = jsonify(out)
+    response.headers["Cache-Control"] = "no-store"
+    return response

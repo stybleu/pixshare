@@ -377,8 +377,11 @@
                   <div class="fw-semibold">
                     {{ f.original }}
                   </div>
-                  {% if is_pending %}
-                    <span class="badge text-bg-warning">En attente de modération</span>
+                  {% if is_pending and f.moderation_decision == 'manual_review' %}
+                    <span class="badge text-bg-warning">En attente de vérification</span>
+                    <div class="small text-muted">Elle reste privée jusqu'à la vérification par la modération.</div>
+                  {% elif is_pending %}
+                    <span class="badge text-bg-info" data-checking="{{ f.id }}">🔍 Vérification automatique…</span>
                   {% endif %}
                 </div>
               </div>
@@ -1162,4 +1165,26 @@ function copyById(id){
 })();
 </script>
 
+<script>
+(function () {
+  // Image en cours de vérification : la page se met à jour d'elle-même dès que le filtre a décidé.
+  var badges = document.querySelectorAll("[data-checking]");
+  if (!badges.length || !window.fetch) return;
+  var ids = Array.prototype.map.call(badges, function (b) { return b.getAttribute("data-checking"); });
+  var tries = 0;
+  function check() {
+    tries += 1;
+    fetch("{{ url_for('public.files_status') }}?ids=" + encodeURIComponent(ids.join(",")), {credentials: "same-origin", cache: "no-store"})
+      .then(function (r) { return r.ok ? r.json() : {}; })
+      .then(function (data) {
+        var changed = ids.some(function (id) { return data[id] && data[id] !== "checking"; });
+        if (changed) { window.location.reload(); return; }
+        if (tries < 30) { setTimeout(check, 2500); }
+        else { Array.prototype.forEach.call(badges, function (b) { b.textContent = "En attente de vérification"; b.className = "badge text-bg-warning"; }); }
+      })
+      .catch(function () { if (tries < 30) setTimeout(check, 4000); });
+  }
+  setTimeout(check, 1500);
+})();
+</script>
 {% endblock %}
