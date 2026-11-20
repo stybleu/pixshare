@@ -608,6 +608,17 @@ def _db_status() -> dict:
         return {"enabled": True, "ok": False, "check": str(exc)}
 
 
+def _backup_status() -> dict:
+    try:
+        from pixshare.services import backup_service
+        state = backup_service.load_state()
+        state.pop("md5", None)
+        state["configured"] = backup_service.is_configured()
+        return state
+    except Exception as exc:
+        return {"configured": False, "last_error": str(exc)}
+
+
 def _env_check() -> dict:
     try:
         from pixshare.services.env_check_service import check
@@ -937,6 +948,7 @@ def admin_system():
         disk=get_disk_contents(),
         env_check=_env_check(),
         db_status=_db_status(),
+        backup=_backup_status(),
         ip_check=ip_check,
         version=current_app.config["APP_VERSION"],
     )
@@ -1314,3 +1326,31 @@ def admin_db_backup():
     response.headers["Cache-Control"] = "no-store"
     response.headers["X-Content-Type-Options"] = "nosniff"
     return response
+
+
+@admin_bp.route("/admin/sauvegarde/lancer", methods=["POST"], endpoint="admin_backup_now")
+@admin_required
+def admin_backup_now():
+    from pixshare.services import backup_service
+    if not backup_service.is_configured():
+        flash("Sauvegarde non configurée : ajoute les 4 variables R2_* sur Render.", "warning")
+    elif backup_service.start_backup(current_app._get_current_object(), manual=True):
+        flash("Sauvegarde lancée ✅ Recharge la page dans une minute pour voir le résultat.", "success")
+    else:
+        flash("Une sauvegarde ou une restauration est déjà en cours.", "info")
+    return redirect(url_for("admin.admin_system") + "#sauvegarde")
+
+
+@admin_bp.route("/admin/sauvegarde/restaurer", methods=["POST"], endpoint="admin_backup_restore")
+@admin_required
+def admin_backup_restore():
+    from pixshare.services import backup_service
+    if (request.form.get("confirm") or "").strip().upper() != "RESTAURER":
+        flash("Restauration annulée : écris RESTAURER pour confirmer.", "warning")
+    elif not backup_service.is_configured():
+        flash("Sauvegarde non configurée : ajoute les 4 variables R2_* sur Render.", "warning")
+    elif backup_service.start_restore(current_app._get_current_object()):
+        flash("Restauration lancée depuis la dernière sauvegarde. Recharge la page dans quelques minutes.", "success")
+    else:
+        flash("Une sauvegarde ou une restauration est déjà en cours.", "info")
+    return redirect(url_for("admin.admin_system") + "#sauvegarde")

@@ -67,6 +67,57 @@
     </div>
   </div>
 
+  <!-- SAUVEGARDE R2 -->
+  <div class="col-12" id="sauvegarde">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-1">
+          <h2 class="h6 mb-0">Sauvegarde de secours (Cloudflare R2)</h2>
+          {% if backup.configured %}
+          <form method="post" action="{{ url_for('admin.admin_backup_now') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="btn btn-outline-primary btn-sm" type="submit" {% if backup.running_since or backup.restoring_since %}disabled{% endif %}>☁️ Sauvegarder maintenant</button>
+          </form>
+          {% endif %}
+        </div>
+        {% if not backup.configured %}
+          <div class="small text-muted">Pas encore configurée. Ajoute sur Render les variables R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY et R2_BUCKET.</div>
+        {% else %}
+          {% if backup.running_since %}<div class="small"><span class="badge text-bg-info">En cours</span> depuis {{ backup.running_since|date_fr }}</div>{% endif %}
+          {% if backup.restoring_since %}<div class="small"><span class="badge text-bg-warning">Restauration en cours</span> depuis {{ backup.restoring_since|date_fr }}</div>{% endif %}
+          {% if backup.last_success %}
+            {% set s = backup.last_summary or {} %}
+            <div class="small"><span class="badge text-bg-success">OK</span> Dernière sauvegarde : {{ backup.last_success|date_fr }}
+              · {{ s.files }} fichier(s) en ligne, {{ s.sent }} envoyé(s) ({{ s.sent_mb }} Mo), {{ s.removed }} retiré(s) · base {{ s.db_kb }} Ko · {{ s.seconds }} s</div>
+          {% elif not backup.running_since %}
+            <div class="small text-muted">Aucune sauvegarde réussie pour l'instant.</div>
+          {% endif %}
+          {% if backup.last_error %}
+            <div class="alert alert-danger small py-2 mt-2 mb-0">Échec le {{ backup.last_error_at|date_fr }} : {{ backup.last_error }}</div>
+          {% endif %}
+          {% if backup.restore_error %}
+            <div class="alert alert-danger small py-2 mt-2 mb-0">Restauration échouée : {{ backup.restore_error }}</div>
+          {% elif backup.last_restore %}
+            <div class="small text-muted mt-1">Dernière restauration : {{ backup.last_restore|date_fr }} ({{ (backup.last_restore_result or {}).files or 0 }} fichier(s) récupéré(s)).</div>
+          {% endif %}
+          <div class="small text-muted mt-1">Automatique chaque nuit (après 3 h) : la base (7 dernières nuits gardées) et les fichiers en ligne. Les fichiers supprimés ou expirés sont aussi retirés de la sauvegarde.</div>
+          <details class="mt-2">
+            <summary class="small text-danger">Restaurer depuis la sauvegarde…</summary>
+            <form method="post" action="{{ url_for('admin.admin_backup_restore') }}" class="mt-2">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <div class="small mb-2">Remplace la base actuelle par la dernière sauvegarde, puis récupère les fichiers absents du disque. La base actuelle est d'abord copiée à côté (pixshare-avant-restauration.db). À n'utiliser qu'après une perte de données.</div>
+              <div class="d-flex flex-wrap gap-2">
+                <label class="visually-hidden" for="restore_confirm">Confirmation</label>
+                <input id="restore_confirm" class="form-control form-control-sm" style="max-width:200px" name="confirm" placeholder="Écris RESTAURER" autocomplete="off" required>
+                <button class="btn btn-sm btn-danger" type="submit">Restaurer</button>
+              </div>
+            </form>
+          </details>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
   <!-- VARIABLES RENDER -->
   <div class="col-12" id="variables">
     <div class="card shadow-sm">

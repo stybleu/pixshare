@@ -29,6 +29,12 @@
         États-Unis<br>
         <a href="https://render.com" target="_blank" rel="noopener">https://render.com</a>
       </p>
+      {% if backup_on %}
+      <p class="mb-2">
+        Copie de secours : <b>Cloudflare, Inc.</b> (service Cloudflare R2), 101 Townsend Street, San Francisco,
+        CA 94107, États-Unis. Les données y sont chiffrées et ne sont accessibles qu’à l’administrateur.
+      </p>
+      {% endif %}
 
       <h2 class="h6 mt-4">{{ _("service_operation_retention") }}</h2>
 
@@ -99,6 +105,7 @@
         <li>Visites en cours : pour la sécurité du service, l’adresse IP et la page consultée sont visibles par l’administrateur pendant 5 minutes, sans être conservées.</li>
         <li>Statistiques de fréquentation : nombres de visites, de pages vues et d’envois par jour, pages les plus vues, sites d’où viennent les visiteurs et sites où les images sont affichées. Aucune adresse IP n’est conservée (seulement une empreinte journalière non réversible), ni aucune localisation, ni rien sur l’appareil ou la personne. Conservées 90 jours.</li>
         <li>Empreintes des images refusées (jamais les images elles-mêmes) : conservées pour refuser leur renvoi.</li>
+        {% if backup_on %}<li>Copie de secours : chaque nuit, les fichiers en ligne et les données du site sont copiés pour pouvoir les récupérer en cas de panne. Un fichier supprimé ou expiré disparaît de la copie la nuit suivante ; les copies des données sont gardées 7 jours.</li>{% endif %}
         <li>Empreintes des images acceptées par l’outil d’analyse (jamais les images elles-mêmes) : servent à publier sans nouvelle analyse un fichier identique ; effacées après 6 mois sans resservir.</li>
         <li>Comptes (facultatifs) : adresse e-mail, empreinte du mot de passe (jamais le mot de passe lui-même), dates de création et de dernière connexion, nombre d’images refusées, formule personnalisée éventuelle, et, si le membre en crée une, l’empreinte de sa clé d’extension de navigateur (jamais la clé elle-même) avec sa date de dernière utilisation. Conservés tant que le compte existe ; effacés immédiatement, avec tous les fichiers du compte, quand le membre le supprime depuis « Mon compte ». Un compte jamais confirmé est effacé au bout de 7 jours.</li>
         <li>Albums des membres : nom, petit mot, mise en page, empreinte du mot de passe éventuel (jamais le mot de passe lui-même) pour chaque photo ajoutée par un invité, le prénom qu’il a choisi d’indiquer et le défi choisi, le nombre de réactions par photo (sans savoir qui a réagi), et les messages du livre d’or avec le prénom indiqué. Effacés avec l’album ou le compte.</li>

@@ -186,6 +186,15 @@ def create_app(config_overrides: dict | None = None) -> Flask:
         return response
 
     @app.after_request
+    def nightly_backup_check(response):
+        # Sauvegarde R2 de la nuit : vérifiée au plus toutes les 10 minutes, après la réponse,
+        # et lancée dans un fil à part (aucune page n'attend).
+        from .services import backup_service
+        if backup_service.should_check():
+            response.call_on_close(lambda: backup_service.maybe_nightly_backup(app))
+        return response
+
+    @app.after_request
     def count_visit(resp):
         # Statistiques de l'admin : pages vues, visiteurs uniques du jour (sans stocker d'IP)
         # et sites où les images sont affichées. Aucune localisation, aucun profil de visiteur.

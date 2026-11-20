@@ -679,3 +679,4 @@ def run_after_response(app) -> None:
             _purge_approved_hourly()
     except Exception:  # pragma: no cover
         _log.exception("Modération automatique interrompue")
+

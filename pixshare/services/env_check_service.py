@@ -41,6 +41,12 @@ GROUPS = [
         ("SEASON_THEME", "Thème de saison", False),
         ("SKY_THEME", "Ciel animé", False),
     ]),
+    ("Sauvegarde de secours (Cloudflare R2)", [
+        ("R2_ACCOUNT_ID", "Identifiant du compte Cloudflare", False),
+        ("R2_ACCESS_KEY_ID", "Identifiant de la clé d'accès R2", True),
+        ("R2_SECRET_ACCESS_KEY", "Clé secrète R2", True),
+        ("R2_BUCKET", "Nom de l'espace de stockage (bucket)", False),
+    ]),
     ("Limites et stockage", [
         ("MAX_LIFETIME_MIN", "Durée maximale des membres en minutes (sinon 1 an)", False),
         ("UPLOAD_RATE_LIMIT", "Envois par fenêtre (0 = aucune limite)", False),
@@ -76,7 +82,7 @@ OBSOLETE = {
 }
 # Préfixes qui ressemblent à des variables de PixShare : un nom inconnu est sans doute une faute de frappe.
 _PREFIXES = ("MAIL_", "ACCOUNT_MAIL", "NSFW_", "TURNSTILE_", "PIXSHARE_", "ADMIN_", "UPLOAD_", "MAX_LIFETIME", "GEOIP",
-             "SUPPORT_URL", "SEASON_", "SKY_THEME", "REPORT_HIDE", "BANNED_", "DISK_RESERVE", "RAM_LIMIT", "MODERATION_")
+             "SUPPORT_URL", "SEASON_", "R2_", "SKY_THEME", "REPORT_HIDE", "BANNED_", "DISK_RESERVE", "RAM_LIMIT", "MODERATION_")
 
 
 def _shown(name: str, value: str, secret: bool) -> str:
@@ -115,6 +121,9 @@ def check() -> dict:
         problems.append(("danger", "ALLOW_DEFAULT_ADMIN est définie : à supprimer sur le site en ligne (admin sans vrai mot de passe)."))
     if (env.get("FLASK_DEBUG") or "").strip() not in ("", "0", "false", "False"):
         problems.append(("danger", "FLASK_DEBUG est activé : à supprimer sur le site en ligne (affiche des détails techniques)."))
+    r2 = [has(n) for n in ("R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET")]
+    if any(r2) and not all(r2):
+        problems.append(("warning", "Sauvegarde R2 : il manque une des 4 variables R2_*, la sauvegarde ne se fait pas."))
     if has("TURNSTILE_SITE_KEY") != has("TURNSTILE_SECRET_KEY"):
         problems.append(("warning", "Turnstile : une seule des deux clés est définie, l'anti-robot ne marche pas."))
 

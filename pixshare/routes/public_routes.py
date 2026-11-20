@@ -744,4 +744,6 @@ def albums_info():
 
 @public_bp.route("/mentions-legales", endpoint="mentions_legales")
 def mentions_legales():
-    return render_template("mentions_legales.html", version=current_app.config["APP_VERSION"])
+    from pixshare.services.backup_service import is_configured
+    return render_template("mentions_legales.html", version=current_app.config["APP_VERSION"],
+                           backup_on=is_configured())
