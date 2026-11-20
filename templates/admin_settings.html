@@ -320,6 +320,57 @@
       </div>
     </form>
 
+    <div class="border rounded-3 p-3 mt-4" id="filtre-membres">
+      <h3 class="h6 mb-1">👤 Filtre des membres (comptes)</h3>
+      <div class="form-text mb-3">Les membres sont identifiables : ils ont moins de restrictions. Par défaut, mêmes seuils que ci-dessus,
+        seulement la nudité explicite, et une image au-delà du seuil de refus est mise en vérification au lieu d'être supprimée.
+        {% if not nsfw.member.customized %}<b>Réglage par défaut en cours.</b>{% endif %}</div>
+      <form method="post" action="{{ url_for('admin.admin_nsfw_member_settings') }}" class="row g-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="col-6">
+          <label class="form-label fw-semibold" for="m-review">Vérifier dès</label>
+          <input id="m-review" type="number" name="nsfw_member_review_threshold" class="form-control" min="0.05" max="1" step="0.01"
+                 value="{{ '%.2f'|format(nsfw.member.review_threshold) }}" required>
+        </div>
+        <div class="col-6">
+          <label class="form-label fw-semibold" for="m-block">Refuser dès</label>
+          <input id="m-block" type="number" name="nsfw_member_block_threshold" class="form-control" min="0.05" max="1" step="0.01"
+                 value="{{ '%.2f'|format(nsfw.member.block_threshold) }}" required>
+        </div>
+        <div class="col-12">
+          <label class="form-label fw-semibold" for="m-reject">Au-delà du seuil de refus</label>
+          <select id="m-reject" name="nsfw_member_reject_direct" class="form-select">
+            <option value="0" {% if not nsfw.member.reject_direct %}selected{% endif %}>Mettre en vérification (je décide)</option>
+            <option value="1" {% if nsfw.member.reject_direct %}selected{% endif %}>Supprimer directement, comme pour les visiteurs</option>
+          </select>
+        </div>
+        <div class="col-12">
+          <div class="form-label fw-semibold mb-1">Parties surveillées pour les membres</div>
+          {% for group_title, items in nsfw.class_groups %}
+            <div class="small text-muted mt-2">{{ group_title }}</div>
+            <div class="row row-cols-1 row-cols-md-2 g-1">
+              {% for name, label in items %}
+                <div class="col">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="nsfw_member_classes" value="{{ name }}" id="m-class-{{ name }}" {% if name in nsfw.member.classes %}checked{% endif %}>
+                    <label class="form-check-label" for="m-class-{{ name }}">{{ label }}</label>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% endfor %}
+        </div>
+        <div class="col-12 small text-muted">
+          🕐 Quand tu es absent : {% if settings.admin_absent_mode and settings.admin_absent_members %}les images de membres mises en vérification par ces réglages sont <b>supprimées par le filtre</b>{% elif settings.admin_absent_mode %}les images de membres mises en vérification <b>t'attendent</b>{% else %}le mode absent est coupé : tout t'attend{% endif %}
+          (<a href="#absent">régler le mode absent</a>).
+        </div>
+        <div class="col-12 d-flex flex-wrap gap-2">
+          <button class="btn btn-primary" type="submit">Enregistrer le filtre des membres</button>
+          <button class="btn btn-outline-secondary" type="submit" name="reset" value="1" formnovalidate>Remettre par défaut</button>
+        </div>
+      </form>
+    </div>
+
     <form method="post" action="{{ url_for('admin.admin_nsfw_run') }}" class="mt-3">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <button class="btn btn-outline-secondary btn-sm" type="submit" {% if not nsfw.waiting %}disabled{% endif %}>Analyser maintenant les images en attente</button>

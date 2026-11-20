@@ -32,6 +32,10 @@ DEFAULT_SETTINGS = {
     "nsfw_block_threshold": None,
     "nsfw_tiling": True,
     "nsfw_classes": None,
+    "nsfw_member_review_threshold": None,
+    "nsfw_member_block_threshold": None,
+    "nsfw_member_classes": None,
+    "nsfw_member_reject_direct": False,
     # Admin absent : sans activité dans l'admin, le filtre décide seul et supprime les images douteuses.
     "admin_absent_mode": True,
     "admin_absent_after_minutes": 15,
@@ -255,7 +259,8 @@ def clean_absent_settings(source: dict) -> dict:
     }
 
 
-NSFW_KEYS = ("nsfw_auto_moderation", "nsfw_review_threshold", "nsfw_block_threshold", "nsfw_tiling", "nsfw_classes")
+NSFW_KEYS = ("nsfw_auto_moderation", "nsfw_review_threshold", "nsfw_block_threshold", "nsfw_tiling", "nsfw_classes",
+             "nsfw_member_review_threshold", "nsfw_member_block_threshold", "nsfw_member_classes", "nsfw_member_reject_direct")
 
 
 def get_valid_nsfw_threshold(value):
@@ -293,6 +298,11 @@ def _clean_nsfw_settings(source: dict) -> dict:
         "nsfw_block_threshold": get_valid_nsfw_threshold(source.get("nsfw_block_threshold")),
         "nsfw_tiling": bool(source.get("nsfw_tiling", True)),
         "nsfw_classes": get_valid_nsfw_classes(source.get("nsfw_classes")),
+        # Filtre des membres (None = comme d'habitude : seuils des visiteurs, nudité explicite seulement)
+        "nsfw_member_review_threshold": get_valid_nsfw_threshold(source.get("nsfw_member_review_threshold")),
+        "nsfw_member_block_threshold": get_valid_nsfw_threshold(source.get("nsfw_member_block_threshold")),
+        "nsfw_member_classes": get_valid_nsfw_classes(source.get("nsfw_member_classes")),
+        "nsfw_member_reject_direct": bool(source.get("nsfw_member_reject_direct", False)),
     }
 
 

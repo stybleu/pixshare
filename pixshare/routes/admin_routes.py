@@ -1356,3 +1356,42 @@ def admin_backup_restore():
     else:
         flash("Une sauvegarde ou une restauration est déjà en cours.", "info")
     return redirect(url_for("admin.admin_system") + "#sauvegarde")
+
+
+@admin_bp.route("/admin/settings/nsfw/membres", methods=["POST"], endpoint="admin_nsfw_member_settings")
+@admin_required
+def admin_nsfw_member_settings():
+    """Filtre des membres : moins strict par défaut, mais réglable (seuils, zones, refus direct ou vérification)."""
+    validate_csrf()
+    current = load_settings()
+    keys = ("nsfw_member_review_threshold", "nsfw_member_block_threshold", "nsfw_member_classes", "nsfw_member_reject_direct")
+    if request.form.get("reset") == "1":
+        for key in keys:
+            current[key] = None if key != "nsfw_member_reject_direct" else False
+        save_settings(current)
+        flash("Filtre des membres remis par défaut ✅ (seuils des visiteurs, nudité explicite seulement, vérification au lieu du refus).", "success")
+        return redirect(url_for("admin.admin_settings") + "#filtre-membres")
+    review = get_valid_nsfw_threshold(request.form.get("nsfw_member_review_threshold"))
+    block = get_valid_nsfw_threshold(request.form.get("nsfw_member_block_threshold"))
+    if review is None or block is None:
+        flash("Seuils des membres invalides : entre 0,05 et 1.", "warning")
+        return redirect(url_for("admin.admin_settings") + "#filtre-membres")
+    if review > block:
+        flash("Membres : le seuil de vérification ne peut pas dépasser le seuil de refus.", "warning")
+        return redirect(url_for("admin.admin_settings") + "#filtre-membres")
+    classes = get_valid_nsfw_classes(request.form.getlist("nsfw_member_classes"))
+    if classes is None:
+        flash("Membres : coche au moins une partie du corps à surveiller.", "warning")
+        return redirect(url_for("admin.admin_settings") + "#filtre-membres")
+    current.update({
+        "nsfw_member_review_threshold": review,
+        "nsfw_member_block_threshold": block,
+        "nsfw_member_classes": classes,
+        "nsfw_member_reject_direct": request.form.get("nsfw_member_reject_direct") == "1",
+    })
+    save_settings(current)
+    guest = nsfw_effective_settings()
+    stricter = review < guest["review_threshold"] or block < guest["block_threshold"] or bool(set(classes) - set(guest["classes"]))
+    flash("Filtre des membres enregistré ✅" + (" Attention : il est plus strict que celui des visiteurs sur au moins un point." if stricter else ""),
+          "warning" if stricter else "success")
+    return redirect(url_for("admin.admin_settings") + "#filtre-membres")

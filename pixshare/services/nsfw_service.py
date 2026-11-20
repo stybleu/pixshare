@@ -126,6 +126,23 @@ def effective_settings() -> dict:
     if classes is None:
         classes = sorted(EXPLICIT_CLASSES)
 
+    # Membres : moins de restrictions par défaut, mais réglables dans l'admin.
+    m_block = stored.get("nsfw_member_block_threshold")
+    m_block = block if m_block is None else max(0.0, min(float(m_block), 1.0))
+    m_review = stored.get("nsfw_member_review_threshold")
+    m_review = review if m_review is None else float(m_review)
+    m_review = max(0.0, min(m_review, m_block))
+    m_classes = get_valid_nsfw_classes(stored.get("nsfw_member_classes"))
+    member = {
+        "review_threshold": m_review,
+        "block_threshold": m_block,
+        "classes": m_classes if m_classes is not None else member_classes(classes),
+        "reject_direct": bool(stored.get("nsfw_member_reject_direct", False)),
+        "customized": any(stored.get(k) is not None for k in (
+            "nsfw_member_review_threshold", "nsfw_member_block_threshold", "nsfw_member_classes")) or bool(
+            stored.get("nsfw_member_reject_direct")),
+    }
+
     return {
         "enabled": bool(enabled),
         "review_threshold": review,
@@ -133,6 +150,7 @@ def effective_settings() -> dict:
         "tiling": bool(stored.get("nsfw_tiling", True)),
         "classes": classes,
         "pending_images": bool(cfg.get("MODERATION_PENDING_IMAGES", True)),
+        "member": member,
     }
 
 
@@ -288,9 +306,10 @@ def test_image(data: bytes) -> dict:
         _scan_lock.release()
 
     def verdict(classes, member):
+        rules = cfg["member"] if member else cfg
         best = max(((s, l) for l, s in found.items() if l in set(classes)), default=(0.0, None))
-        decision = decide(best[1], best[0], cfg["review_threshold"], cfg["block_threshold"])
-        if member and decision == "reject":
+        decision = decide(best[1], best[0], rules["review_threshold"], rules["block_threshold"])
+        if member and decision == "reject" and not cfg["member"]["reject_direct"]:
             decision = "review"
         return {"decision": decision, "label": best[1], "score": best[0]}
 
@@ -300,7 +319,7 @@ def test_image(data: bytes) -> dict:
         "detections": sorted(({"label": l, "score": s, "watched": l in watched} for l, s in found.items()),
                              key=lambda d: -d["score"]),
         "guest": verdict(cfg["classes"], False),
-        "member": verdict(member_classes(cfg["classes"]), True),
+        "member": verdict(cfg["member"]["classes"], True),
         "settings": cfg,
     }
 
@@ -406,8 +425,11 @@ def _process_one(file_id: str, review_threshold: float, block_threshold: float, 
     if not _is_waiting_image(meta):
         return
     member = bool(meta.get("account_id"))
+    member_rules = None
     if member:
-        classes = member_classes(classes)
+        member_rules = effective_settings()["member"]
+        classes = member_rules["classes"]
+        review_threshold, block_threshold = member_rules["review_threshold"], member_rules["block_threshold"]
     path = os.path.join(current_app.config["UPLOAD_FOLDER"], os.path.basename(str(meta.get("server_name") or "")))
     from pixshare.services import approved_hash_service as approved
     fp = approved.fingerprint(DETECTOR_NAME, review_threshold, block_threshold, tiling, classes)
@@ -444,8 +466,8 @@ def _process_one(file_id: str, review_threshold: float, block_threshold: float, 
         return
 
     decision = decide(label, score, review_threshold, block_threshold)
-    if member and decision == "reject":
-        decision = "review"  # membre : jamais de suppression automatique, l'admin décide
+    if member and decision == "reject" and not member_rules["reject_direct"]:
+        decision = "review"  # membre : par défaut jamais de suppression automatique, l'admin décide
     if decision == "review" and _filter_decides(member):
         bump_stat("auto_review")
         if _delete_while_absent(file_id, meta, label, score):
