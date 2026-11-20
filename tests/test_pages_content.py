@@ -34,10 +34,10 @@ def test_french_error_pages(make_app):
     client = make_app().test_client()
     page = client.get("/cette-page-n-existe-pas", headers={"Accept": "text/html"})
     html = page.get_data(as_text=True)
-    assert page.status_code == 404 and "Page introuvable" in html and "Not Found" not in html
+    assert page.status_code == 404 and "page introuvable" in html and "Not Found" not in html
     assert html.count("<h1") == 1
     raw = client.get("/view/inexistant", headers={"Accept": "image/*"})
-    assert raw.status_code == 404 and "<html" not in raw.get_data(as_text=True)
+    assert raw.status_code == 404 and b"<html" not in raw.data
 
 
 def test_contact_appeal_type(make_app):

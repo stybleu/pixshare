@@ -65,18 +65,79 @@ _ERRORS = {
 }
 
 
+_PLACEHOLDER: dict = {}
+
+
+def expired_image_placeholder() -> bytes:
+    """Petite image « Image indisponible · PixShare », montrée à la place d'une image disparue intégrée ailleurs
+    (forum, Discord, site) : mieux qu'une image cassée. Fabriquée une fois, puis gardée en mémoire."""
+    if "png" not in _PLACEHOLDER:
+        import io
+        from PIL import Image, ImageDraw, ImageFont
+        w, h = 480, 300
+        img = Image.new("RGB", (w, h), (238, 242, 255))
+        d = ImageDraw.Draw(img)
+        d.rounded_rectangle((8, 8, w - 9, h - 9), radius=22, outline=(199, 210, 254), width=3)
+        cx, top = w // 2, 62
+        d.rectangle((cx - 26, top, cx + 26, top + 8), fill=(120, 53, 15))
+        d.rectangle((cx - 26, top + 72, cx + 26, top + 80), fill=(120, 53, 15))
+        d.polygon([(cx - 20, top + 8), (cx + 20, top + 8), (cx + 4, top + 40), (cx + 20, top + 72),
+                   (cx - 20, top + 72), (cx - 4, top + 40)], fill=(186, 230, 253))
+        d.polygon([(cx - 12, top + 18), (cx + 12, top + 18), (cx, top + 34)], fill=(245, 158, 11))
+        d.polygon([(cx - 16, top + 72), (cx + 16, top + 72), (cx, top + 58)], fill=(245, 158, 11))
+        try:
+            big, small = ImageFont.load_default(size=30), ImageFont.load_default(size=18)
+        except Exception:  # ancienne version de Pillow
+            big = small = ImageFont.load_default()
+        d.text((cx, 190), "Image indisponible", font=big, fill=(30, 27, 75), anchor="mm")
+        d.text((cx, 232), "Ce lien PixShare n'est plus disponible", font=small, fill=(79, 70, 229), anchor="mm")
+        buf = io.BytesIO()
+        img.save(buf, "PNG", optimize=True)
+        _PLACEHOLDER["png"] = buf.getvalue()
+    return _PLACEHOLDER["png"]
+
+
 def _register_error_pages(app: Flask) -> None:
     """Pages d'erreur en français, dans le style du site (au lieu du texte anglais par défaut)."""
     from flask import render_template, request as _req
     from werkzeug.exceptions import HTTPException
 
+    def opened_in_browser() -> bool:
+        """Vraie page ouverte dans le navigateur (pas une image affichée dans un forum ou un téléchargement)."""
+        dest = (_req.headers.get("Sec-Fetch-Dest") or "").lower()
+        if dest:
+            return dest == "document"
+        return _req.accept_mimetypes.best == "text/html"
+
     def handler(error):
         code = error.code if isinstance(error, HTTPException) else 500
         title, text = _ERRORS.get(code, ("Erreur", "Une erreur est survenue."))
-        if not _req.accept_mimetypes.accept_html or _req.path.startswith(("/view/", "/file/", "/download/", "/static/")):
+        link_path = _req.path.startswith(("/view/", "/file/", "/download/"))
+        plain = (not _req.accept_mimetypes.accept_html or _req.path.startswith("/static/")
+                 or (_req.path.startswith(("/view/", "/download/")) and not opened_in_browser()))
+        if (plain and code == 404 and _req.path.startswith("/view/")
+                and _req.accept_mimetypes.best_match(["image/png", "text/html"]) == "image/png"):
+            try:  # image intégrée ailleurs : une vignette « Image indisponible » plutôt qu'une image cassée
+                return expired_image_placeholder(), 404, {"Content-Type": "image/png", "Cache-Control": "public, max-age=600",
+                                                          "X-Robots-Tag": "noindex, noimageindex"}
+            except Exception:
+                pass
+        if plain:
             return f"{code} {title}", code, {"Content-Type": "text/plain; charset=utf-8"}
+        album_path = _req.path.startswith("/album/")
+        kind = ("expired" if (link_path or album_path) else "missing") if code == 404 else "other"
+        if kind == "expired" and album_path:
+            title, text = ("Cet album n'est plus disponible",
+                           "Il a été supprimé par son créateur, ou l'adresse est incomplète. Vérifiez le lien ou le QR code reçu.")
+        elif kind == "expired":
+            title, text = ("Ce lien n'est plus disponible",
+                           "Les fichiers sur PixShare sont temporaires : celui-ci a expiré, a été supprimé par son "
+                           "auteur ou a atteint sa limite de vues.")
+        elif kind == "missing":
+            title, text = ("Oups, page introuvable",
+                           "Cette adresse ne mène nulle part. Elle a peut-être été mal recopiée, ou la page a changé de place.")
         try:
-            return render_template("error.html", code=code, error_title=title, error_text=text), code
+            return render_template("error.html", code=code, error_title=title, error_text=text, kind=kind), code
         except Exception:
             return f"{code} {title}", code, {"Content-Type": "text/plain; charset=utf-8"}
 

@@ -3,14 +3,213 @@
 {% set title = error_title %}
 {% block robots %}<meta name="robots" content="noindex, nofollow">{% endblock %}
 {% block content %}
-<div class="container py-5" style="max-width: 560px;">
+<div class="container py-4" style="max-width: 560px;">
   <div class="card shadow-sm text-center">
     <div class="card-body py-4">
-      <div class="display-6 text-muted mb-2">{{ code }}</div>
+      {% if kind == "expired" %}
+        <div class="err-icon" aria-hidden="true">⏳</div>
+      {% elif kind == "missing" %}
+        <div class="err-icon" aria-hidden="true">🧭</div>
+      {% else %}
+        <div class="display-6 text-muted mb-2">{{ code }}</div>
+      {% endif %}
       <h1 class="h4 mb-2">{{ error_title }}</h1>
       <p class="text-muted mb-3">{{ error_text }}</p>
-      <a class="btn btn-primary" href="{{ url_for('public.index') }}">Retour à l'accueil</a>
+      {% if kind == "expired" %}
+        <a class="btn btn-primary" href="{{ url_for('public.index') }}">Partager vos photos</a>
+        <div class="small mt-3"><a href="{{ url_for('public.faq') }}">Combien de temps les fichiers restent-ils en ligne ?</a></div>
+      {% elif kind == "missing" %}
+        <a class="btn btn-primary" href="{{ url_for('public.index') }}">Retour à l'accueil</a>
+        <div class="small mt-3">
+          <a href="{{ url_for('public.faq') }}">Questions fréquentes</a> ·
+          <a href="{{ url_for('public.albums_info') }}">Albums souvenirs</a>
+        </div>
+      {% else %}
+        <a class="btn btn-primary" href="{{ url_for('public.index') }}">Retour à l'accueil</a>
+      {% endif %}
     </div>
   </div>
+
+  {% if kind in ("expired", "missing") %}
+  <div class="card shadow-sm mt-3" id="catchgame">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-baseline flex-wrap gap-1 mb-2">
+        <h2 class="h6 mb-0">📸 Attrape les photos</h2>
+        <div class="small text-muted"><span id="cgScore" aria-live="polite">0</span> photo(s) · record <span id="cgBest">0</span></div>
+      </div>
+      <p class="small text-muted mb-2">Faites glisser l'appareil du doigt (ou avec les flèches) : attrapez les photos, évitez les sabliers ⏳.</p>
+      <canvas id="cgCanvas" class="cg-canvas" tabindex="0" role="img"
+              aria-label="Mini-jeu : un appareil photo attrape des photos qui tombent et évite les sabliers"></canvas>
+    </div>
+  </div>
+  {% endif %}
 </div>
+
+<style>
+  .err-icon { font-size: 2.6rem; line-height: 1; margin-bottom: .5rem; }
+  .cg-canvas { display: block; width: 100%; max-width: 360px; aspect-ratio: 3 / 4; margin: 0 auto; border-radius: 14px;
+               background: linear-gradient(#eef2ff, #fdf4ff); touch-action: none; cursor: pointer; }
+  .cg-canvas:focus-visible { outline: 3px solid #6366f1; outline-offset: 2px; }
+</style>
+
+{% if kind in ("expired", "missing") %}
+<script>
+(function () {
+  "use strict";
+  // Mini-jeu original de PixShare. Rien n'est envoyé au serveur : le record reste dans ce navigateur.
+  var canvas = document.getElementById("cgCanvas");
+  if (!canvas || !canvas.getContext) return;
+  var ctx = canvas.getContext("2d");
+  var scoreEl = document.getElementById("cgScore"), bestEl = document.getElementById("cgBest");
+  var W = 300, H = 400, scale = 1;
+  var state = "ready", score = 0, best = 0, lives = 3, items = [], pops = [];
+  var cam = { x: W / 2, target: W / 2, w: 56, h: 38 }, keys = {};
+  var spawnIn = 0, elapsed = 0, last = 0, hurt = 0, rafId = 0;
+  var TINTS = ["#6366f1", "#ec4899", "#10b981", "#f59e0b", "#0ea5e9", "#8b5cf6"];
+  try { best = parseInt(localStorage.getItem("pixshare-attrape-record") || "0", 10) || 0; } catch (e) { best = 0; }
+  bestEl.textContent = best;
+
+  function resize() {
+    var rect = canvas.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    scale = rect.width / W;
+    canvas.width = Math.round(rect.width * dpr); canvas.height = Math.round(rect.width * (H / W) * dpr);
+    ctx.setTransform(canvas.width / W, 0, 0, canvas.height / H, 0, 0);
+    draw();
+  }
+
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+  }
+  function drawCamera() {
+    var x = cam.x - cam.w / 2, y = H - cam.h - 14;
+    ctx.save();
+    if (hurt > 0 && Math.floor(hurt * 12) % 2) ctx.globalAlpha = .35;
+    ctx.fillStyle = "#312e81"; roundRect(x + 8, y - 7, 16, 9, 3); ctx.fill();            // déclencheur
+    ctx.fillStyle = "#4f46e5"; roundRect(x, y, cam.w, cam.h, 9); ctx.fill();              // boîtier
+    ctx.fillStyle = "#fde68a"; roundRect(x + cam.w - 15, y + 6, 9, 6, 2); ctx.fill();     // flash
+    ctx.fillStyle = "#e0e7ff"; ctx.beginPath(); ctx.arc(cam.x, y + cam.h / 2 + 1, 13, 0, 7); ctx.fill();
+    ctx.fillStyle = "#1e1b4b"; ctx.beginPath(); ctx.arc(cam.x, y + cam.h / 2 + 1, 8, 0, 7); ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,.8)"; ctx.beginPath(); ctx.arc(cam.x - 3, y + cam.h / 2 - 2, 2.5, 0, 7); ctx.fill();
+    ctx.restore();
+  }
+  function drawPhoto(it) {
+    ctx.save(); ctx.translate(it.x, it.y); ctx.rotate(it.rot);
+    ctx.fillStyle = "rgba(0,0,0,.12)"; roundRect(-14, -15, 30, 34, 3); ctx.fill();
+    ctx.fillStyle = it.gold ? "#fef3c7" : "#ffffff"; roundRect(-15, -17, 30, 34, 3); ctx.fill();
+    ctx.fillStyle = it.gold ? "#f59e0b" : it.tint; ctx.fillRect(-11, -13, 22, 20);
+    ctx.fillStyle = "rgba(255,255,255,.85)"; ctx.beginPath(); ctx.arc(5, -7, 3, 0, 7); ctx.fill();        // soleil
+    ctx.fillStyle = "rgba(255,255,255,.55)"; ctx.beginPath(); ctx.moveTo(-11, 7); ctx.lineTo(-3, -3); ctx.lineTo(5, 7); ctx.fill();
+    if (it.gold) { ctx.fillStyle = "#b45309"; ctx.font = "bold 9px system-ui, sans-serif"; ctx.textAlign = "center"; ctx.fillText("+5", 0, 15); }
+    ctx.restore();
+  }
+  function drawHourglass(it) {
+    ctx.save(); ctx.translate(it.x, it.y); ctx.rotate(it.rot);
+    ctx.fillStyle = "#78350f"; ctx.fillRect(-13, -17, 26, 4); ctx.fillRect(-13, 13, 26, 4);
+    ctx.fillStyle = "rgba(186, 230, 253, .9)"; ctx.beginPath();
+    ctx.moveTo(-10, -13); ctx.lineTo(10, -13); ctx.lineTo(2, 0); ctx.lineTo(10, 13); ctx.lineTo(-10, 13); ctx.lineTo(-2, 0); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#f59e0b"; ctx.beginPath(); ctx.moveTo(-6, -8); ctx.lineTo(6, -8); ctx.lineTo(0, -1); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-8, 13); ctx.lineTo(8, 13); ctx.lineTo(0, 6); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  function heart(x, y, s, full) {
+    ctx.beginPath(); ctx.moveTo(x, y + s * .3);
+    ctx.bezierCurveTo(x, y, x - s * .5, y, x - s * .5, y + s * .3);
+    ctx.bezierCurveTo(x - s * .5, y + s * .6, x, y + s * .75, x, y + s);
+    ctx.bezierCurveTo(x, y + s * .75, x + s * .5, y + s * .6, x + s * .5, y + s * .3);
+    ctx.bezierCurveTo(x + s * .5, y, x, y, x, y + s * .3);
+    ctx.fillStyle = full ? "#e11d48" : "rgba(225, 29, 72, .18)"; ctx.fill();
+  }
+  function drawHud() {
+    ctx.fillStyle = "rgba(255,255,255,.7)"; roundRect(6, 6, 76, 26, 13); ctx.fill();
+    for (var i = 0; i < 3; i++) heart(22 + i * 22, 11, 16, i < lives);
+  }
+  function message(title, sub) {
+    ctx.fillStyle = "rgba(255,255,255,.82)"; roundRect(30, H / 2 - 52, W - 60, 92, 14); ctx.fill();
+    ctx.fillStyle = "#1e1b4b"; ctx.textAlign = "center"; ctx.font = "bold 19px system-ui, sans-serif"; ctx.fillText(title, W / 2, H / 2 - 18);
+    ctx.fillStyle = "#4b5563"; ctx.font = "14px system-ui, sans-serif"; ctx.fillText(sub, W / 2, H / 2 + 10);
+  }
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = "rgba(99,102,241,.10)"; ctx.fillRect(0, H - 12, W, 12);
+    items.forEach(function (it) { if (it.bad) drawHourglass(it); else drawPhoto(it); });
+    pops.forEach(function (p) {
+      ctx.globalAlpha = Math.max(0, p.t); ctx.fillStyle = p.color; ctx.font = "bold 15px system-ui, sans-serif"; ctx.textAlign = "center";
+      ctx.fillText(p.text, p.x, p.y); ctx.globalAlpha = 1;
+    });
+    drawCamera(); drawHud();
+    if (state === "ready") message("Touchez pour jouer", "Attrapez les photos, pas le temps ⏳");
+    if (state === "over") message(score + " photo(s)", score > 0 && score >= best ? "Nouveau record 🎉 · Touchez pour rejouer" : "Touchez pour rejouer");
+    if (state === "paused") message("Pause", "Touchez pour reprendre");
+  }
+
+  function spawn() {
+    var level = Math.min(elapsed / 60, 1);                       // la difficulté monte sur une minute
+    var bad = Math.random() < 0.22 + level * 0.18;
+    var wobble = bad ? .15 : 1;                                   // les sabliers restent droits, faciles à reconnaître
+    items.push({ x: 20 + Math.random() * (W - 40), y: -20, rot: (Math.random() - .5) * .5 * wobble, spin: (Math.random() - .5) * 1.5 * wobble,
+                 vy: 90 + level * 130 + Math.random() * 40, bad: bad, gold: !bad && Math.random() < 0.08,
+                 tint: TINTS[Math.floor(Math.random() * TINTS.length)] });
+    spawnIn = Math.max(0.38, 0.95 - level * 0.5) * (0.7 + Math.random() * 0.6);
+  }
+  function setScore(v) {
+    score = v; scoreEl.textContent = score;
+    if (score > best) { best = score; bestEl.textContent = best; try { localStorage.setItem("pixshare-attrape-record", String(best)); } catch (e) {} }
+  }
+  function step(dt) {
+    elapsed += dt; hurt = Math.max(0, hurt - dt);
+    var dir = (keys.ArrowRight ? 1 : 0) - (keys.ArrowLeft ? 1 : 0);
+    if (dir) cam.target = Math.max(cam.w / 2, Math.min(W - cam.w / 2, cam.target + dir * 300 * dt));
+    cam.x += (cam.target - cam.x) * Math.min(1, dt * 14);
+    spawnIn -= dt; if (spawnIn <= 0) spawn();
+    var top = H - cam.h - 20;
+    items = items.filter(function (it) {
+      it.y += it.vy * dt; it.rot += it.spin * dt;
+      if (it.y > top && it.y < H - 10 && Math.abs(it.x - cam.x) < cam.w / 2 + 10) {
+        if (it.bad) {
+          if (hurt <= 0) { lives -= 1; hurt = 1; pops.push({ x: it.x, y: top, text: "−1 vie", color: "#dc2626", t: 1 });
+            if (navigator.vibrate) { try { navigator.vibrate(60); } catch (e) {} } }
+        } else {
+          var pts = it.gold ? 5 : 1; setScore(score + pts);
+          pops.push({ x: it.x, y: top, text: "+" + pts, color: it.gold ? "#d97706" : "#4f46e5", t: 1 });
+        }
+        return false;
+      }
+      return it.y < H + 30;
+    });
+    pops = pops.filter(function (p) { p.t -= dt * 1.6; p.y -= 30 * dt; return p.t > 0; });
+    if (lives <= 0) { state = "over"; }
+  }
+  function loop(ts) {
+    var dt = Math.min(0.05, (ts - (last || ts)) / 1000); last = ts;
+    if (state === "play") step(dt);
+    draw();
+    if (state === "play") rafId = requestAnimationFrame(loop); else { rafId = 0; last = 0; }
+  }
+  function run() { if (!rafId) rafId = requestAnimationFrame(loop); }
+  function start() {
+    items = []; pops = []; lives = 3; elapsed = 0; spawnIn = 0.6; hurt = 0; setScore(0);
+    cam.x = cam.target = W / 2; state = "play"; run();
+  }
+  function tap() {
+    if (state === "ready" || state === "over") start();
+    else if (state === "paused") { state = "play"; run(); }
+  }
+  function aim(ev) {
+    var rect = canvas.getBoundingClientRect();
+    cam.target = Math.max(cam.w / 2, Math.min(W - cam.w / 2, (ev.clientX - rect.left) / scale));
+  }
+  canvas.addEventListener("pointerdown", function (ev) { aim(ev); tap(); try { canvas.setPointerCapture(ev.pointerId); } catch (e) {} });
+  canvas.addEventListener("pointermove", function (ev) { if (state === "play" && (ev.pointerType === "mouse" || ev.buttons || ev.pressure)) aim(ev); });
+  canvas.addEventListener("keydown", function (ev) {
+    if (ev.key === "ArrowLeft" || ev.key === "ArrowRight") { keys[ev.key] = true; ev.preventDefault(); }
+    if (ev.key === " " || ev.key === "Enter") { tap(); ev.preventDefault(); }
+  });
+  canvas.addEventListener("keyup", function (ev) { keys[ev.key] = false; });
+  document.addEventListener("visibilitychange", function () { if (document.hidden && state === "play") { state = "paused"; draw(); } });
+  window.addEventListener("resize", resize);
+  resize();
+})();
+</script>
+{% endif %}
 {% endblock %}
