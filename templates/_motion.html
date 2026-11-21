@@ -141,7 +141,11 @@
         if (entry.isIntersecting) { entry.target.classList.add("mx-in"); io.unobserve(entry.target); }
       });
     }, { threshold: 0.08 });
+    const fold = window.innerHeight || 800;
     targets.forEach((el, i) => {
+      // Ce qui est déjà à l'écran au chargement s'affiche tout de suite (lisible et rapide) :
+      // seuls les blocs plus bas apparaissent en douceur au défilement.
+      if (el.getBoundingClientRect().top < fold) return;
       el.classList.add("mx-reveal");
       el.style.setProperty("--mx-delay", Math.min(i, 6) * 70 + "ms");
       io.observe(el);
