@@ -403,10 +403,12 @@ def test_limits_table_shows_album_limits(app):
 def test_google_preview_and_album_landing_page(app):
     client = app.test_client()
     home = client.get("/").get_data(as_text=True)
-    assert "<title>PixShare – Partagez vos photos et vos albums souvenirs</title>" in home
-    assert 'name="description" content="Partagez vos photos en un instant, sans inscription. Mariage, anniversaire, fête' in home
+    # « hébergeur d'images » : la recherche qui amène le plus de visiteurs (Search Console) reste dans le titre
+    assert "<title>PixShare – Hébergeur d&#39;images gratuit et albums photo partagés</title>" in home
+    assert 'name="description" content="Hébergez et partagez vos images gratuitement, sans inscription' in home
+    assert "Hébergeur d&#39;images gratuit, sans inscription" in home
     assert "Albums souvenirs d'événement partagés par QR code" in home                 # données structurées
-    assert 'og:description" content="Partagez vos photos' in home
+    assert 'og:description" content="Hébergez et partagez vos images' in home
     page = client.get("/album-souvenir")
     text = page.get_data(as_text=True)
     assert page.status_code == 200 and "Un album souvenir pour votre événement" in text
