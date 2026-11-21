@@ -175,6 +175,57 @@ def flash_pending_moderation_notice():
 # Public site
 # =========================================================
 
+MAX_FILES_PER_SEND = 10
+
+
+def _save_several(files, too_many, ip, guest_token, keep, view_limit_enabled, max_views, max_size_bytes, password):
+    """Plusieurs fichiers dans un seul envoi : chacun est vérifié et compté comme un envoi (limites horaires
+    comprises) ; un fichier refusé n'empêche pas les autres de partir."""
+    account = current_account()
+    rate_key = f"acct:{account['id']}" if account else ip
+    saved, problems, waiting, rate_note = [], [], 0, ""
+    for index, upload in enumerate(files):
+        original = upload.filename
+        safe_name = secure_filename(original)
+        if not safe_name or not allowed_file(safe_name):
+            problems.append(f"« {original} » : type de fichier non accepté")
+            continue
+        if index:  # le premier a déjà été compté par la vérification commune
+            rate = check_upload_rate(rate_key, exempt=is_admin(), limit=get_uploads_per_hour(account or False))
+            if not rate.allowed:
+                rate_note = limit_message(rate, member=bool(account))
+                problems.append(f"{len(files) - index} fichier(s) non envoyé(s) : limite d'envois atteinte")
+                break
+        try:
+            new_id, _lifetime, _permanent = save_uploaded_file(
+                upload, original_name=original, client_ip=ip, guest_token=guest_token, keep_requested=keep,
+                view_limit_enabled=view_limit_enabled, max_views=max_views, max_size_bytes=max_size_bytes,
+                password=password)
+        except FileTooLargeError:
+            problems.append(f"« {original} » : trop volumineux (maximum {get_max_upload_size_mb()} Mo)")
+            continue
+        except BannedImageError:
+            problems.append(f"« {original} » : image déjà refusée par la modération")
+            continue
+        saved.append(new_id)
+        if requires_image_moderation(safe_name):
+            waiting += 1
+    if too_many:
+        problems.append(f"{MAX_FILES_PER_SEND} fichiers au plus par envoi : les suivants n'ont pas été pris")
+    if saved:
+        text = f"{len(saved)} fichier(s) envoyé(s) ✅"
+        if waiting:
+            text += f" {waiting} image(s) en vérification automatique : leur lien s'affiche dès qu'elles sont validées."
+        flash(text, "success" if not problems else "info")
+    for problem in problems[:5]:
+        flash(problem, "warning")
+    if rate_note:
+        flash(rate_note, "warning")
+    if not saved:
+        return attach_guest_cookie(redirect(url_for("public.index")))
+    return attach_guest_cookie(redirect(url_for("public.index", nouveau=",".join(saved), _anchor=f"file-{saved[0]}")))
+
+
 @public_bp.route("/", methods=["GET", "POST"], endpoint="index")
 def index():
     cleanup_expired()
@@ -206,7 +257,10 @@ def index():
                 flash("Le stockage est plein pour le moment. Réessayez un peu plus tard.", "warning")
                 return attach_guest_cookie(redirect(url_for("public.index")))
 
-        f = request.files.get("file")
+        chosen = [x for x in request.files.getlist("file") if x and x.filename]
+        too_many = len(chosen) > MAX_FILES_PER_SEND
+        chosen = chosen[:MAX_FILES_PER_SEND]
+        f = chosen[0] if chosen else None
         image_url = (request.form.get("image_url") or "").strip()
         max_size_bytes = get_max_upload_size_bytes()
         keep = (request.form.get("keep", "") in {"1", "on", "true", "yes"})
@@ -233,6 +287,10 @@ def index():
                 rate_limited = True
                 rate_limit_retry = rate.retry_after
                 flash(limit_message(rate, member=bool(account)), "warning")
+
+        if not rate_limited and len(chosen) > 1:
+            return _save_several(chosen, too_many, ip, guest_token, keep, view_limit_enabled, max_views,
+                                 max_size_bytes, file_password)
 
         if not rate_limited and f and f.filename:
             original = f.filename

@@ -182,5 +182,9 @@
   "home_faq_link": "A question? See the FAQ",
   "optional": "optional",
   "human_check_wait": "Checking you're human…",
+  "js_several_files": "{n} files selected:",
+  "js_pasted": "📋 Pasted —",
+  "forum_codes": "Codes for forums and websites (BBCode, HTML, Markdown)",
+  "forum_codes_views": "This image has a view limit: each display on a forum counts as a view.",
   "enter_to_send": "Press <kbd>Enter</kbd> to upload"
 }

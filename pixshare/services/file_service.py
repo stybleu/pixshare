@@ -550,6 +550,7 @@ def file_meta(file_id: str, db: dict | None = None):
         "public_url": url_for("public.public_file", file_id=file_id, _external=True) if is_public and public_exists else "",
         "raw_url": url_for("public.view_file", file_id=file_id, _external=True) if is_public and public_exists else "",
         "previewable": previewable,
+        "is_image": previewable and ext in IMAGE_EXTENSIONS,
         "views": int(meta.get("views", 0) or 0),
         "view_limit_enabled": bool(meta.get("view_limit_enabled", False)),
         "max_views": int(meta.get("max_views", 0) or 0),

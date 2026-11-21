@@ -128,7 +128,7 @@
               <div id="dz-file" class="mt-2 small fw-semibold"></div>
             </div>
 
-            <input id="fileInput" aria-label="{{ _('dropzone_title') }}" class="visually-hidden" type="file" name="file" {% if not uploads_enabled %}disabled{% endif %}>
+            <input id="fileInput" aria-label="{{ _('dropzone_title') }}" class="visually-hidden" type="file" name="file" multiple {% if not uploads_enabled %}disabled{% endif %}>
 
             <details class="mt-2 url-import">
               <summary class="small text-muted">{{ _("import_url_label") }}</summary>
@@ -411,7 +411,7 @@
             {% set open_url = f.raw_url if f.previewable else f.download_url %}
             {% set is_pending = (f.status == 'pending') %}
 
-            <div class="mb-3 p-2 border rounded {% if request.args.get('nouveau') == f.id %}file-new{% endif %}" id="file-{{ f.id }}" style="scroll-margin-top: 90px">
+            <div class="mb-3 p-2 border rounded {% if f.id in (request.args.get('nouveau') or '').split(',') %}file-new{% endif %}" id="file-{{ f.id }}" style="scroll-margin-top: 90px">
 
               <div class="d-flex align-items-center gap-2">
                 {% if f.owner_preview_url %}
@@ -558,6 +558,24 @@
                   </div>
                 </div>
               </div>
+              {% if f.is_image and f.raw_url and not f.protected %}
+              <details class="mt-2 forum-codes">
+                <summary class="small text-primary" style="cursor:pointer">{{ _("forum_codes") }}</summary>
+                {% if f.view_limit_enabled %}<div class="small text-warning-emphasis mt-1">⚠️ {{ _("forum_codes_views") }}</div>{% endif %}
+                {% set codes = [
+                  ("bb", "BBCode (forums)", "[url=" ~ f.public_url ~ "][img]" ~ f.raw_url ~ "[/img][/url]"),
+                  ("html", "HTML (sites, blogs)", '<a href="' ~ f.public_url ~ '"><img src="' ~ f.raw_url ~ '" alt="' ~ (f.original|replace('"', '')) ~ '"></a>'),
+                  ("md", "Markdown (Reddit, GitHub, Discord)", "[![" ~ (f.original|replace("]", "")|replace("[", "")) ~ "](" ~ f.raw_url ~ ")](" ~ f.public_url ~ ")"),
+                ] %}
+                {% for key, title, code in codes %}
+                <div class="small text-muted mt-2 mb-1">{{ title }}</div>
+                <div class="input-group input-group-sm">
+                  <input id="code_{{ key }}_{{ f.id }}" aria-label="{{ title }}" class="form-control font-monospace" value="{{ code }}" readonly onclick="this.select()">
+                  <button type="button" class="btn btn-outline-primary" onclick="copyById('code_{{ key }}_{{ f.id }}')">{{ _("copy") }}</button>
+                </div>
+                {% endfor %}
+              </details>
+              {% endif %}
               {% endif %}
 
             </div>
@@ -640,6 +658,8 @@ function copyById(id){
 
   const I18N = {
     selectedPrefix: {{ _("js_selected_prefix")|tojson }},
+    severalFiles: {{ _("js_several_files")|tojson }},
+    pasted: {{ _("js_pasted")|tojson }},
     selectedUrlPrefix: {{ _("js_selected_url_prefix")|tojson }},
     dimensionsLabel: {{ _("dimensions_label")|tojson }},
     placeholderWidth: {{ _("placeholder_width")|tojson }},
@@ -824,10 +844,24 @@ function copyById(id){
 
   function showName() {
     const f = input.files && input.files[0];
+    const count = input.files ? input.files.length : 0;
     const urlValue = (imageUrlInput?.value || "").trim();
-    label.textContent = f ? (I18N.selectedPrefix + f.name) : (urlValue ? (I18N.selectedUrlPrefix + urlValue) : "");
+    if (count > 1) {
+      const names = Array.prototype.slice.call(input.files, 0, 3).map(function (x) { return x.name; }).join(", ");
+      label.textContent = I18N.severalFiles.replace("{n}", String(count)) + " " + names + (count > 3 ? "…" : "");
+    } else {
+      label.textContent = f ? (I18N.selectedPrefix + f.name) : (urlValue ? (I18N.selectedUrlPrefix + urlValue) : "");
+    }
 
     if (!previewBox || !previewImg || !resizeBox) return;
+
+    if (count > 1) {              // plusieurs fichiers : pas d'aperçu ni de redimensionnement (un par un, c'est pour un seul)
+      previewBox.style.display = "none";
+      previewImg.src = "";
+      resizeBox.style.display = "none";
+      resetResizeUi();
+      return;
+    }
 
     if (!f) {
       previewBox.style.display = "none";
@@ -898,6 +932,72 @@ function copyById(id){
   function fileChosen() {
     const url = imageUrlInput;
     return !!(input.files && input.files.length) || !!(url && url.value.trim());
+  }
+
+  function useFiles(list) {
+    const dt = new DataTransfer();
+    Array.prototype.slice.call(list, 0, 10).forEach(function (file) { dt.items.add(file); });
+    if (!dt.files.length) return false;
+    input.files = dt.files;
+    if (imageUrlInput) imageUrlInput.value = "";
+    showName();
+    updateEnterHint();
+    return true;
+  }
+
+  // Ctrl+V : une capture d'écran ou une image copiée part dans l'envoi ; une adresse d'image va dans « importer par lien ».
+  document.addEventListener("paste", (e) => {
+    const a = document.activeElement;
+    if (a && (a.tagName === "TEXTAREA" || (a.tagName === "INPUT" && a.type !== "file"))) return;  // on colle dans un champ
+    const data = e.clipboardData;
+    if (!data || input.disabled) return;
+    const files = [];
+    Array.prototype.forEach.call(data.items || [], function (item) {
+      if (item.kind === "file") {
+        const file = item.getAsFile();
+        if (file) {
+          const ext = (file.type.split("/")[1] || "png").replace("jpeg", "jpg").replace(/[^a-z0-9]/gi, "");
+          files.push(file.name && file.name !== "image." + ext && file.name !== "image.png" ? file
+            : new File([file], "capture-" + new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-") + "." + ext, { type: file.type }));
+        }
+      }
+    });
+    if (files.length) {
+      e.preventDefault();
+      if (useFiles(files) && label) label.textContent = I18N.pasted + " " + label.textContent;
+      return;
+    }
+    const text = (data.getData("text") || "").trim();
+    if (imageUrlInput && /^https?:\/\/\S+$/i.test(text)) {
+      e.preventDefault();
+      imageUrlInput.value = text;
+      const details = imageUrlInput.closest("details");
+      if (details) details.open = true;
+      imageUrlInput.dispatchEvent(new Event("input", { bubbles: true }));
+      updateEnterHint();
+    }
+  });
+
+  // Image partagée depuis la galerie du téléphone (menu « Partager » → PixShare) : le service worker l'a gardée,
+  // on la met dans le formulaire ; la personne choisit la durée et appuie sur Envoyer comme d'habitude.
+  if (new URLSearchParams(location.search).has("partage") && "caches" in window) {
+    caches.open("pixshare-partage").then(function (cache) {
+      return cache.keys().then(function (keys) {
+        return Promise.all(keys.map(function (req) {
+          return cache.match(req).then(function (resp) {
+            return resp.blob().then(function (blob) {
+              const name = decodeURIComponent(resp.headers.get("X-Nom") || "photo");
+              return new File([blob], name, { type: blob.type || resp.headers.get("Content-Type") || "" });
+            });
+          });
+        })).then(function (files) {
+          return Promise.all(keys.map(function (req) { return cache.delete(req); })).then(function () { return files; });
+        });
+      });
+    }).then(function (files) {
+      if (files && files.length) useFiles(files);
+      history.replaceState(null, "", location.pathname);
+    }).catch(function () {});
   }
 
   document.addEventListener("keydown", (e) => {
@@ -1167,6 +1267,7 @@ function copyById(id){
   }
 
   form.addEventListener("submit", async (e) => {
+    if (input.files && input.files.length > 1) return;   // plusieurs fichiers : envoyés tels quels
     const f = input.files && input.files[0];
     const hasUrl = !!((imageUrlInput?.value || "").trim());
 

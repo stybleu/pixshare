@@ -234,7 +234,8 @@ def test_post_without_csrf_token_is_refused(app, mails):
     album_id = create(c)
     # API de l'extension : clé personnelle, pas de cookie. Lien de modération par mail : sans lien signé valable,
     # rien ne se passe (et avec, le jeton du formulaire est exigé).
-    skip = {"extension.upload", "admin.mail_review"}
+    # « /partager » (menu Partager d'Android) ne fait rien côté serveur : il renvoie juste à l'accueil.
+    skip = {"extension.upload", "admin.mail_review", "seo.share_target"}
     for rule in app.url_map.iter_rules():
         if "POST" not in rule.methods or rule.endpoint in skip:
             continue
@@ -288,3 +289,10 @@ def test_file_password_brute_force_from_many_ips(app, mails):
     attacker = from_ip(app.test_client(), "192.0.2.99")
     attacker.post(f"/file/{file_id}/unlock", data={"csrf_token": csrf(attacker, f"/file/{file_id}"), "password": "motdepasse-photo"})
     assert attacker.get(f"/view/{file_id}?raw=1").status_code == 404
+
+
+def test_share_endpoint_stores_nothing(app):
+    c = app.test_client()
+    r = c.post("/partager", data={"file": (io.BytesIO(png()), "x.png")}, content_type="multipart/form-data")
+    assert r.status_code == 302 and r.headers["Location"].endswith("/")
+    assert records(app) == {}

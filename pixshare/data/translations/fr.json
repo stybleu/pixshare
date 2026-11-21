@@ -182,5 +182,9 @@
   "home_faq_link": "Une question ? Consultez les questions fréquentes",
   "optional": "facultatif",
   "human_check_wait": "Vérification anti-robot…",
+  "js_several_files": "{n} fichiers sélectionnés :",
+  "js_pasted": "📋 Collé —",
+  "forum_codes": "Codes pour forums et sites (BBCode, HTML, Markdown)",
+  "forum_codes_views": "Cette image a une limite de vues : chaque affichage sur un forum compte comme une vue.",
   "enter_to_send": "Appuyez sur <kbd>Entrée</kbd> pour envoyer"
 }

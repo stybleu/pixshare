@@ -182,8 +182,17 @@ def test_backup_due_once_per_night(make_app, r2):
         assert backup_service.backup_due()            # jamais faite : tout de suite
         backup_service._save_state(last_attempt="2026-11-20T02:30:00")   # 3 h 30 à Paris
         assert not backup_service.backup_due(datetime(2026, 11, 20, 12, 0, tzinfo=timezone.utc))
+        assert not backup_service.backup_due(datetime(2026, 11, 20, 22, 0, tzinfo=timezone.utc))  # 23 h : pas le soir même
         assert not backup_service.backup_due(datetime(2026, 11, 21, 1, 0, tzinfo=timezone.utc))   # 2 h à Paris
         assert backup_service.backup_due(datetime(2026, 11, 21, 2, 5, tzinfo=timezone.utc))       # 3 h 05
+        # sauvegarde lancée à la main à 15 h : celle de la nuit suivante a quand même lieu
+        backup_service._save_state(last_attempt="2026-11-21T14:00:00")
+        assert not backup_service.backup_due(datetime(2026, 11, 21, 20, 0, tzinfo=timezone.utc))
+        assert backup_service.backup_due(datetime(2026, 11, 22, 2, 1, tzinfo=timezone.utc))
+        # heure d'été : 3 h à Paris = 1 h UTC
+        backup_service._save_state(last_attempt="2026-07-01T02:00:00")
+        assert not backup_service.backup_due(datetime(2026, 7, 2, 0, 30, tzinfo=timezone.utc))
+        assert backup_service.backup_due(datetime(2026, 7, 2, 1, 5, tzinfo=timezone.utc))
 
 
 def test_admin_card_and_restore_needs_confirmation(make_app, r2, monkeypatch):

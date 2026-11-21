@@ -38,7 +38,6 @@ DB_PREFIX = "base/"
 FILES_PREFIX = "fichiers/"
 KEEP_DB_COPIES = 7
 NIGHT_HOUR = 3            # heure de Paris à partir de laquelle la sauvegarde de la nuit se lance
-MIN_INTERVAL_HOURS = 20   # jamais deux sauvegardes automatiques dans la même nuit
 _thread_lock = threading.Lock()
 
 
@@ -310,28 +309,37 @@ def start_backup(app, manual: bool = False) -> bool:
     return True
 
 
-def _paris_hour(now: datetime) -> int:
+def _last_night_start(now: datetime) -> datetime:
+    """Le dernier « 3 h du matin, heure de Paris » passé (heure d'été comprise)."""
     try:
         from zoneinfo import ZoneInfo
-        return now.astimezone(ZoneInfo("Europe/Paris")).hour
+        paris = ZoneInfo("Europe/Paris")
     except Exception:  # pragma: no cover
-        return (now.hour + 1) % 24
+        paris = timezone(timedelta(hours=1))
+    local = now.astimezone(paris)
+    start = local.replace(hour=NIGHT_HOUR, minute=0, second=0, microsecond=0)
+    if local < start:
+        start = (local - timedelta(days=1)).replace(hour=NIGHT_HOUR, minute=0, second=0, microsecond=0)
+    return start
 
 
 def backup_due(now: datetime | None = None) -> bool:
+    """Une sauvegarde automatique par nuit : due si la dernière tentative date d'avant le dernier 3 h (Paris)."""
     if not is_configured():
         return False
     now = now or utcnow()
-    state = load_state()
-    last = state.get("last_attempt") or ""
-    if last:
-        try:
-            if now - parse_dt(last) < timedelta(hours=MIN_INTERVAL_HOURS):
-                return False
-        except Exception:
-            pass
-        return _paris_hour(now) >= NIGHT_HOUR
-    return True  # jamais sauvegardé : tout de suite
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+    last = load_state().get("last_attempt") or ""
+    if not last:
+        return True  # jamais sauvegardé : tout de suite
+    try:
+        last_dt = parse_dt(last)
+        if last_dt.tzinfo is None:
+            last_dt = last_dt.replace(tzinfo=timezone.utc)
+    except Exception:
+        return True
+    return last_dt < _last_night_start(now)
 
 
 _last_check: float | None = None

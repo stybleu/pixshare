@@ -78,6 +78,13 @@ def faq() -> list[dict]:
         ("Comment signaler un contenu ?",
          "Avec le bouton « Signaler » sous chaque image, ou par le formulaire de contact. Les signalements sont "
          "vérifiés, et une image signalée peut être masquée en attendant la vérification.", [("Formulaire de contact", "public.contact")]),
+        ("Peut-on installer PixShare sur son téléphone ?",
+         "Oui. Sur Android, dans Chrome ou Samsung Internet, ouvrez le menu du navigateur puis « Installer l'application » "
+         "(ou « Ajouter à l'écran d'accueil »). PixShare apparaît alors dans le menu « Partager » de votre galerie : "
+         "choisissez une photo, « Partager », puis PixShare, et elle arrive directement dans le formulaire d'envoi. "
+         "Sur iPhone, « Ajouter à l'écran d'accueil » fonctionne aussi, mais Safari ne permet pas encore le partage "
+         "depuis la galerie. Sur ordinateur, vous pouvez aussi coller une capture d'écran avec Ctrl+V, ou envoyer "
+         "jusqu'à 10 fichiers d'un coup.", []),
         ("Pourquoi me demande-t-on un code par mail à la connexion ?",
          "Pour protéger votre compte et vos albums : sur un appareil ou un navigateur que le site ne connaît pas encore, "
          "le bon mot de passe ne suffit pas, il faut aussi le code à 6 chiffres reçu par mail. Ensuite, cet appareil est "
