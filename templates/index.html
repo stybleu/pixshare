@@ -123,12 +123,12 @@
 
             <div id="dropzone" class="dropzone" role="button" tabindex="0" aria-controls="fileInput">
               <div class="dz-icon" aria-hidden="true">📷</div>
-              <div class="dz-title">{{ _("dropzone_title") }}</div>
+              <div class="dz-title">{{ _("dropzone_title_member") if (account or admin) else _("dropzone_title") }}</div>
               <div class="dz-sub">{{ _("dropzone_subtitle") }}</div>
               <div id="dz-file" class="mt-2 small fw-semibold"></div>
             </div>
 
-            <input id="fileInput" aria-label="{{ _('dropzone_title') }}" class="visually-hidden" type="file" name="file" accept="image/*,video/*" multiple {% if not uploads_enabled %}disabled{% endif %}>
+            <input id="fileInput" aria-label="{{ _('dropzone_title') }}" class="visually-hidden" type="file" name="file" accept="image/*,video/*{% if account or admin %},audio/*{% endif %}" multiple {% if not uploads_enabled %}disabled{% endif %}>
 
             <details class="mt-2 url-import">
               <summary class="small text-muted">{{ _("import_url_label") }}</summary>

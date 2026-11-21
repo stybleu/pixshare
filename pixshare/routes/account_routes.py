@@ -489,8 +489,8 @@ def replace(file_id):
         flash("Choisissez la nouvelle photo.", "warning")
         return back
     safe_name = secure_filename(f.filename)
-    if not safe_name or not allowed_file(safe_name):
-        flash("Ce format n'est pas accepté : seulement des photos et des vidéos.", "danger")
+    if not safe_name or not allowed_file(safe_name, member=True):
+        flash("Ce format n'est pas accepté : seulement des photos, des vidéos et des sons.", "danger")
         return back
     ip = get_client_ip()
     rate = check_upload_rate(f"acct:{rec['id']}", exempt=is_admin(), limit=get_uploads_per_hour(rec))

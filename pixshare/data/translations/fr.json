@@ -14,6 +14,7 @@
   "cgu_short": "CGU",
   "choose_file": "Choisir une photo",
   "dropzone_title": "Choisir des photos ou des vidéos",
+  "dropzone_title_member": "Choisir des photos, vidéos ou sons",
   "dropzone_subtitle": "ou glissez-les ici · jusqu'à 10 à la fois",
   "image_preview": "Aperçu de l'image",
   "resize_before_upload": "Redimensionner avant l'envoi",

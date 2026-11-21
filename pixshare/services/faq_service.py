@@ -14,7 +14,9 @@ def faq() -> list[dict]:
              f"Non. Vous pouvez envoyer une photo ou une vidéo sans inscription, gardée jusqu'à {guest['life']}, "
              f"{guest['mb']} Mo au maximum. Un compte gratuit permet d'aller plus loin.", []),
             ("Quels formats sont acceptés ?",
-             "Les images JPG, PNG, GIF, WebP, HEIC (photos d'iPhone), TIFF et BMP, et les vidéos MP4, WebM, MOV et AVI.", []),
+             "Les images JPG, PNG, GIF, WebP, HEIC (photos d'iPhone), TIFF et BMP, et les vidéos MP4, WebM, MOV et AVI. "
+             "Avec un compte gratuit, aussi les sons MP3, M4A, AAC, OGG, Opus, WAV et FLAC, à écouter directement "
+             "depuis le lien. Seulement des sons dont vous avez les droits : pas de musique copiée.", []),
             ("Quelle est la taille maximale d'une photo ou d'une vidéo ?",
              f"{guest['mb']} Mo sans compte, et {member['mb']} Mo avec un compte gratuit.", []),
             ("Combien de temps ma photo reste-t-elle en ligne ?",

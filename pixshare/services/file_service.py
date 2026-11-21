@@ -41,6 +41,9 @@ IMAGE_EXTENSIONS = {
     ".bmp", ".jfif", ".jpe", ".apng",
 }
 VIDEO_EXTENSIONS = {".mp4", ".webm", ".avi", ".mov"}
+# Sons : réservés aux membres (identifiables : la musique piratée est le principal risque).
+# Le WMA n'est lu par aucun navigateur : pas accepté.
+AUDIO_EXTENSIONS = {".mp3", ".m4a", ".aac", ".ogg", ".oga", ".opus", ".wav", ".flac"}
 PREVIEW_IMAGE_EXTENSIONS = {
     ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg", ".avif",
     ".jfif", ".jpe", ".apng",
@@ -104,9 +107,23 @@ def is_image_extension(ext: str) -> bool:
     return ext in IMAGE_EXTENSIONS
 
 
-def allowed_file(filename: str) -> bool:
+def allowed_file(filename: str, member: bool = False) -> bool:
+    """Photos et vidéos pour tous ; les sons en plus pour les membres."""
     ext = safe_ext(filename)
-    return bool(ext) and ext[1:] in current_app.config["ALLOWED_EXTENSIONS"]
+    if not ext:
+        return False
+    return ext[1:] in current_app.config["ALLOWED_EXTENSIONS"] or (member and ext in AUDIO_EXTENSIONS)
+
+
+def is_audio_filename(filename) -> bool:
+    return bool(filename) and os.path.splitext(str(filename).lower())[1] in AUDIO_EXTENSIONS
+
+
+def accepted_formats(member: bool = False) -> str:
+    names = sorted(current_app.config["ALLOWED_EXTENSIONS"])
+    if member:
+        names += sorted(e[1:] for e in AUDIO_EXTENSIONS)
+    return ", ".join(names)
 
 
 def generate_file_id() -> str:
@@ -509,7 +526,7 @@ def file_meta(file_id: str, db: dict | None = None):
         return None
 
     is_public = status == "active"
-    previewable = is_public and public_exists and ext in IMAGE_EXTENSIONS.union(VIDEO_EXTENSIONS)
+    previewable = is_public and public_exists and ext in IMAGE_EXTENSIONS.union(VIDEO_EXTENSIONS, AUDIO_EXTENSIONS)
     permanent = bool(meta.get("permanent")) or (not meta.get("expires_at"))
     remaining_h = ""
 

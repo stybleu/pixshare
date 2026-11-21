@@ -105,8 +105,8 @@ def upload():
         if f and f.filename:
             original = f.filename[:200]
             safe_name = secure_filename(original)
-            if not safe_name or not allowed_file(safe_name):
-                return _error("Seulement des photos et des vidéos.", 415)
+            if not safe_name or not allowed_file(safe_name, member=True):
+                return _error("Seulement des photos, des vidéos et des sons.", 415)
             file_id, lifetime, _permanent = save_uploaded_file(
                 f, original_name=original, client_ip=ip, guest_token=guest_token, max_size_bytes=max_bytes)
             name = safe_name

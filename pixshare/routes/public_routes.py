@@ -13,7 +13,9 @@ from pixshare.services.auth_service import is_admin, is_locked, register_fail, r
 from pixshare.services.contact_service import create_contact_message
 from pixshare.services.file_service import (
     FileTooLargeError,
+    accepted_formats,
     allowed_file,
+    is_audio_filename,
     can_keep_uploads,
     cleanup_expired,
     delete_by_id,
@@ -176,6 +178,7 @@ def flash_pending_moderation_notice():
 # =========================================================
 
 MAX_FILES_PER_SEND = 10
+AUDIO_FOR_MEMBERS = "Les sons (MP3, OGG, WAV…) sont réservés aux comptes gratuits : créez-en un en une minute pour les envoyer."
 
 
 def _save_several(files, too_many, ip, guest_token, keep, view_limit_enabled, max_views, max_size_bytes, password):
@@ -187,8 +190,9 @@ def _save_several(files, too_many, ip, guest_token, keep, view_limit_enabled, ma
     for index, upload in enumerate(files):
         original = upload.filename
         safe_name = secure_filename(original)
-        if not safe_name or not allowed_file(safe_name):
-            problems.append(f"« {original} » : seulement des photos et des vidéos")
+        if not safe_name or not allowed_file(safe_name, member=is_member()):
+            problems.append(f"« {original} » : " + (AUDIO_FOR_MEMBERS if is_audio_filename(safe_name)
+                                                   else "format non accepté"))
             continue
         if index:  # le premier a déjà été compté par la vérification commune
             rate = check_upload_rate(rate_key, exempt=is_admin(), limit=get_uploads_per_hour(account or False))
@@ -299,9 +303,11 @@ def index():
                 flash("Nom de photo invalide.", "danger")
                 return attach_guest_cookie(redirect(url_for("public.index")))
 
-            if not allowed_file(safe_name):
-                allowed = ", ".join(sorted(current_app.config["ALLOWED_EXTENSIONS"]))
-                flash(f"Seulement des photos et des vidéos. Formats acceptés : {allowed}", "danger")
+            if not allowed_file(safe_name, member=is_member()):
+                if is_audio_filename(safe_name):
+                    flash(AUDIO_FOR_MEMBERS, "info")
+                else:
+                    flash(f"Ce format n'est pas accepté. Formats acceptés : {accepted_formats(is_member())}", "danger")
                 return attach_guest_cookie(redirect(url_for("public.index")))
 
             content_length = request.content_length or 0
@@ -701,6 +707,7 @@ def public_file(file_id):
             views_remaining=(max(0, int(meta.get("max_views", 0) or 0) - int(meta.get("views", 0) or 0)) if meta.get("view_limit_enabled") else None),
             is_image=is_image_filename(meta.get("original_name", "")),
             is_video=is_video_filename(meta.get("original_name", "")),
+            is_audio=is_audio_filename(meta.get("original_name", "")),
         )
     )
     response.headers["X-Robots-Tag"] = "noindex, noimageindex"

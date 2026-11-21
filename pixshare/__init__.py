@@ -145,6 +145,11 @@ def _register_error_pages(app: Flask) -> None:
         app.register_error_handler(code, handler)
 
 
+import mimetypes as _mimetypes
+_mimetypes.add_type("audio/wav", ".wav")
+_mimetypes.add_type("audio/ogg", ".opus")
+
+
 def create_app(config_overrides: dict | None = None) -> Flask:
     app = Flask(__name__, template_folder="../templates", static_folder="../static")
     app.config.from_object(Config)
