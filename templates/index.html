@@ -128,7 +128,7 @@
               <div id="dz-file" class="mt-2 small fw-semibold"></div>
             </div>
 
-            <input id="fileInput" aria-label="{{ _('dropzone_title') }}" class="visually-hidden" type="file" name="file" multiple {% if not uploads_enabled %}disabled{% endif %}>
+            <input id="fileInput" aria-label="{{ _('dropzone_title') }}" class="visually-hidden" type="file" name="file" accept="image/*,video/*" multiple {% if not uploads_enabled %}disabled{% endif %}>
 
             <details class="mt-2 url-import">
               <summary class="small text-muted">{{ _("import_url_label") }}</summary>

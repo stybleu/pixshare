@@ -9,7 +9,7 @@ from pixshare.services import json_services
 def test_homepage_mentions_only_existing_features(make_app):
     html = make_app().test_client().get("/").get_data(as_text=True)
     assert "API" not in html and "qualitée" not in html
-    for text in ("Partagez vos photos en un instant", "Choisir des photos ou des fichiers", "jusqu&#39;à 10 à la fois", "codes prêts",
+    for text in ("Partagez vos photos en un instant", "Choisir des photos ou des vidéos", "jusqu&#39;à 10 à la fois", "codes prêts",
                  "Suppression automatique", "Compte gratuit : plus de temps", "questions fréquentes"):
         assert text in html, text
     for long_text in ("Pourquoi utiliser PixShare", "Hébergement d'image temporaire simple et rapide", "utilisez le bouton"):
