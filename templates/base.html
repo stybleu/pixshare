@@ -2,6 +2,23 @@
 <html lang="{{ current_lang or 'fr' }}">
 <head>
 <meta charset="utf-8">
+<script>
+  // Décor animé (ciel, nuages, lettres du logo, saison) : immobile pendant le chargement, il démarre
+  // 3 secondes après. La page paraît ainsi finie tout de suite (meilleur « Speed Index »), et on profite
+  // du décor juste après.
+  (function () {
+    var root = document.documentElement;
+    root.classList.add("mx-hold");
+    function go() { setTimeout(function () { root.classList.remove("mx-hold"); }, 3000); }
+    if (document.readyState === "complete") go(); else window.addEventListener("load", go);
+    setTimeout(function () { root.classList.remove("mx-hold"); }, 9000);
+  })();
+</script>
+<style>
+  html.mx-hold #sky-wide *, html.mx-hold .topbar-sky *, html.mx-hold .topbar-sky *::before,
+  html.mx-hold .brand-title span, html.mx-hold .season-lights i, html.mx-hold .dz-title::before,
+  html.mx-hold [class^="sc-"], html.mx-hold [class*=" sc-"] { animation-play-state: paused !important; }
+</style>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 {% set _is_en = ((request.args.get('lang') or '')|lower) == 'en' %}
