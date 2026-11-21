@@ -43,8 +43,8 @@
 {% if request.path == "/" %}
 <script type="application/ld+json">
 {"@context": "https://schema.org", "@type": "WebApplication", "name": "PixShare", "url": "{{ request.url_root }}",
- "description": "Partagez vos photos et vos fichiers gratuitement, sans inscription, avec un lien privé et une suppression automatique. Avec un compte gratuit, créez des albums souvenirs pour vos événements (mariage, anniversaire, fête), partagés par QR code, où vos invités ajoutent leurs photos.",
- "featureList": ["Partage d'images et de fichiers par lien privé", "Suppression automatique", "Albums souvenirs d'événement partagés par QR code", "Les invités ajoutent leurs photos sans application ni inscription", "Diaporama en direct, défis photo et livre d'or"],
+ "description": "Partagez vos photos et vos vidéos gratuitement, sans inscription, avec un lien privé et une suppression automatique. Avec un compte gratuit, créez des albums souvenirs pour vos événements (mariage, anniversaire, fête), partagés par QR code, où vos invités ajoutent leurs photos.",
+ "featureList": ["Partage de photos et de vidéos par lien privé", "Suppression automatique", "Albums souvenirs d'événement partagés par QR code", "Les invités ajoutent leurs photos sans application ni inscription", "Diaporama en direct, défis photo et livre d'or"],
  "applicationCategory": "MultimediaApplication", "operatingSystem": "Tous", "inLanguage": ["fr", "en"],
  "isAccessibleForFree": true, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "EUR"}}
 </script>
@@ -342,7 +342,7 @@ footer {
 <main>
   <div class="container-shell">
     <header class="site-header">
-      {% block sr_h1 %}<h1 class="visually-hidden">Partager une image ou un fichier avec PixShare</h1>{% endblock %}
+      {% block sr_h1 %}<h1 class="visually-hidden">Partager une photo ou une vidéo avec PixShare</h1>{% endblock %}
 
       <div class="topbar">
         {{ sky_window(sky_on) }}
@@ -350,7 +350,7 @@ footer {
           {{ season_hat(season_theme) }}
           <img src="{{ url_for('static', filename='images/pixshare_logo_120.webp') }}" width="44" height="44" alt="PixShare">
           <div class="brand-meta">
-            <span class="brand-kicker">{{ "Temporary image and file sharing" if current_lang == "en" else "Partage temporaire d'images et de fichiers" }}</span>
+            <span class="brand-kicker">{{ "Temporary photo and video sharing" if current_lang == "en" else "Partage temporaire de photos et de vidéos" }}</span>
             <span class="brand-title">
               <span>P</span><span>i</span><span>x</span><span>S</span><span>h</span><span>a</span><span>r</span><span>e</span>
             </span>

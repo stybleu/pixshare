@@ -239,7 +239,7 @@ def add(album_id):
     if ip and ip in load_blocked():
         return done("L'envoi n'est pas possible depuis votre connexion.", "danger", 403)
     if not upload_service_enabled():
-        return done("L'envoi de fichiers est suspendu pour le moment. Réessayez plus tard.", "warning", 503)
+        return done("L'envoi est suspendu pour le moment. Réessayez plus tard.", "warning", 503)
     if not albums.unlocked(album, me):
         return done("Cet album est protégé par un mot de passe.", "warning", 403)
     if not by_owner and not album.get("guests_can_add"):
@@ -291,7 +291,7 @@ def add(album_id):
             continue
         except Exception as exc:  # fichier trop gros ou illisible : on passe à la suite
             current_app.logger.info("Photo d'album refusée (%s) : %s", type(exc).__name__, exc)
-            errors.append(f"{name} : fichier refusé (trop lourd, {get_max_upload_size_mb(owner_rec)} Mo maximum, ou illisible).")
+            errors.append(f"{name} : photo refusée (trop lourde, {get_max_upload_size_mb(owner_rec)} Mo maximum, ou illisible).")
             continue
         albums.finalize_photo(file_id, album, owner_rec, by_owner, contributor, challenge)
         if albums.usage_bytes(album["id"]) > lim["mb"] * 1024 * 1024:

@@ -657,7 +657,7 @@ def list_removed_files():
                 continue
         except Exception:
             continue
-        items.append({"id": file_id, "original_name": meta.get("original_name") or "fichier",
+        items.append({"id": file_id, "original_name": meta.get("original_name") or "photo",
                       "cause": removal_cause(meta), "deleted_at": meta.get("deleted_at") or "",
                       "replaceable": can_replace_removed(meta, account_id)})
     return sorted(items, key=lambda m: m["deleted_at"], reverse=True)

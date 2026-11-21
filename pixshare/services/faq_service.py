@@ -9,17 +9,17 @@ def faq() -> list[dict]:
     guest, member = lim["guest"], lim["member"]
     albums = lim.get("albums")
     sections = [
-        ("Envoyer un fichier", [
+        ("Envoyer une photo", [
             ("Faut-il créer un compte pour envoyer une image ?",
-             f"Non. Vous pouvez envoyer une image ou un fichier sans inscription, gardé jusqu'à {guest['life']}, "
+             f"Non. Vous pouvez envoyer une photo ou une vidéo sans inscription, gardée jusqu'à {guest['life']}, "
              f"{guest['mb']} Mo au maximum. Un compte gratuit permet d'aller plus loin.", []),
             ("Quels formats sont acceptés ?",
              "Les images JPG, PNG, GIF, WebP, HEIC (photos d'iPhone), TIFF et BMP, et les vidéos MP4, WebM, MOV et AVI.", []),
-            ("Quelle est la taille maximale d'un fichier ?",
+            ("Quelle est la taille maximale d'une photo ou d'une vidéo ?",
              f"{guest['mb']} Mo sans compte, et {member['mb']} Mo avec un compte gratuit.", []),
-            ("Combien de temps mon fichier reste-t-il en ligne ?",
+            ("Combien de temps ma photo reste-t-elle en ligne ?",
              f"Le temps que vous choisissez au moment de l'envoi : jusqu'à {guest['life']} sans compte, "
-             f"et jusqu'à {member['life']} avec un compte gratuit. Ensuite, il est supprimé automatiquement. "
+             f"et jusqu'à {member['life']} avec un compte gratuit. Ensuite, elle est supprimée automatiquement. "
              "Si une image doit d'abord être vérifiée, le compte à rebours ne commence qu'après la vérification.", []),
             ("Mes photos perdent-elles en qualité ?",
              "Non : vos images ne sont pas recompressées. Seules les informations cachées (position GPS, modèle "
@@ -29,13 +29,13 @@ def faq() -> list[dict]:
         ("Partager", [
             ("Comment partager mon image ?",
              "Après l'envoi, PixShare vous donne un lien à copier, ainsi que des codes prêts à coller pour les "
-             "forums, les sites, Discord ou Markdown. Vous les retrouvez à tout moment dans « Mes fichiers », "
+             "forums, les sites, Discord ou Markdown. Vous les retrouvez à tout moment dans « Mes envois », "
              "sur la page d'accueil.", []),
             ("Puis-je protéger mon image par un mot de passe ?",
              "Oui, avec un compte gratuit. Vous pouvez aussi faire supprimer l'image automatiquement après un "
              "nombre de vues choisi.", []),
-            ("Comment supprimer mon fichier avant la fin ?",
-             "Dans « Mes fichiers », sur la page d'accueil, depuis le navigateur qui a servi à l'envoyer. "
+            ("Comment supprimer ma photo avant la fin ?",
+             "Dans « Mes envois », sur la page d'accueil, depuis le navigateur qui a servi à l'envoyer. "
              "Avec un compte, vous pouvez le faire depuis n'importe lequel de vos appareils.", []),
             ("Puis-je remplacer une image sans changer le lien ?",
              "Oui, avec un compte gratuit : la nouvelle image prend la place de l'ancienne, et le lien déjà "
@@ -43,13 +43,13 @@ def faq() -> list[dict]:
         ]),
         ("Compte gratuit", [
             ("Qu'apporte un compte gratuit ?",
-             f"Des fichiers gardés jusqu'à {member['life']} et jusqu'à {member['mb']} Mo, vos images sur tous vos "
+             f"Des photos et vidéos gardées jusqu'à {member['life']} et jusqu'à {member['mb']} Mo, vos images sur tous vos "
              "appareils, le mot de passe et la limite de vues, l'amélioration des photos, le remplacement sans "
              "changer le lien, l'extension pour navigateur"
              + (", et les albums souvenirs à partager par QR code." if albums else "."),
              [("Créer un compte", "account.signup")]),
             ("Comment supprimer mon compte ?",
-             "Dans « Mon compte », en bas de la page : « Supprimer mon compte ». Tous vos fichiers et vos albums "
+             "Dans « Mon compte », en bas de la page : « Supprimer mon compte ». Toutes vos photos, vos vidéos et vos albums "
              "sont alors supprimés, définitivement.", []),
         ]),
     ]
@@ -65,14 +65,14 @@ def faq() -> list[dict]:
         ("Qui peut voir mes images ?",
          "Uniquement les personnes à qui vous donnez le lien. Vos images ne sont listées nulle part sur le site.", []),
         ("Mes images apparaissent-elles sur Google ?",
-         "Non. Vos images, vos fichiers et vos albums n'apparaissent pas dans les résultats de Google : le site "
+         "Non. Vos photos, vos vidéos et vos albums n'apparaissent pas dans les résultats de Google : le site "
          "demande aux moteurs de recherche de ne pas les référencer. Seules les personnes qui ont le lien peuvent "
          "les voir.", []),
         ("Pourquoi mon image a-t-elle été refusée ou supprimée ?",
          "Les images sont vérifiées automatiquement : la nudité, la pornographie et les contenus illégaux sont "
          "interdits par les conditions d'utilisation. Une image douteuse peut être mise de côté pour vérification, "
          "ou supprimée. Dans ce cas, un message vous indique laquelle et pourquoi, et elle reste indiquée "
-         "7 jours dans « Mes fichiers ». Avec un compte, ce message vous suit sur tous vos appareils, et vous "
+         "7 jours dans « Mes envois ». Avec un compte, ce message vous suit sur tous vos appareils, et vous "
          "pouvez remplacer l'image par une autre en gardant le même lien. Une image déjà interdite (même "
          "renommée ou redimensionnée) ne peut pas être republiée.", [("Lire les conditions d'utilisation", "public.cgu")]),
         ("Comment signaler un contenu ?",
@@ -84,7 +84,7 @@ def faq() -> list[dict]:
          "choisissez une photo, « Partager », puis PixShare, et elle arrive directement dans le formulaire d'envoi. "
          "Sur iPhone, « Ajouter à l'écran d'accueil » fonctionne aussi, mais Safari ne permet pas encore le partage "
          "depuis la galerie. Sur ordinateur, vous pouvez aussi coller une capture d'écran avec Ctrl+V, ou envoyer "
-         "jusqu'à 10 fichiers d'un coup.", []),
+         "jusqu'à 10 photos d'un coup.", []),
         ("Pourquoi me demande-t-on un code par mail à la connexion ?",
          "Pour protéger votre compte et vos albums : sur un appareil ou un navigateur que le site ne connaît pas encore, "
          "le bon mot de passe ne suffit pas, il faut aussi le code à 6 chiffres reçu par mail. Ensuite, cet appareil est "
@@ -93,7 +93,7 @@ def faq() -> list[dict]:
          "« Ce n'était pas moi » du mail.", []),
         ("Le site utilise-t-il des cookies de pistage ?",
          "Non. PixShare n'utilise que des cookies techniques, nécessaires au fonctionnement du site (sécurité, "
-         "connexion, historique de vos fichiers), sans publicité ni mesure d'audience.",
+         "connexion, historique de vos envois), sans publicité ni mesure d'audience.",
          [("Mentions légales", "public.mentions_legales")]),
         ("Le service est-il payant ?",
          "Non, PixShare est gratuit et sans publicité."

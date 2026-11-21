@@ -136,7 +136,7 @@ def confirm(token):
             get_guest_token()
             claimed = claim_device_files(rec["id"])
             flash("Adresse confirmée, votre compte est prêt ✅"
-                  + (f" {claimed} fichier(s) envoyé(s) depuis ce navigateur y ont été ajoutés." if claimed else ""), "success")
+                  + (f" {claimed} envoi(s) faits depuis ce navigateur y ont été ajoutés." if claimed else ""), "success")
             return attach_guest_cookie(redirect(url_for("account.page")))
         flash("Adresse confirmée.", "success")
         return redirect(url_for("account.login"))
@@ -219,7 +219,7 @@ def _finish_login(rec: dict, device_id: str = ""):
     accounts.login(rec, device_id)
     get_guest_token()
     claimed = claim_device_files(rec["id"])
-    flash("Connecté ✅" + (f" {claimed} fichier(s) de ce navigateur ajouté(s) à votre compte." if claimed else ""),
+    flash("Connecté ✅" + (f" {claimed} envoi(s) de ce navigateur ajouté(s) à votre compte." if claimed else ""),
           "success")
     return attach_guest_cookie(redirect(_safe_next() or url_for("public.index")))
 
@@ -435,7 +435,7 @@ def delete():
         flash("Cochez la case et indiquez votre mot de passe pour supprimer le compte.", "danger")
         return redirect(url_for("account.page"))
     removed = accounts.delete_account(rec["id"])
-    flash(f"Compte supprimé, avec ses {removed} fichier(s). Votre adresse e-mail a été effacée.", "success")
+    flash(f"Compte supprimé, avec ses {removed} photo(s) et vidéo(s). Votre adresse e-mail a été effacée.", "success")
     return redirect(url_for("public.index"))
 
 
@@ -486,11 +486,11 @@ def replace(file_id):
         return back
     f = request.files.get("file")
     if not f or not f.filename:
-        flash("Choisissez le nouveau fichier.", "warning")
+        flash("Choisissez la nouvelle photo.", "warning")
         return back
     safe_name = secure_filename(f.filename)
     if not safe_name or not allowed_file(safe_name):
-        flash("Ce format de fichier n'est pas accepté.", "danger")
+        flash("Ce format n'est pas accepté : seulement des photos et des vidéos.", "danger")
         return back
     ip = get_client_ip()
     rate = check_upload_rate(f"acct:{rec['id']}", exempt=is_admin(), limit=get_uploads_per_hour(rec))
@@ -502,12 +502,12 @@ def replace(file_id):
         return back
     max_bytes = get_max_upload_size_bytes()
     if (request.content_length or 0) > max_bytes:
-        flash(f"Fichier trop volumineux. Taille maximale : {get_max_upload_size_mb()} Mo.", "danger")
+        flash(f"Trop volumineux. Taille maximale : {get_max_upload_size_mb()} Mo.", "danger")
         return back
     try:
         replace_file(file_id, f, f.filename, ip, max_bytes)
     except FileTooLargeError:
-        flash(f"Fichier trop volumineux. Taille maximale : {get_max_upload_size_mb()} Mo.", "danger")
+        flash(f"Trop volumineux. Taille maximale : {get_max_upload_size_mb()} Mo.", "danger")
         return back
     except BannedImageError:
         flash("Cette image a déjà été refusée par la modération : elle ne peut pas être publiée.", "danger")
@@ -518,5 +518,5 @@ def replace(file_id):
         flash("Image remplacée ✅ Le lien reste le même. Elle redevient visible après la vérification automatique "
               "(les anciennes copies en cache peuvent mettre quelques minutes à disparaître).", "success")
     else:
-        flash("Fichier remplacé ✅ Le lien reste le même.", "success")
+        flash("Photo remplacée ✅ Le lien reste le même.", "success")
     return back

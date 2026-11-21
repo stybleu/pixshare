@@ -18,10 +18,10 @@
       <p class="mb-1">Connecté avec <strong class="text-break">{{ rec.email }}</strong></p>
       <p class="small text-muted mb-3">Compte créé le {{ rec.created_at[:10]|day_fr }}.</p>
       <p class="mb-2">
-        <strong>{{ file_count }}</strong> fichier(s) en ligne{% if pending_count %}, dont {{ pending_count }} en attente de vérification{% endif %}.
+        <strong>{{ file_count }}</strong> photo(s) ou vidéo(s) en ligne{% if pending_count %}, dont {{ pending_count }} en attente de vérification{% endif %}.
       </p>
-      <a class="btn btn-primary btn-sm" href="{{ url_for('public.index') }}#upload-tool">Envoyer un fichier</a>
-      <a class="btn btn-outline-primary btn-sm" href="{{ url_for('public.index') }}#mes-fichiers">Voir mes fichiers</a>
+      <a class="btn btn-primary btn-sm" href="{{ url_for('public.index') }}#upload-tool">Envoyer une photo</a>
+      <a class="btn btn-outline-primary btn-sm" href="{{ url_for('public.index') }}#mes-fichiers">Voir mes envois</a>
     </div>
   </div>
 
@@ -41,7 +41,7 @@
       {% if plan %}
       <div class="alert alert-info py-2 small">
         <strong>Votre formule : {{ plan.name }}</strong>{% if plan.until %}, jusqu'au {{ plan.until|day_fr }}{% endif %}<br>
-        Durée maximale {{ plan.life }} · {{ plan.mb }} Mo par fichier ·
+        Durée maximale {{ plan.life }} · {{ plan.mb }} Mo par photo ou vidéo ·
         {% if plan.per_hour %}{{ plan.per_hour }} envois par heure{% else %}envois illimités{% endif %}
         {% if plan.albums is not none %} · {{ plan.albums }} album(s){% endif %}{% if plan.album_mb %} · {{ plan.album_mb }} Mo par album{% endif %}
       </div>
@@ -100,7 +100,7 @@
             <input class="form-control font-monospace" id="extKey" type="text" readonly value="{{ new_key }}" aria-label="Clé de l'extension">
             <button class="btn btn-outline-dark" type="button" onclick="navigator.clipboard.writeText(document.getElementById('extKey').value); this.textContent='Copiée ✓';">Copier</button>
           </div>
-          Collez-la dans les réglages de l'extension. Ne la donnez à personne : elle permet d'envoyer des fichiers avec votre compte.
+          Collez-la dans les réglages de l'extension. Ne la donnez à personne : elle permet d'envoyer des images avec votre compte.
         </div>
       {% elif rec.ext_key_hash %}
         <p class="small text-muted mb-2">
@@ -160,7 +160,7 @@
   <div class="card shadow-sm border-danger">
     <div class="card-body">
       <h2 class="h6 text-danger">Supprimer mon compte</h2>
-      <p class="small text-muted">Votre compte, votre adresse e-mail et <strong>tous vos fichiers</strong> sont effacés tout de suite. C'est définitif.</p>
+      <p class="small text-muted">Votre compte, votre adresse e-mail et <strong>toutes vos photos et vidéos</strong> sont effacés tout de suite. C'est définitif.</p>
       <form method="post" action="{{ url_for('account.delete') }}" class="row g-2">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <div class="col-md-6">
@@ -170,7 +170,7 @@
         <div class="col-12">
           <div class="form-check">
             <input class="form-check-input" type="checkbox" value="1" id="deleteConfirm" name="confirm" required>
-            <label class="form-check-label small" for="deleteConfirm">Je veux supprimer mon compte et tous mes fichiers.</label>
+            <label class="form-check-label small" for="deleteConfirm">Je veux supprimer mon compte et toutes mes photos et vidéos.</label>
           </div>
         </div>
         <div class="col-12">

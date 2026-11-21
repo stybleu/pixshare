@@ -96,7 +96,7 @@ def upload():
     max_bytes = get_max_upload_size_bytes()
     max_mb = get_max_upload_size_mb()
     if (request.content_length or 0) > max_bytes + 64 * 1024:
-        return _error(f"Fichier trop volumineux (maximum {max_mb} Mo).", 413)
+        return _error(f"Trop volumineux (maximum {max_mb} Mo).", 413)
 
     guest_token = get_guest_token()
     f = request.files.get("file")
@@ -106,7 +106,7 @@ def upload():
             original = f.filename[:200]
             safe_name = secure_filename(original)
             if not safe_name or not allowed_file(safe_name):
-                return _error("Ce format de fichier n'est pas accepté.", 415)
+                return _error("Seulement des photos et des vidéos.", 415)
             file_id, lifetime, _permanent = save_uploaded_file(
                 f, original_name=original, client_ip=ip, guest_token=guest_token, max_size_bytes=max_bytes)
             name = safe_name
@@ -115,9 +115,9 @@ def upload():
             file_id, lifetime, _permanent = save_saved_local_file(
                 temp_path, original_name=name, client_ip=ip, guest_token=guest_token)
         else:
-            return _error("Aucun fichier reçu.", 400)
+            return _error("Aucune image reçue.", 400)
     except FileTooLargeError:
-        return _error(f"Fichier trop volumineux (maximum {max_mb} Mo).", 413)
+        return _error(f"Trop volumineux (maximum {max_mb} Mo).", 413)
     except BannedImageError:
         return _error("Cette image a déjà été refusée par la modération : elle ne peut pas être publiée.", 422)
     except UrlImportError as exc:

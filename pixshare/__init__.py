@@ -58,8 +58,8 @@ def _forget_geolocation() -> None:
 _ERRORS = {
     400: ("Requête invalide", "La demande n'a pas pu être traitée. Rechargez la page et réessayez."),
     403: ("Accès refusé", "Vous n'avez pas accès à cette page."),
-    404: ("Page introuvable", "Cette page n'existe pas, ou le fichier a expiré ou été supprimé."),
-    413: ("Fichier trop volumineux", "Le fichier dépasse la taille maximale indiquée sur l'accueil."),
+    404: ("Page introuvable", "Cette page n'existe pas, ou la photo a expiré ou été supprimée."),
+    413: ("Trop volumineux", "La photo ou la vidéo dépasse la taille maximale indiquée sur l'accueil."),
     429: ("Trop de demandes", "Vous avez fait trop de demandes en peu de temps. Patientez un peu puis réessayez."),
     500: ("Erreur du serveur", "Un problème est survenu de notre côté. Réessayez dans quelques instants."),
 }
@@ -131,7 +131,7 @@ def _register_error_pages(app: Flask) -> None:
                            "Il a été supprimé par son créateur, ou l'adresse est incomplète. Vérifiez le lien ou le QR code reçu.")
         elif kind == "expired":
             title, text = ("Ce lien n'est plus disponible",
-                           "Les fichiers sur PixShare sont temporaires : celui-ci a expiré, a été supprimé par son "
+                           "Les photos sur PixShare sont temporaires : celle-ci a expiré, a été supprimée par son "
                            "auteur ou a atteint sa limite de vues.")
         elif kind == "missing":
             title, text = ("Oups, page introuvable",

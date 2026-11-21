@@ -168,7 +168,7 @@ def flash_pending_moderation_notice():
     if not notice:
         return
 
-    flash(notice.get("message") or "Un de vos fichiers a été retiré par la modération.", notice.get("level") or "warning")
+    flash(notice.get("message") or "Un de vos envois a été retiré par la modération.", notice.get("level") or "warning")
 
 
 # =========================================================
@@ -188,13 +188,13 @@ def _save_several(files, too_many, ip, guest_token, keep, view_limit_enabled, ma
         original = upload.filename
         safe_name = secure_filename(original)
         if not safe_name or not allowed_file(safe_name):
-            problems.append(f"« {original} » : type de fichier non accepté")
+            problems.append(f"« {original} » : seulement des photos et des vidéos")
             continue
         if index:  # le premier a déjà été compté par la vérification commune
             rate = check_upload_rate(rate_key, exempt=is_admin(), limit=get_uploads_per_hour(account or False))
             if not rate.allowed:
                 rate_note = limit_message(rate, member=bool(account))
-                problems.append(f"{len(files) - index} fichier(s) non envoyé(s) : limite d'envois atteinte")
+                problems.append(f"{len(files) - index} photo(s) non envoyée(s) : limite d'envois atteinte")
                 break
         try:
             new_id, _lifetime, _permanent = save_uploaded_file(
@@ -211,9 +211,9 @@ def _save_several(files, too_many, ip, guest_token, keep, view_limit_enabled, ma
         if requires_image_moderation(safe_name):
             waiting += 1
     if too_many:
-        problems.append(f"{MAX_FILES_PER_SEND} fichiers au plus par envoi : les suivants n'ont pas été pris")
+        problems.append(f"{MAX_FILES_PER_SEND} photos au plus par envoi : les suivantes n'ont pas été prises")
     if saved:
-        text = f"{len(saved)} fichier(s) envoyé(s) ✅"
+        text = f"{len(saved)} envoi(s) réussi(s) ✅"
         if waiting:
             text += f" {waiting} image(s) en vérification automatique : leur lien s'affiche dès qu'elles sont validées."
         flash(text, "success" if not problems else "info")
@@ -244,7 +244,7 @@ def index():
         validate_csrf()
 
         if not uploads_enabled:
-            flash("L'envoi de fichiers est suspendu pour le moment. Réessayez plus tard.", "warning")
+            flash("L'envoi est suspendu pour le moment. Réessayez plus tard.", "warning")
             return attach_guest_cookie(redirect(url_for("public.index")))
 
         if not turnstile_ok(request.form, ip):
@@ -296,18 +296,18 @@ def index():
             original = f.filename
             safe_name = secure_filename(original)
             if not safe_name:
-                flash("Nom de fichier invalide.", "danger")
+                flash("Nom de photo invalide.", "danger")
                 return attach_guest_cookie(redirect(url_for("public.index")))
 
             if not allowed_file(safe_name):
                 allowed = ", ".join(sorted(current_app.config["ALLOWED_EXTENSIONS"]))
-                flash(f"Ce type de fichier n'est pas accepté. Types acceptés : {allowed}", "danger")
+                flash(f"Seulement des photos et des vidéos. Formats acceptés : {allowed}", "danger")
                 return attach_guest_cookie(redirect(url_for("public.index")))
 
             content_length = request.content_length or 0
             if content_length > max_size_bytes:
                 max_mb = get_max_upload_size_mb()
-                flash(f"Fichier trop volumineux. Taille maximale : {max_mb} Mo.", "danger")
+                flash(f"Trop volumineux. Taille maximale : {max_mb} Mo.", "danger")
                 return attach_guest_cookie(redirect(url_for("public.index")))
 
             try:
@@ -324,7 +324,7 @@ def index():
                 )
             except FileTooLargeError:
                 max_mb = get_max_upload_size_mb()
-                flash(f"Fichier trop volumineux. Taille maximale : {max_mb} Mo.", "danger")
+                flash(f"Trop volumineux. Taille maximale : {max_mb} Mo.", "danger")
                 return attach_guest_cookie(redirect(url_for("public.index")))
             except BannedImageError:
                 flash(BANNED_MESSAGE, "danger")
@@ -333,9 +333,9 @@ def index():
             if requires_image_moderation(safe_name):
                 flash("Image reçue ✅ Vérification automatique en cours : son lien s'affiche dès qu'elle est validée.", "info")
             elif permanent:
-                flash("Fichier envoyé ✅ (sans expiration)", "success")
+                flash("Envoi réussi ✅ (sans expiration)", "success")
             else:
-                flash(f"Fichier envoyé ✅ (expiration : {format_duration_minutes(lifetime)})", "success")
+                flash(f"Envoi réussi ✅ (expiration : {format_duration_minutes(lifetime)})", "success")
 
             # On arrive directement sur le fichier envoyé, avec son lien à copier.
             return attach_guest_cookie(redirect(url_for("public.index", nouveau=new_id, _anchor=f"file-{new_id}")))
@@ -378,7 +378,7 @@ def index():
             return attach_guest_cookie(redirect(url_for("public.index", nouveau=new_id, _anchor=f"file-{new_id}")))
 
         if not rate_limited:
-            flash("Choisissez un fichier ou collez une URL d'image directe.", "warning")
+            flash("Choisissez une photo ou collez l'adresse d'une image.", "warning")
             return attach_guest_cookie(redirect(url_for("public.index")))
 
     guest_files = list_guest_files()
@@ -758,13 +758,13 @@ def delete_own_file(file_id):
     validate_csrf()
 
     if not file_id:
-        flash("Fichier non précisé.", "warning")
+        flash("Photo non précisée.", "warning")
         return redirect(url_for("public.index"))
 
     db = load_db()
     meta = db.get(file_id)
     if not meta:
-        flash("Fichier introuvable.", "warning")
+        flash("Photo introuvable.", "warning")
         return redirect(url_for("public.index"))
 
     get_guest_token()
@@ -773,7 +773,7 @@ def delete_own_file(file_id):
 
     ok = delete_by_id(file_id)
     flash(
-        "Fichier supprimé ✅" if ok else "Suppression impossible.",
+        "Supprimé ✅" if ok else "Suppression impossible.",
         "success" if ok else "warning",
     )
     return redirect(url_for("public.index"))

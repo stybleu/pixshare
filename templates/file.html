@@ -21,13 +21,13 @@
 
     <!-- 📁 Nom fichier sécurisé -->
     <h5 class="mb-2">
-      {{ file.original_name if file and file.original_name else (file.filename if file else "Fichier") }}
+      {{ file.original_name if file and file.original_name else (file.filename if file else "Photo") }}
     </h5>
 
     <!-- ⏳ Expiration -->
     {% if is_expired %}
       <div class="alert alert-warning">
-        ⚠️ Ce fichier a expiré et n’est plus disponible.
+        ⚠️ Ce lien a expiré : la photo n’est plus disponible.
       </div>
     {% else %}
 
@@ -79,7 +79,7 @@
       {% endif %}
 
       {% if file and file.is_permanent %}
-        <div>♾️ Fichier permanent</div>
+        <div>♾️ Sans expiration</div>
       {% endif %}
 
       {% if meta and meta.view_limit_enabled %}
@@ -103,14 +103,14 @@
   <!-- 🚀 CTA -->
   <div class="mt-5 p-4 bg-light rounded shadow-sm">
 
-    <h5 class="mb-2">Partager vos fichiers facilement</h5>
+    <h5 class="mb-2">Partager vos photos facilement</h5>
 
     <p class="text-muted mb-3">
       Envoyez vos images en haute qualité, sans compression, et obtenez un lien sécurisé en quelques secondes.
     </p>
 
     <a href="{{ url_for('public.index') }}" class="btn btn-success">
-      📤 Envoyer un fichier
+      📤 Envoyer une photo
     </a>
 
   </div>

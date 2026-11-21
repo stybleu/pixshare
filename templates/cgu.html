@@ -78,7 +78,7 @@ font-size:0.85rem;
 <h2 id="presentation" class="h6 mt-2">1. Présentation du service</h2>
 
 <p>
-PixShare est un service permettant d’envoyer et de partager des images et des fichiers via un lien temporaire.
+PixShare est un service permettant d’envoyer et de partager des photos et des vidéos via un lien temporaire.
 Le service est conçu pour un usage simple et rapide, sans obligation de créer un compte.
 Un compte gratuit, facultatif, donne accès à des limites plus larges (voir la section « Comptes »).
 </p>
@@ -94,16 +94,16 @@ L’utilisation du service implique l’acceptation pleine et entière des prés
 <h2 id="fonctionnement" class="h6 mt-4">2. Fonctionnement du service</h2>
 
 <p>
-Lors de l’envoi d’un fichier, un lien unique est généré permettant son accès, son affichage ou son téléchargement selon la nature du fichier et les fonctionnalités disponibles.
+Lors de l’envoi d’une photo ou d’une vidéo, un lien unique est généré permettant son affichage ou son téléchargement.
 </p>
 
 <ul>
-<li>Chaque fichier est conservé pendant une durée limitée, choisie à l’envoi parmi les durées proposées (de quelques minutes à la durée maximale fixée par l’éditeur).
+<li>Chaque photo ou vidéo est conservée pendant une durée limitée, choisie à l’envoi parmi les durées proposées (de quelques minutes à la durée maximale fixée par l’éditeur).
 Pour une image, cette durée ne commence qu’à sa publication : le temps passé en vérification ne compte pas.
 Une image qui n’a pas pu être vérifiée dans les 30 jours est supprimée.</li>
-<li>Une fois cette durée écoulée, le fichier est supprimé automatiquement. Aucun fichier n’est conservé sans date d’expiration.</li>
-<li>Avec un compte, l’utilisateur peut limiter le nombre de vues d’un fichier ou le protéger par un mot de passe. Une fois la limite de vues atteinte, le fichier est supprimé.</li>
-<li>L’utilisateur peut supprimer lui-même les fichiers qu’il a envoyés, depuis l’historique du navigateur utilisé pour l’envoi ou, avec un compte, depuis n’importe lequel de ses appareils.</li>
+<li>Une fois cette durée écoulée, elle est supprimée automatiquement. Aucune photo ni vidéo n’est conservée sans date d’expiration.</li>
+<li>Avec un compte, l’utilisateur peut limiter le nombre de vues d’une photo ou d’une vidéo, ou la protéger par un mot de passe. Une fois la limite de vues atteinte, elle est supprimée.</li>
+<li>L’utilisateur peut supprimer lui-même les photos et vidéos qu’il a envoyées, depuis l’historique du navigateur utilisé pour l’envoi ou, avec un compte, depuis n’importe lequel de ses appareils.</li>
 </ul>
 
 <p>
@@ -117,15 +117,15 @@ PixShare est un service de partage temporaire et ne doit pas être utilisé comm
 <h2 id="limites" class="h6 mt-4">3. Limites techniques</h2>
 
 <ul>
-<li>La taille maximale des fichiers est limitée ; elle est indiquée sur la page d’accueil.</li>
+<li>La taille maximale des photos et vidéos est limitée ; elle est indiquée sur la page d’accueil.</li>
 <li>Seuls certains formats sont acceptés. Les photos HEIC/HEIF (iPhone) sont converties en JPEG à l’envoi.</li>
 <li>Le nombre d’envois peut être restreint selon la configuration en vigueur.</li>
 <li>Le service peut être temporairement indisponible.</li>
-<li>Les fichiers peuvent être supprimés lors d’une maintenance, d’une erreur technique ou d’une opération de sécurité.</li>
+<li>Les photos et vidéos peuvent être supprimées lors d’une maintenance, d’une erreur technique ou d’une opération de sécurité.</li>
 </ul>
 
 <p>
-PixShare ne garantit pas la disponibilité permanente des fichiers, ni l’accès continu au service, ni la conservation de tout contenu envoyé.
+PixShare ne garantit pas la disponibilité permanente des photos et vidéos, ni l’accès continu au service, ni la conservation de tout contenu envoyé.
 </p>
 
 <div class="back-summary">
@@ -192,12 +192,12 @@ jusqu’à la décision de l’éditeur.
 Lorsque l’éditeur n’est pas disponible pour vérifier, l’outil décide seul : une image jugée douteuse est alors
 supprimée automatiquement{% if not absent_members %} (sauf pour les images envoyées avec un compte, qui attendent la vérification){% endif %}.
 Une image qui a déjà été acceptée par l’outil, avec les mêmes réglages, peut être publiée directement si exactement
-le même fichier est envoyé à nouveau.
+la même image est envoyée à nouveau.
 </p>
 
 <p>
 Cet outil peut se tromper dans les deux sens : il peut laisser passer un contenu interdit ou bloquer une image autorisée.
-Les vidéos et les autres fichiers ne sont pas analysés automatiquement.
+Les vidéos ne sont pas analysées automatiquement.
 </p>
 
 <p><strong>Signalement par les visiteurs.</strong>
@@ -219,13 +219,13 @@ L’éditeur peut aussi bloquer une adresse IP manuellement, pour une durée de 
 </p>
 
 <p><strong>Protection contre les robots.</strong>
-L’envoi de fichiers et le formulaire de contact sont protégés par Cloudflare Turnstile, un service de vérification
+L’envoi de photos et vidéos et le formulaire de contact sont protégés par Cloudflare Turnstile, un service de vérification
 fourni par Cloudflare, Inc. Pour vérifier que l’utilisateur n’est pas un robot, ce service reçoit notamment
 l’adresse IP et des informations techniques sur le navigateur.
 </p>
 
 <p><strong>Autres mesures.</strong>
-PixShare peut également appliquer des quotas et des limitations d’usage, supprimer des fichiers,
+PixShare peut également appliquer des quotas et des limitations d’usage, supprimer des contenus,
 et restreindre ou bloquer l’accès au service, de façon temporaire ou permanente, en cas d’usage abusif,
 de tentative de contournement des limitations ou d’activité suspecte.
 </p>
@@ -269,17 +269,17 @@ un code à usage unique envoyé par mail. Le membre voit et peut retirer ses app
 </p>
 
 <p>
-Un compte permet notamment des durées en ligne et des tailles de fichiers plus grandes, davantage d’envois,
-de retrouver ses fichiers sur tous ses appareils, de remplacer un fichier en gardant son lien et de créer des albums photo partagés par lien ou QR code (voir ci-dessous).
+Un compte permet notamment des durées en ligne et des tailles d’envoi plus grandes, davantage d’envois,
+de retrouver ses envois sur tous ses appareils, de remplacer une photo en gardant son lien et de créer des albums photo partagés par lien ou QR code (voir ci-dessous).
 Les limites exactes sont indiquées sur la page d’inscription et peuvent évoluer.
 Une image remplacée est analysée à nouveau avant d’être visible.
-Le membre peut aussi envoyer des fichiers avec l’extension de navigateur PixShare, grâce à une clé personnelle créée dans « Mon compte » :
+Le membre peut aussi envoyer des images avec l’extension de navigateur PixShare, grâce à une clé personnelle créée dans « Mon compte » :
 cette clé est confidentielle, et tout ce qui est envoyé avec elle l’est sous la responsabilité du membre.
 </p>
 
 <p>
 Les contenus interdits le sont aussi avec un compte. Lorsque plusieurs images d’un même compte sont refusées par la modération,
-le compte est suspendu automatiquement. L’éditeur peut aussi suspendre ou supprimer un compte, avec ses fichiers,
+le compte est suspendu automatiquement. L’éditeur peut aussi suspendre ou supprimer un compte, avec ses envois,
 en cas de non-respect des présentes conditions. Le membre peut contester cette décision via le formulaire de contact.
 </p>
 
@@ -297,7 +297,7 @@ Le lien d’un album n’est pas public, mais toute personne qui le possède peu
 
 <p>
 Le membre peut supprimer son compte à tout moment depuis la page « Mon compte » : le compte, l’adresse e-mail et tous les
-fichiers du compte sont alors effacés immédiatement. Un compte dont l’adresse n’a pas été confirmée est effacé au bout de 7 jours.
+photos et vidéos du compte sont alors effacées immédiatement. Un compte dont l’adresse n’a pas été confirmée est effacé au bout de 7 jours.
 </p>
 
 <div class="back-summary">
@@ -316,14 +316,14 @@ Le détail et les durées de conservation figurent dans les
 
 <p>
 Un identifiant technique temporaire peut également être stocké dans le navigateur
-afin de permettre l’affichage de l’historique des fichiers envoyés depuis ce navigateur,
+afin de permettre l’affichage de l’historique des envois faits depuis ce navigateur,
 de faciliter certaines mesures de sécurité et, le cas échéant, d’afficher un message d’information
 ou de modération lors d’une visite ultérieure depuis le même navigateur.
 Cet identifiant n’est pas utilisé pour le suivi publicitaire.
 </p>
 
 <p>
-Les informations cachées dans les fichiers (position GPS, modèle d’appareil, date de prise de vue…)
+Les informations cachées dans les photos (position GPS, modèle d’appareil, date de prise de vue…)
 sont retirées automatiquement à l’envoi des formats courants : photos JPEG, PNG, WebP, GIF et TIFF,
 ainsi que les vidéos MP4 et MOV. Les photos HEIC/HEIF sont converties en JPEG sans ces informations.
 L’image elle-même n’est pas modifiée.
@@ -336,7 +336,7 @@ L’image elle-même n’est pas modifiée.
 <h2 id="responsabilite_utilisateur" class="h6 mt-4">9. Responsabilité de l’utilisateur</h2>
 
 <p>
-L’utilisateur est seul responsable des fichiers qu’il envoie, des liens qu’il partage, de l’usage qu’il fait du service et du respect de la législation applicable.
+L’utilisateur est seul responsable des photos et vidéos qu’il envoie, des liens qu’il partage, de l’usage qu’il fait du service et du respect de la législation applicable.
 </p>
 
 <p>
@@ -351,7 +351,7 @@ L’utilisateur s’engage notamment à :
 </ul>
 
 <p>
-L’utilisateur demeure responsable de l’utilisation des liens générés, y compris lorsqu’ils permettent l’affichage, le téléchargement ou la suppression d’un fichier.
+L’utilisateur demeure responsable de l’utilisation des liens générés, y compris lorsqu’ils permettent l’affichage, le téléchargement ou la suppression d’une photo ou d’une vidéo.
 </p>
 
 <div class="back-summary">
@@ -366,7 +366,7 @@ La responsabilité de PixShare ne saurait être engagée notamment en cas de :
 </p>
 
 <ul>
-<li>perte de fichiers</li>
+<li>perte de photos ou de vidéos</li>
 <li>suppression automatique ou technique</li>
 <li>erreur de l’outil d’analyse automatique</li>
 <li>indisponibilité temporaire</li>
@@ -377,7 +377,7 @@ La responsabilité de PixShare ne saurait être engagée notamment en cas de :
 
 <p>
 PixShare agit comme hébergeur technique. Les images font l’objet d’une analyse automatique,
-mais l’éditeur ne vérifie pas lui-même chaque fichier envoyé. Il agit promptement pour retirer
+mais l’éditeur ne vérifie pas lui-même chaque photo ou vidéo envoyée. Il agit promptement pour retirer
 un contenu manifestement illicite dès qu’il en a connaissance, notamment après un signalement.
 </p>
 

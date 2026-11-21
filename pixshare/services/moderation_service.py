@@ -41,8 +41,8 @@ def build_notice_message(reason: str) -> str:
     if reason == "filtre_absent":
         return "Une de vos images a été retirée par le filtre automatique de PixShare, car elle semblait ne pas respecter les conditions d’utilisation."
     if reason == "spam_abus":
-        return "Un de vos fichiers a été supprimé par la modération pour usage abusif du service."
-    return "Un de vos fichiers a été supprimé par l’administration de PixShare."
+        return "Un de vos envois a été supprimé par la modération pour usage abusif du service."
+    return "Un de vos envois a été supprimé par l’administration de PixShare."
 
 
 # Suppressions qui ne viennent pas de la modération (l'auteur, la fin de vie, la limite de vues…).
@@ -80,11 +80,11 @@ def removal_message(meta: dict, reason: str | None = None) -> str:
     if image:
         text = f"Votre image « {name} » a été retirée" if name else "Une de vos images a été retirée"
     else:
-        text = f"Votre fichier « {name} » a été retiré" if name else "Un de vos fichiers a été retiré"
+        text = f"Votre vidéo « {name} » a été retirée" if name else "Une de vos vidéos a été retirée"
     text += f" par la modération : {removal_cause(meta, reason)}."
     if meta.get("account_id"):
-        text += (" Vous pouvez la remplacer par une autre" if image else " Vous pouvez le remplacer par un autre") + \
-            " en gardant le même lien, depuis « Mes fichiers »."
+        text += (" Vous pouvez la remplacer par une autre") + \
+            " en gardant le même lien, depuis « Mes envois »."
     return text
 
 
