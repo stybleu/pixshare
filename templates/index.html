@@ -304,8 +304,60 @@
 
           <div class="col-12">
             {% if turnstile_site_key %}
-            <div class="cf-turnstile mb-2" data-sitekey="{{ turnstile_site_key }}" data-language="{{ current_lang or 'fr' }}" data-theme="auto"></div>
-            <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+            {# Anti-robot chargé au premier geste sur le formulaire (pas à l'arrivée : la page s'affiche plus vite sur mobile) #}
+            <div class="cf-turnstile mb-2" id="turnstileBox" data-sitekey="{{ turnstile_site_key }}" data-language="{{ current_lang or 'fr' }}" data-theme="auto"></div>
+            <script>
+            (function () {
+              "use strict";
+              var SRC = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+              var form = document.getElementById("uploadForm"), loaded = false;
+              if (!form) return;
+              function load() {
+                if (loaded) return;
+                loaded = true;
+                var s = document.createElement("script");
+                s.src = SRC; s.async = true; s.defer = true;
+                document.head.appendChild(s);
+              }
+              function token() {
+                var t = form.querySelector("input[name='cf-turnstile-response']");
+                return t && t.value ? t.value : "";
+              }
+              ["pointerdown", "focusin", "dragenter", "keydown", "change", "input"].forEach(function (ev) {
+                form.addEventListener(ev, load, { once: true, passive: true });
+              });
+              document.addEventListener("dragenter", load, { once: true, passive: true });
+              // Envoi avant la fin de la vérification : on attend le jeton, puis on envoie tout seul.
+              var waiting = false;
+              form.addEventListener("submit", function (e) {
+                if (token()) return;
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                if (waiting) return;
+                waiting = true;
+                load();
+                var btn = document.getElementById("submitBtn"), label = btn ? btn.textContent : "";
+                if (btn) { btn.disabled = true; btn.textContent = {{ _("human_check_wait")|tojson }}; }
+                var tries = 0;
+                (function poll() {
+                  if (token()) {
+                    waiting = false;
+                    if (btn) { btn.disabled = false; btn.textContent = label; }
+                    if (form.requestSubmit) form.requestSubmit(btn || undefined); else if (btn) btn.click();
+                    return;
+                  }
+                  if (++tries > 600) {   // 2 minutes : l'appareil n'a pas pu être vérifié
+                    waiting = false;
+                    if (btn) { btn.disabled = false; btn.textContent = label; }
+                    var box = document.getElementById("turnstileBox");
+                    if (box) box.scrollIntoView({ block: "center" });
+                    return;
+                  }
+                  setTimeout(poll, 200);
+                })();
+              }, true);
+            })();
+            </script>
             {% endif %}
             <button id="submitBtn" class="btn btn-primary btn-lg w-100" type="submit" {% if not uploads_enabled %}disabled{% endif %}>
               {% if uploads_enabled %}{{ _("upload") }}{% else %}{{ _("upload_suspended") }}{% endif %}

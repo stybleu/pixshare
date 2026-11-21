@@ -181,5 +181,6 @@
   "teaser_albums_text": "Vos invités ajoutent leurs photos grâce à un QR code.",
   "home_faq_link": "Une question ? Consultez les questions fréquentes",
   "optional": "facultatif",
+  "human_check_wait": "Vérification anti-robot…",
   "enter_to_send": "Appuyez sur <kbd>Entrée</kbd> pour envoyer"
 }

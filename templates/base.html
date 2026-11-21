@@ -10,11 +10,9 @@
 <link rel="alternate" hreflang="en" href="{{ request.base_url }}?lang=en">
 <link rel="alternate" hreflang="x-default" href="{{ request.base_url }}">
 
-<link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon.png') }}">
-<link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon.png') }}">
-<link rel="icon" type="image/png" sizes="48x48" href="{{ url_for('static', filename='favicon.png') }}">
-<link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='favicon.png') }}">
-<link rel="icon" type="image/png" sizes="512x512" href="{{ url_for('static', filename='favicon.png') }}">
+<link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32.png') }}">
+<link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='favicon-192.png') }}">
+<link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
 {% block canonical %}<link rel="canonical" href="{{ _canon }}">{% endblock %}
 
 <title>{% block title %}{% if title %}{{ title }}{% if 'PixShare' not in title %} – PixShare{% endif %}{% else %}{{ _('index_meta_title') }}{% endif %}{% endblock %}</title>
