@@ -2,6 +2,8 @@
 aperçu privé des images pour leur propriétaire et remplacement d'une image en gardant son lien."""
 from __future__ import annotations
 
+import io
+
 import os
 import time
 
@@ -520,3 +522,62 @@ def replace(file_id):
     else:
         flash("Photo remplacée ✅ Le lien reste le même.", "success")
     return back
+
+
+# ------------------------------------------------------------------ mode Document (membres)
+
+def _doc_image():
+    """Image envoyée par l'aperçu (déjà réduite par le navigateur) ; None si absente ou illisible."""
+    from PIL import Image, ImageOps
+    f = request.files.get("image")
+    if not f:
+        return None
+    data = f.read(8 * 1024 * 1024 + 1)
+    if len(data) > 8 * 1024 * 1024:
+        return None
+    try:
+        img = Image.open(io.BytesIO(data))
+        img = ImageOps.exif_transpose(img) or img
+        img.thumbnail((1600, 1600))
+        return img.convert("RGB")
+    except Exception:
+        return None
+
+
+def _doc_guard():
+    validate_csrf()
+    rec = accounts.current_account()
+    if not rec and not is_admin():
+        abort(403)
+    key = f"docscan:{rec['id'] if rec else 'admin'}"
+    if not check_upload_rate(key, exempt=is_admin(), limit=120).allowed:
+        abort(429)
+
+
+@account_bp.route("/outils/document/coins", methods=["POST"], endpoint="document_corners")
+def document_corners():
+    """Trouve les 4 coins de la feuille sur la photo (aperçu du formulaire d'envoi)."""
+    _doc_guard()
+    from pixshare.services import photo_filter_service as pfs
+    img = _doc_image()
+    if img is None:
+        return {"error": "Photo illisible."}, 400
+    corners, found = pfs.detect_corners(img)
+    return {"corners": corners, "found": found}
+
+
+@account_bp.route("/outils/document/apercu", methods=["POST"], endpoint="document_preview")
+def document_preview():
+    """Aperçu de la page redressée (petite image JPEG, rien n'est gardé)."""
+    _doc_guard()
+    from pixshare.services import photo_filter_service as pfs
+    img = _doc_image()
+    corners = pfs.parse_corners(request.form.get("corners"))
+    if img is None or corners is None:
+        return {"error": "Coins ou photo invalides."}, 400
+    page = pfs.straighten(img, corners, (request.form.get("mode") or "scan").lower(), max_side=1000)
+    buf = io.BytesIO()
+    page.save(buf, "JPEG", quality=85)
+    response = make_response(buf.getvalue())
+    response.headers.update({"Content-Type": "image/jpeg", "Cache-Control": "no-store", "X-Robots-Tag": "noindex"})
+    return response

@@ -24,6 +24,8 @@ from .image_quality_service import (
     enhance_image_bytes,
     get_output_extension,
     parse_strength,
+    transform_image_bytes,
+    _enhance_rgb,
 )
 from .image_metadata_service import strip_uploaded_image
 from .settings_service import nsfw_class_label
@@ -938,13 +940,36 @@ def save_uploaded_file(
 ) -> tuple[str, int | None, bool]:
     file_id, server_name, dest, ext = _prepare_file_destination(original_name)
 
-    enhance_requested = request.form.get("enhance_quality") in {"1", "on", "true", "yes"} and _is_member()
+    from . import photo_filter_service as pfs
+    member = _is_member()
+    enhance_requested = request.form.get("enhance_quality") in {"1", "on", "true", "yes"} and member
     enhance_strength = parse_strength(request.form.get("enhance_strength"))
+    # Filtres photo et mode Document : réservés aux membres, une seule photo à la fois.
+    photo_filter = pfs.parse_filter(request.form.get("photo_filter")) if member else ""
+    if photo_filter and len([f for f in request.files.getlist("file") if f and f.filename]) > 1:
+        photo_filter = ""
+    filter_strength = pfs.parse_strength(request.form.get("filter_strength"))
+    doc_corners = pfs.parse_corners(request.form.get("doc_corners")) if photo_filter == pfs.DOCUMENT else None
+    doc_mode = (request.form.get("doc_mode") or "scan").strip().lower()
+    applied = {"filter": ""}
 
-    if enhance_requested and enhance_strength > 0 and can_enhance_extension(ext):
+    def _transform(rgb):
+        if photo_filter == pfs.DOCUMENT:
+            corners = doc_corners or pfs.detect_corners(rgb)[0]
+            rgb = pfs.straighten(rgb, corners, doc_mode)
+            applied["filter"] = pfs.DOCUMENT
+        elif photo_filter and filter_strength > 0:
+            rgb = pfs.apply_filter(rgb, photo_filter, filter_strength)
+            applied["filter"] = photo_filter
+        if enhance_requested and enhance_strength > 0:
+            rgb = _enhance_rgb(rgb, enhance_strength)
+        return rgb
+
+    wants_change = (enhance_requested and enhance_strength > 0) or bool(photo_filter)
+    if wants_change and can_enhance_extension(ext):
         original_bytes = file_storage.read()
         try:
-            file_bytes = enhance_image_bytes(original_bytes, ext, enhance_strength)
+            file_bytes = transform_image_bytes(original_bytes, ext, _transform)
         except Exception:
             file_bytes = original_bytes
 
@@ -988,7 +1013,7 @@ def save_uploaded_file(
 
     lifetime, permanent = _resolve_web_lifetime(keep_requested)
 
-    return _register_saved_public_file(
+    result = _register_saved_public_file(
         file_id=file_id,
         server_name=server_name,
         original_name=original_name,
@@ -1002,6 +1027,14 @@ def save_uploaded_file(
         password=password,
         banned=banned,
     )
+    if applied["filter"]:
+        db = load_db()
+        if isinstance(db.get(file_id), dict):
+            db[file_id]["photo_filter"] = applied["filter"]
+            if applied["filter"] == pfs.DOCUMENT:
+                db[file_id]["document_scan"] = True
+            save_db(db)
+    return result
 
 
 def get_file_record(file_id: str):

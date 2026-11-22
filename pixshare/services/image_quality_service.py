@@ -93,10 +93,18 @@ def enhance_image_bytes(file_bytes: bytes, ext: str, strength: int = DEFAULT_STR
     Améliore légèrement une photo. En cas de doute (format illisible, image
     animée, force 0...), renvoie l'objet d'origine tel quel.
     """
-    ext = (ext or "").lower()
     strength = parse_strength(strength)
+    if strength <= 0:
+        return file_bytes
+    return transform_image_bytes(file_bytes, ext, lambda rgb: _enhance_rgb(rgb, strength))
 
-    if strength <= 0 or not can_enhance_extension(ext):
+
+def transform_image_bytes(file_bytes: bytes, ext: str, transform) -> bytes:
+    """Ouvre la photo (remise dans le bon sens), applique ``transform(rgb) -> rgb`` et la réenregistre
+    dans le même format. Image animée, illisible ou format non géré : renvoie l'original tel quel.
+    Si la transformation change la taille (document redressé), la transparence est abandonnée."""
+    ext = (ext or "").lower()
+    if not can_enhance_extension(ext):
         return file_bytes
 
     try:
@@ -124,9 +132,13 @@ def enhance_image_bytes(file_bytes: bytes, ext: str, strength: int = DEFAULT_STR
             if rgb.mode != "RGB" or rgb.width < 2 or rgb.height < 2:
                 return file_bytes
 
-            rgb = _enhance_rgb(rgb, strength)
+            rgb = transform(rgb)
+            if rgb is None:
+                return file_bytes
+            if rgb.mode != "RGB":
+                rgb = rgb.convert("RGB")
 
-            if alpha is not None:
+            if alpha is not None and alpha.size == rgb.size:
                 rgb.putalpha(alpha)
             out_img = rgb
 

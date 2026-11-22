@@ -401,7 +401,7 @@ def test_photo_enhancement_is_for_members_only(make_app, mails, monkeypatch):
     from pixshare.services import file_service
 
     calls = []
-    monkeypatch.setattr(file_service, "enhance_image_bytes", lambda data, ext, strength: (calls.append(strength) or data + b""))
+    monkeypatch.setattr(file_service, "_enhance_rgb", lambda rgb, strength: (calls.append(strength) or rgb))
     app = make_app()
     guest = app.test_client()
     assert 'name="enhance_quality"' not in guest.get("/").get_data(as_text=True)

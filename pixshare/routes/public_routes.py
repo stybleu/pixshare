@@ -659,6 +659,31 @@ def download(file_id):
     )
 
 
+@public_bp.route("/download/<file_id>.pdf", endpoint="download_pdf")
+def download_pdf(file_id):
+    """La photo (surtout un document scanné) en PDF A4, fabriqué à la volée : rien de plus n'est stocké."""
+    cleanup_expired()
+    _, meta, server_name = get_file_record(file_id)
+    if not meta or not is_image_filename(server_name):
+        abort(404)
+    if not _is_unlocked(file_id, meta) or not _limited_access_allowed(file_id, meta):
+        abort(404)
+    from PIL import Image, ImageOps
+    from pixshare.services.photo_filter_service import to_pdf_bytes
+    try:
+        with Image.open(os.path.join(current_app.config["UPLOAD_FOLDER"], server_name)) as src:
+            data = to_pdf_bytes(ImageOps.exif_transpose(src) or src)
+    except Exception:
+        abort(404)
+    record_usage_event(file_id, "download", stored_filename=server_name)
+    name = os.path.splitext(secure_filename(meta.get("original_name") or "") or "document")[0] or "document"
+    response = make_response(data)
+    response.headers.update({"Content-Type": "application/pdf",
+                             "Content-Disposition": f'attachment; filename="{name}.pdf"',
+                             "X-Robots-Tag": "noindex", "Cache-Control": "private, no-store"})
+    return response
+
+
 @public_bp.route("/file/<file_id>", endpoint="public_file")
 def public_file(file_id):
     cleanup_expired()
@@ -708,6 +733,7 @@ def public_file(file_id):
             is_image=is_image_filename(meta.get("original_name", "")),
             is_video=is_video_filename(meta.get("original_name", "")),
             is_audio=is_audio_filename(meta.get("original_name", "")),
+            is_document=bool(meta.get("document_scan")),
         )
     )
     response.headers["X-Robots-Tag"] = "noindex, noimageindex"

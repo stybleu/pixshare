@@ -56,6 +56,11 @@
       <a href="{{ file_url }}" class="btn btn-primary mb-2" download>
         ⬇ Télécharger
       </a>
+      {% if is_document %}
+      <a href="{{ url_for('public.download_pdf', file_id=file_id) }}" class="btn btn-outline-primary mb-2">
+        📄 Télécharger en PDF (A4)
+      </a>
+      {% endif %}
 
       <!-- 🔗 Copier lien -->
       <div class="input-group mt-2">

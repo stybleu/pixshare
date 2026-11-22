@@ -46,10 +46,18 @@ def faq() -> list[dict]:
         ("Compte gratuit", [
             ("Qu'apporte un compte gratuit ?",
              f"Des photos et vidéos gardées jusqu'à {member['life']} et jusqu'à {member['mb']} Mo, vos images sur tous vos "
-             "appareils, le mot de passe et la limite de vues, l'amélioration des photos, le remplacement sans "
+             "appareils, le mot de passe et la limite de vues, l'amélioration des photos, les filtres et le scanner de documents, le remplacement sans "
              "changer le lien, l'extension pour navigateur"
              + (", et les albums souvenirs à partager par QR code." if albums else "."),
              [("Créer un compte", "account.signup")]),
+            ("Comment transformer la photo d'une feuille en document lisible ?",
+             "Avec un compte gratuit, choisissez le filtre « 📄 Document » avant l'envoi : PixShare trouve les bords "
+             "de la page (vous pouvez déplacer les coins du doigt), la redresse, blanchit le fond et noircit le texte. "
+             "La page de partage propose ensuite le document en PDF au format A4. Le texte reste une image : "
+             "il ne peut pas encore être copié.", [("Créer un compte", "account.signup")]),
+            ("Quels filtres photo sont disponibles ?",
+             "Avec un compte gratuit : noir et blanc, dramatique, rétro, vintage, intense, chaud, froid et doux, "
+             "avec une intensité réglable. L'aperçu montre exactement le résultat avant l'envoi.", []),
             ("Comment supprimer mon compte ?",
              "Dans « Mon compte », en bas de la page : « Supprimer mon compte ». Toutes vos photos, vos vidéos et vos albums "
              "sont alors supprimés, définitivement.", []),

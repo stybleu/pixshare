@@ -72,6 +72,18 @@
   .df .dropzone { padding: 34px 18px; min-height: 170px; display: flex; flex-direction: column; justify-content: center; }
   .df .dropzone:focus-visible { outline: 3px solid rgba(13,110,253,.5); outline-offset: 2px; }
   .enter-hint kbd { font-size: .75em; }
+  .preview-stage { position: relative; display: inline-block; max-width: 100%; }
+  .preview-stage canvas { display: block; }
+  .doc-overlay { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; overflow: visible; }
+  .doc-overlay polygon { fill: rgba(79, 70, 229, .12); stroke: #4f46e5; stroke-width: 2.5; vector-effect: non-scaling-stroke; }
+  .doc-handle { fill: #fff; stroke: #4f46e5; stroke-width: 3; cursor: grab; vector-effect: non-scaling-stroke; }
+  .filter-strip { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scroll-snap-type: x proximity; }
+  .filter-chip { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 4px;
+                 border: 2px solid transparent; border-radius: 12px; background: transparent; font-size: .75rem; scroll-snap-align: start; }
+  .filter-chip canvas { width: 64px; height: 64px; border-radius: 9px; background: #e9ecef; object-fit: cover; }
+  .filter-chip.active { border-color: #4f46e5; background: rgba(79, 70, 229, .08); font-weight: 600; }
+  .filter-chip:focus-visible { outline: 3px solid rgba(79, 70, 229, .5); }
+  .doc-preview { max-width: 100%; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,.15); background: #fff; }
   @media (hover: none), (pointer: coarse) { .enter-hint { display: none !important; } }  /* téléphone : pas de touche Entrée */
   .df .dz-icon { font-size: 2.2rem; line-height: 1; margin-bottom: .4rem; }
   .df .dz-title { font-size: 1.1rem; }
@@ -138,7 +150,16 @@
 
             <div id="previewBox" class="preview-box">
               <div class="small text-muted mb-2">{{ _("image_preview") }}</div>
-              <canvas id="previewCanvas"></canvas>
+              <div class="preview-stage" id="previewStage">
+                <canvas id="previewCanvas"></canvas>
+                {% if account or admin %}
+                <svg id="docOverlay" class="doc-overlay" hidden aria-label="Coins de la page : faites-les glisser">
+                  <polygon id="docPoly" points=""></polygon>
+                  <circle class="doc-handle" r="14" data-i="0"></circle><circle class="doc-handle" r="14" data-i="1"></circle>
+                  <circle class="doc-handle" r="14" data-i="2"></circle><circle class="doc-handle" r="14" data-i="3"></circle>
+                </svg>
+                {% endif %}
+              </div>
               <img id="previewImg" src="" alt="{{ _('image_preview') }}" style="display:none;">
             </div>
 
@@ -166,6 +187,38 @@
                 </div>
 
                 {% if account or admin %}
+                <div class="col-12" id="filterBox">
+                  <div class="small fw-semibold mb-1">🎨 Filtres</div>
+                  <div class="filter-strip" id="filterStrip" role="radiogroup" aria-label="Filtres photo">
+                    {% for key, label in [("", "Original"), ("noir_blanc", "Noir et blanc"), ("dramatique", "Dramatique"),
+                                          ("retro", "Rétro"), ("vintage", "Vintage"), ("intense", "Intense"),
+                                          ("chaud", "Chaud"), ("froid", "Froid"), ("doux", "Doux"), ("document", "📄 Document")] %}
+                    <button type="button" class="filter-chip{% if not key %} active{% endif %}" role="radio" aria-checked="{{ 'true' if not key else 'false' }}" data-filter="{{ key }}">
+                      <canvas width="64" height="64" aria-hidden="true"></canvas><span>{{ label }}</span>
+                    </button>
+                    {% endfor %}
+                  </div>
+                  <input type="hidden" name="photo_filter" id="photoFilter" value="">
+                  <div id="filterStrengthBox" class="mt-2" hidden>
+                    <label class="form-label small mb-0" for="filterStrength">Intensité : <strong id="filterStrengthValue">100</strong> %</label>
+                    <input id="filterStrength" type="range" name="filter_strength" min="0" max="100" step="5" value="100" class="form-range">
+                  </div>
+                  <div id="docBox" class="doc-box mt-2" hidden>
+                    <div class="small text-muted mb-2" id="docHint">Recherche de la page…</div>
+                    <div class="btn-group btn-group-sm w-100" role="group" aria-label="Rendu du document">
+                      <input type="radio" class="btn-check" name="doc_mode" id="docModeScan" value="scan" checked>
+                      <label class="btn btn-outline-primary" for="docModeScan">Scan</label>
+                      <input type="radio" class="btn-check" name="doc_mode" id="docModeGris" value="gris">
+                      <label class="btn btn-outline-primary" for="docModeGris">Gris</label>
+                      <input type="radio" class="btn-check" name="doc_mode" id="docModeCouleur" value="couleur">
+                      <label class="btn btn-outline-primary" for="docModeCouleur">Couleur</label>
+                    </div>
+                    <input type="hidden" name="doc_corners" id="docCorners" value="">
+                    <button type="button" class="btn btn-sm btn-outline-secondary w-100 mt-2" id="docPreviewBtn">👁️ Voir la page redressée</button>
+                    <img id="docPreviewImg" class="doc-preview mt-2" alt="Page redressée" hidden>
+                    <div class="form-text">Après l'envoi, la page de partage propose aussi le document en PDF.</div>
+                  </div>
+                </div>
                 <div class="col-12">
                 <div class="form-check">
                   <input class="form-check-input" type="checkbox" name="enhance_quality" value="1" id="enhanceQuality">
@@ -835,12 +888,17 @@ function copyById(id){
       return;
     }
 
-    previewCanvas.width = target.width;
-    previewCanvas.height = target.height;
+    // L'aperçu sert à regarder : 1200 px de côté suffisent (et les filtres restent instantanés).
+    const fit = Math.min(1, 1200 / Math.max(target.width, target.height));
+    const w = Math.max(1, Math.round(target.width * fit)), h = Math.max(1, Math.round(target.height * fit));
+    previewCanvas.width = w;
+    previewCanvas.height = h;
 
-    previewCtx.clearRect(0, 0, target.width, target.height);
-    previewCtx.drawImage(sourceImage, 0, 0, target.width, target.height);
+    previewCtx.clearRect(0, 0, w, h);
+    previewCtx.drawImage(sourceImage, 0, 0, w, h);
+    if (window.PixPreviewHook) window.PixPreviewHook(previewCtx, w, h, sourceImage);
   }
+  window.PixRenderPreview = renderLivePreview;
 
   function showName() {
     const f = input.files && input.files[0];
@@ -1371,4 +1429,155 @@ function copyById(id){
   setTimeout(check, 1500);
 })();
 </script>
+{% if account or admin %}
+<script src="{{ url_for('static', filename='js/filtres.js') }}"></script>
+<script>
+(function () {
+  "use strict";
+  // Filtres photo et mode Document (membres). L'aperçu utilise les mêmes formules que le serveur.
+  var strip = document.getElementById("filterStrip");
+  var field = document.getElementById("photoFilter");
+  var strengthBox = document.getElementById("filterStrengthBox"), strength = document.getElementById("filterStrength");
+  var strengthOut = document.getElementById("filterStrengthValue");
+  var docBox = document.getElementById("docBox"), docHint = document.getElementById("docHint");
+  var overlay = document.getElementById("docOverlay"), poly = document.getElementById("docPoly");
+  var cornersField = document.getElementById("docCorners");
+  var previewBtn = document.getElementById("docPreviewBtn"), previewOut = document.getElementById("docPreviewImg");
+  var input = document.getElementById("fileInput"), form = document.getElementById("uploadForm");
+  var canvas = document.getElementById("previewCanvas");
+  if (!strip || !field || !window.PixFilters || !canvas) return;
+  var csrf = (form.querySelector("input[name=csrf_token]") || {}).value || "";
+  var current = "", corners = null, lastSource = null, smallBlob = null;
+
+  function isSingleImage() {
+    var f = input.files && input.files[0];
+    return input.files && input.files.length === 1 && f && /^image\/(jpeg|png|webp|tiff|heic|heif|bmp)/i.test(f.type || "");
+  }
+  function sync() {
+    var box = document.getElementById("filterBox");
+    if (box) box.hidden = !isSingleImage();
+  }
+  input.addEventListener("change", function () { setFilter(""); corners = null; smallBlob = null; sync(); });
+  sync();
+
+  // Aperçu filtré : appelé par l'aperçu du formulaire à chaque redessin.
+  window.PixPreviewHook = function (ctx, w, h, source) {
+    if (source !== lastSource) { lastSource = source; drawThumbs(source); }
+    if (current && current !== "document") {
+      var data = ctx.getImageData(0, 0, w, h);
+      PixFilters.apply(data, current, parseInt(strength.value, 10));
+      ctx.putImageData(data, 0, 0);
+    }
+    placeOverlay();
+  };
+  function redraw() { canvas.dispatchEvent(new CustomEvent("pix-redraw", { bubbles: true })); if (window.PixRenderPreview) window.PixRenderPreview(); }
+
+  function drawThumbs(source) {
+    Array.prototype.forEach.call(strip.querySelectorAll(".filter-chip"), function (chip) {
+      var c = chip.querySelector("canvas"), x = c.getContext("2d"), s = Math.min(source.width, source.height);
+      x.drawImage(source, (source.width - s) / 2, (source.height - s) / 2, s, s, 0, 0, 64, 64);
+      var name = chip.getAttribute("data-filter");
+      if (name && name !== "document") { var d = x.getImageData(0, 0, 64, 64); PixFilters.apply(d, name, 100); x.putImageData(d, 0, 0); }
+      if (name === "document") { x.fillStyle = "rgba(255,255,255,.55)"; x.fillRect(0, 0, 64, 64); x.font = "30px sans-serif"; x.textAlign = "center"; x.fillText("📄", 32, 43); }
+    });
+  }
+
+  function setFilter(name) {
+    current = name || "";
+    field.value = current;
+    Array.prototype.forEach.call(strip.querySelectorAll(".filter-chip"), function (chip) {
+      var on = chip.getAttribute("data-filter") === current;
+      chip.classList.toggle("active", on); chip.setAttribute("aria-checked", on ? "true" : "false");
+    });
+    strengthBox.hidden = !current || current === "document";
+    docBox.hidden = current !== "document";
+    overlay.toggleAttribute("hidden", current !== "document");   // (un SVG n'a pas la propriété .hidden)
+    previewOut.hidden = true;
+    if (current === "document" && !corners) findCorners();
+    redraw();
+  }
+  strip.addEventListener("click", function (e) {
+    var chip = e.target.closest(".filter-chip");
+    if (chip) setFilter(chip.getAttribute("data-filter"));
+  });
+  strength.addEventListener("input", function () { strengthOut.textContent = strength.value; redraw(); });
+
+  // ---------- document : coins trouvés par le serveur, déplaçables au doigt ----------
+  function smallImage() {
+    if (smallBlob) return Promise.resolve(smallBlob);
+    return new Promise(function (resolve) {
+      var src = lastSource, k = Math.min(1, 1400 / Math.max(src.width, src.height));
+      var c = document.createElement("canvas"); c.width = Math.round(src.width * k); c.height = Math.round(src.height * k);
+      c.getContext("2d").drawImage(src, 0, 0, c.width, c.height);
+      c.toBlob(function (b) { smallBlob = b; resolve(b); }, "image/jpeg", 0.85);
+    });
+  }
+  function post(url, extra) {
+    return smallImage().then(function (blob) {
+      var fd = new FormData(); fd.append("csrf_token", csrf); fd.append("image", blob, "apercu.jpg");
+      Object.keys(extra || {}).forEach(function (k) { fd.append(k, extra[k]); });
+      return fetch(url, { method: "POST", body: fd, credentials: "same-origin" });
+    });
+  }
+  function findCorners() {
+    if (!lastSource) return;
+    docHint.textContent = "Recherche de la page…";
+    post("{{ url_for('account.document_corners') }}").then(function (r) { return r.json(); }).then(function (res) {
+      corners = res.corners || [[0.05, 0.05], [0.95, 0.05], [0.95, 0.95], [0.05, 0.95]];
+      docHint.textContent = res.found ? "✅ Page trouvée. Ajustez un coin du doigt si besoin."
+                                      : "Page non trouvée automatiquement : placez les 4 coins sur ceux de la feuille.";
+      saveCorners(); placeOverlay();
+    }).catch(function () {
+      corners = [[0.05, 0.05], [0.95, 0.05], [0.95, 0.95], [0.05, 0.95]];
+      docHint.textContent = "Placez les 4 coins sur ceux de la feuille."; saveCorners(); placeOverlay();
+    });
+  }
+  function saveCorners() {
+    cornersField.value = corners ? corners.map(function (p) { return p[0].toFixed(4) + "," + p[1].toFixed(4); }).join(",") : "";
+    previewOut.hidden = true;
+  }
+  function placeOverlay() {
+    if (!overlay || overlay.hasAttribute("hidden") || !corners) return;
+    var w = canvas.clientWidth, h = canvas.clientHeight;
+    overlay.setAttribute("viewBox", "0 0 " + w + " " + h);
+    poly.setAttribute("points", corners.map(function (p) { return (p[0] * w) + "," + (p[1] * h); }).join(" "));
+    Array.prototype.forEach.call(overlay.querySelectorAll(".doc-handle"), function (hd) {
+      var p = corners[+hd.getAttribute("data-i")]; hd.setAttribute("cx", p[0] * w); hd.setAttribute("cy", p[1] * h);
+    });
+  }
+  var dragging = -1;
+  overlay.addEventListener("pointerdown", function (e) {
+    if (!corners) return;
+    var r = overlay.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height, best = -1, bd = 1e9;
+    corners.forEach(function (p, i) { var d = Math.hypot((p[0] - x) * r.width, (p[1] - y) * r.height); if (d < bd) { bd = d; best = i; } });
+    if (bd > 60) return;
+    dragging = best; overlay.setPointerCapture(e.pointerId); e.preventDefault();
+  });
+  overlay.addEventListener("pointermove", function (e) {
+    if (dragging < 0) return;
+    var r = overlay.getBoundingClientRect();
+    corners[dragging] = [Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)), Math.max(0, Math.min(1, (e.clientY - r.top) / r.height))];
+    placeOverlay();
+  });
+  overlay.addEventListener("pointerup", function () { if (dragging >= 0) { dragging = -1; saveCorners(); } });
+  window.addEventListener("resize", placeOverlay);
+
+  previewBtn.addEventListener("click", function () {
+    if (!corners) return;
+    var mode = (form.querySelector("input[name=doc_mode]:checked") || {}).value || "scan";
+    previewBtn.disabled = true; previewBtn.textContent = "Préparation…";
+    post("{{ url_for('account.document_preview') }}", { corners: cornersField.value, mode: mode }).then(function (r) {
+      if (!r.ok) throw new Error(); return r.blob();
+    }).then(function (b) {
+      // data: plutôt que blob: — la politique de sécurité du site n'autorise pas les images blob:.
+      return new Promise(function (ok) { var fr = new FileReader(); fr.onload = function () { previewOut.src = fr.result; previewOut.hidden = false; ok(); }; fr.readAsDataURL(b); });
+    }).catch(function () { docHint.textContent = "Aperçu impossible pour le moment : la page sera quand même redressée à l'envoi."; })
+      .then(function () { previewBtn.disabled = false; previewBtn.textContent = "👁️ Voir la page redressée"; });
+  });
+  Array.prototype.forEach.call(form.querySelectorAll("input[name=doc_mode]"), function (r) {
+    r.addEventListener("change", function () { previewOut.hidden = true; });
+  });
+})();
+</script>
+{% endif %}
 {% endblock %}
