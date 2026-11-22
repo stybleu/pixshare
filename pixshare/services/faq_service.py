@@ -12,7 +12,11 @@ def faq() -> list[dict]:
         ("Envoyer une photo", [
             ("Faut-il créer un compte pour envoyer une image ?",
              f"Non. Vous pouvez envoyer une photo ou une vidéo sans inscription, gardée jusqu'à {guest['life']}, "
-             f"{guest['mb']} Mo au maximum. Un compte gratuit permet d'aller plus loin.", []),
+             f"{guest['mb']} Mo au maximum. Un compte gratuit permet d'aller plus loin."
+             + (f" Sans compte, les options avancées (mot de passe, limite de vues, filtres, scanner de documents, "
+                f"sons, jusqu'à {lim['guest_pass_mb']} Mo et {lim['guest_pass_life']}) sont aussi possibles "
+                f"{lim['guest_pass']} fois par heure : un compteur affiche ce qu'il vous reste."
+                if lim.get("guest_pass") else ""), []),
             ("Quels formats sont acceptés ?",
              "Les images JPG, PNG, GIF, WebP, HEIC (photos d'iPhone), TIFF et BMP, et les vidéos MP4, WebM, MOV et AVI. "
              "Avec un compte gratuit, aussi les sons MP3, M4A, AAC, OGG, Opus, WAV et FLAC, à écouter directement "
@@ -51,12 +55,14 @@ def faq() -> list[dict]:
              + (", et les albums souvenirs à partager par QR code." if albums else "."),
              [("Créer un compte", "account.signup")]),
             ("Comment transformer la photo d'une feuille en document lisible ?",
-             "Avec un compte gratuit, choisissez le filtre « 📄 Document » avant l'envoi : PixShare trouve les bords "
+             ("Avec un compte gratuit (ou avec une utilisation des options avancées sans compte), choisissez"
+              if lim.get("guest_pass") else "Avec un compte gratuit, choisissez")
+             + " le filtre « 📄 Document » avant l'envoi : PixShare trouve les bords "
              "de la page (vous pouvez déplacer les coins du doigt), la redresse, blanchit le fond et noircit le texte. "
              "La page de partage propose ensuite le document en PDF au format A4. Le texte reste une image : "
              "il ne peut pas encore être copié.", [("Créer un compte", "account.signup")]),
             ("Quels filtres photo sont disponibles ?",
-             "Avec un compte gratuit : noir et blanc, dramatique, rétro, vintage, intense, chaud, froid et doux, "
+             "Avec un compte gratuit, ou sans compte avec une utilisation des options avancées : noir et blanc, dramatique, rétro, vintage, intense, chaud, froid et doux, "
              "avec une intensité réglable. L'aperçu montre exactement le résultat avant l'envoi.", []),
             ("Comment supprimer mon compte ?",
              "Dans « Mon compte », en bas de la page : « Supprimer mon compte ». Toutes vos photos, vos vidéos et vos albums "

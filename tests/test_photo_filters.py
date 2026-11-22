@@ -7,7 +7,7 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 from conftest import csrf
-from test_accounts import mails, member, records, upload  # noqa: F401  (fixture mails)
+from test_accounts import mails, member, no_guest_pass, records, upload  # noqa: F401  (fixture mails)
 from pixshare.services import photo_filter_service as pf
 
 
@@ -75,7 +75,7 @@ def test_browser_script_uses_same_filter_list():
 # ---------- envoi ----------
 
 def test_filter_is_for_members_only(make_app, mails):
-    app = make_app()
+    app = no_guest_pass(make_app())
     guest = app.test_client()
     assert 'name="photo_filter"' not in guest.get("/").get_data(as_text=True)
     upload(guest, "invite.jpg", data=jpeg(Image.new("RGB", (60, 40), (200, 60, 30))), photo_filter="noir_blanc")
@@ -110,7 +110,7 @@ def test_document_upload_gives_pdf(make_app, mails):
 
 
 def test_document_tools_need_account_and_csrf(make_app, mails):
-    app = make_app()
+    app = no_guest_pass(make_app())
     data = jpeg(sheet_photo())
     guest = app.test_client()
     token = csrf(guest)

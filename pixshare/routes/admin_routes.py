@@ -1018,6 +1018,7 @@ def admin_accounts():
         rows=rows,
         settings=load_settings(),
         guest_life_choices=[c for c in LIFETIME_CHOICES if c[0] in GUEST_MAX_LIFETIME_CHOICES],
+        pass_life_choices=[c for c in LIFETIME_CHOICES if c[0] in MAX_LIFETIME_CHOICES],
         limits=limits_table(),
         mail_ready=accounts.mail_ready(),
         strikes_max=accounts.strikes_max(),
@@ -1040,6 +1041,9 @@ def admin_accounts_settings():
         "guest_max_upload_size_mb": request.form.get("guest_max_upload_size_mb"),
         "guest_uploads_per_hour": request.form.get("guest_uploads_per_hour"),
         "member_uploads_per_hour": request.form.get("member_uploads_per_hour"),
+        "guest_pass_per_hour": request.form.get("guest_pass_per_hour"),
+        "guest_pass_max_lifetime_minutes": request.form.get("guest_pass_max_lifetime_minutes"),
+        "guest_pass_max_upload_size_mb": request.form.get("guest_pass_max_upload_size_mb"),
         "member_strikes_max": request.form.get("member_strikes_max"),
         **{key: request.form.get(key) for key in ("albums_per_member", "album_max_mb", "album_max_photos",
                                                   "album_guest_per_hour", "album_guestbook_per_hour")

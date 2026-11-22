@@ -127,8 +127,18 @@ def test_password_rules(make_app, mails):
     assert "accepter les conditions" in resp.get_data(as_text=True)
 
 
+def no_guest_pass(app):
+    """Options avancées sans compte coupées : on teste les limites « de base » des visiteurs."""
+    with app.app_context():
+        from pixshare.services import settings_service
+        s = settings_service.load_settings()
+        s["guest_pass_per_hour"] = 0
+        settings_service.save_settings(s)
+    return app
+
+
 def test_guest_and_member_limits(make_app, mails):
-    app = make_app()
+    app = no_guest_pass(make_app())
     guest = app.test_client()
     html = guest.get("/").get_data(as_text=True)
     values = [int(v) for v in re.findall(r'<option value="(\d+)"', html.split('id="lifetimeSelect"')[1].split("</select>")[0])]
@@ -380,7 +390,7 @@ def test_account_pages_are_accessible(make_app, mails):
 
 
 def test_password_and_view_limit_are_for_members_only(make_app, mails):
-    app = make_app()
+    app = no_guest_pass(make_app())
     guest = app.test_client()
     html = guest.get("/").get_data(as_text=True)
     assert 'name="file_password"' not in html and 'name="view_limit_enabled"' not in html
@@ -402,7 +412,7 @@ def test_photo_enhancement_is_for_members_only(make_app, mails, monkeypatch):
 
     calls = []
     monkeypatch.setattr(file_service, "_enhance_rgb", lambda rgb, strength: (calls.append(strength) or rgb))
-    app = make_app()
+    app = no_guest_pass(make_app())
     guest = app.test_client()
     assert 'name="enhance_quality"' not in guest.get("/").get_data(as_text=True)
     upload(guest, "invite.png", enhance_quality="1", enhance_strength="20")

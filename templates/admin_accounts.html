@@ -49,6 +49,24 @@
         <input class="form-control form-control-sm" type="number" min="0" max="10000" id="guest_uploads_per_hour" name="guest_uploads_per_hour" value="{{ settings.guest_uploads_per_hour }}">
       </div>
       <div class="col-6 col-md-4">
+        <label class="form-label small" for="guest_pass_per_hour">Options avancées / heure sans compte</label>
+        <input class="form-control form-control-sm" type="number" min="0" max="100" id="guest_pass_per_hour" name="guest_pass_per_hour" value="{{ settings.guest_pass_per_hour }}"
+               aria-describedby="guest_pass_help">
+        <div class="form-text" id="guest_pass_help">Envois par heure où un visiteur a la taille, la durée et les options des comptes (mot de passe, filtres, documents, sons…). 0 = réservé aux comptes. Les albums restent réservés aux comptes.</div>
+      </div>
+      <div class="col-6 col-md-4">
+        <label class="form-label small" for="guest_pass_max_upload_size_mb">Taille max avec options avancées (Mo)</label>
+        <input class="form-control form-control-sm" type="number" min="1" max="500" id="guest_pass_max_upload_size_mb" name="guest_pass_max_upload_size_mb" value="{{ settings.guest_pass_max_upload_size_mb }}">
+      </div>
+      <div class="col-6 col-md-4">
+        <label class="form-label small" for="guest_pass_max_lifetime_minutes">Durée max avec options avancées</label>
+        <select class="form-select form-select-sm" id="guest_pass_max_lifetime_minutes" name="guest_pass_max_lifetime_minutes">
+          {% for minutes, key in pass_life_choices %}
+          <option value="{{ minutes }}" {% if settings.guest_pass_max_lifetime_minutes == minutes %}selected{% endif %}>{{ _(key) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-4">
         <label class="form-label small" for="member_uploads_per_hour">Envois / heure avec compte</label>
         <input class="form-control form-control-sm" type="number" min="0" max="10000" id="member_uploads_per_hour" name="member_uploads_per_hour" value="{{ settings.member_uploads_per_hour }}">
       </div>

@@ -21,6 +21,9 @@ DEFAULT_SETTINGS = {
     "guest_max_lifetime_minutes": 120,
     "guest_max_upload_size_mb": 10,
     "guest_uploads_per_hour": 10,
+    "guest_pass_per_hour": 1,
+    "guest_pass_max_lifetime_minutes": 1440,
+    "guest_pass_max_upload_size_mb": 30,
     "member_uploads_per_hour": 100,
     # Lien « Soutenir PixShare » (Ko-fi...). "" = variable SUPPORT_URL, sinon pas de bouton.
     "support_url": "",
@@ -107,7 +110,8 @@ MAX_LIFETIME_CHOICES = tuple(minutes for minutes, _key in LIFETIME_CHOICES if mi
 # Durées possibles pour le maximum des visiteurs sans compte (à partir de 10 minutes).
 GUEST_MAX_LIFETIME_CHOICES = tuple(minutes for minutes, _key in LIFETIME_CHOICES if minutes >= 10)
 ACCOUNT_KEYS = ("accounts_enabled", "guest_max_lifetime_minutes", "guest_max_upload_size_mb",
-                "guest_uploads_per_hour", "member_uploads_per_hour")
+                "guest_uploads_per_hour", "member_uploads_per_hour", "guest_pass_per_hour",
+                "guest_pass_max_lifetime_minutes", "guest_pass_max_upload_size_mb")
 
 
 ENV_SETTINGS = "PIXSHARE_SETTINGS"
@@ -329,14 +333,26 @@ def clean_account_settings(source: dict) -> dict:
         "guest_max_upload_size_mb": _bounded_int(source.get("guest_max_upload_size_mb"), DEFAULT_SETTINGS["guest_max_upload_size_mb"], 1, 500),
         "guest_uploads_per_hour": _bounded_int(source.get("guest_uploads_per_hour"), DEFAULT_SETTINGS["guest_uploads_per_hour"], 0, 10000),
         "member_uploads_per_hour": _bounded_int(source.get("member_uploads_per_hour"), DEFAULT_SETTINGS["member_uploads_per_hour"], 0, 10000),
+        "guest_pass_per_hour": _bounded_int(source.get("guest_pass_per_hour"), DEFAULT_SETTINGS["guest_pass_per_hour"], 0, 100),
+        "guest_pass_max_lifetime_minutes": _pass_life(source.get("guest_pass_max_lifetime_minutes")),
+        "guest_pass_max_upload_size_mb": _bounded_int(source.get("guest_pass_max_upload_size_mb"), DEFAULT_SETTINGS["guest_pass_max_upload_size_mb"], 1, 500),
     }
 
 
-def _member() -> bool:
-    """Membre connecté (ou admin) : il a droit aux limites des comptes."""
+def _pass_life(value) -> int:
     try:
-        from pixshare.services.account_service import is_member
-        return is_member()
+        value = int(value)
+    except (TypeError, ValueError):
+        return DEFAULT_SETTINGS["guest_pass_max_lifetime_minutes"]
+    return value if value in MAX_LIFETIME_CHOICES else DEFAULT_SETTINGS["guest_pass_max_lifetime_minutes"]
+
+
+def _member() -> bool:
+    """Membre connecté (ou admin), ou visiteur à qui un envoi « options avancées » vient d'être
+    accordé : il a droit aux limites des comptes pour cette requête."""
+    try:
+        from pixshare.services.guest_pass_service import features_unlocked
+        return features_unlocked()
     except Exception:
         return False
 
@@ -429,9 +445,43 @@ def get_max_lifetime(member=None) -> int:
     member, plan = _who(member)
     if plan.get("life"):
         return int(plan["life"])
+    if member and _guest_pass_only():
+        return get_guest_pass_max_lifetime()
     if member:
         return member_max
     return min(member_max, int(load_settings().get("guest_max_lifetime_minutes") or 120))
+
+
+def _guest_pass_only() -> bool:
+    """Visiteur sans compte qui utilise les options avancées (pas un vrai membre)."""
+    try:
+        from pixshare.services.account_service import is_member
+        from pixshare.services.guest_pass_service import active
+        return active() and not is_member()
+    except Exception:
+        return False
+
+
+def get_guest_pass_max_upload_size_mb() -> int:
+    """Taille maximale des envois « options avancées » sans compte (30 Mo par défaut),
+    jamais plus que celle des membres ni moins que celle des visiteurs."""
+    s = load_settings()
+    member_max = int(s.get("max_upload_size_mb", DEFAULT_SETTINGS["max_upload_size_mb"]))
+    guest_max = min(member_max, int(s.get("guest_max_upload_size_mb") or 10))
+    try:
+        chosen = int(s.get("guest_pass_max_upload_size_mb") or DEFAULT_SETTINGS["guest_pass_max_upload_size_mb"])
+    except (TypeError, ValueError):
+        chosen = DEFAULT_SETTINGS["guest_pass_max_upload_size_mb"]
+    return max(guest_max, min(member_max, chosen))
+
+
+def get_guest_pass_max_lifetime() -> int:
+    """Durée maximale des envois « options avancées » sans compte (24 heures par défaut),
+    jamais plus que celle des membres ni moins que celle des visiteurs."""
+    member_max = get_member_max_lifetime()
+    guest_max = min(member_max, int(load_settings().get("guest_max_lifetime_minutes") or 120))
+    chosen = _pass_life(load_settings().get("guest_pass_max_lifetime_minutes"))
+    return max(guest_max, min(member_max, chosen))
 
 
 def get_member_max_lifetime() -> int:
@@ -480,6 +530,8 @@ def get_max_upload_size_mb(member=None) -> int:
     member, plan = _who(member)
     if plan.get("mb"):
         return int(plan["mb"])
+    if member and _guest_pass_only():
+        return get_guest_pass_max_upload_size_mb()
     if member:
         return member_max
     return min(member_max, int(settings.get("guest_max_upload_size_mb") or 10))
@@ -513,10 +565,20 @@ def limits_table() -> dict:
                   "per_hour": get_uploads_per_hour(False)},
         "member": {"life": lifetime_label(get_max_lifetime(True)), "mb": get_max_upload_size_mb(True),
                    "per_hour": get_uploads_per_hour(True)},
+        "guest_pass": _guest_pass_per_hour(),
+        "guest_pass_mb": get_guest_pass_max_upload_size_mb(),
+        "guest_pass_life": lifetime_label(get_guest_pass_max_lifetime()),
         "absent_deletes_members": _absent_deletes_members(),
         "absent_mode": bool(load_settings().get("admin_absent_mode")),
         "albums": _album_limits_for_table(),
     }
+
+
+def _guest_pass_per_hour() -> int:
+    try:
+        return max(0, int(load_settings().get("guest_pass_per_hour") or 0))
+    except (TypeError, ValueError):
+        return 0
 
 
 def _album_limits_for_table() -> dict | None:

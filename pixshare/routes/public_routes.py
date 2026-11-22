@@ -47,6 +47,9 @@ from pixshare.services.json_services import (
 from pixshare.services.request_service import get_client_ip
 from pixshare.services.upload_limit_service import check_upload_rate, limit_message
 from pixshare.services.settings_service import (
+    get_max_lifetime,
+    get_guest_pass_max_lifetime,
+    LIFETIME_CHOICES,
     get_default_lifetime,
     get_lifetime_choices,
     get_max_upload_size_bytes,
@@ -57,6 +60,7 @@ from pixshare.services.settings_service import (
     upload_service_enabled,
 )
 from pixshare.services.account_service import current_account, is_member
+from pixshare.services import guest_pass_service as guest_pass
 from pixshare.services.url_import_service import UrlImportError, download_remote_image_to_temp
 from pixshare.services.moderation_service import pop_pending_notice
 from pixshare.services.embed_service import embed_codes
@@ -190,7 +194,7 @@ def _save_several(files, too_many, ip, guest_token, keep, view_limit_enabled, ma
     for index, upload in enumerate(files):
         original = upload.filename
         safe_name = secure_filename(original)
-        if not safe_name or not allowed_file(safe_name, member=is_member()):
+        if not safe_name or not allowed_file(safe_name, member=guest_pass.features_unlocked()):
             problems.append(f"« {original} » : " + (AUDIO_FOR_MEMBERS if is_audio_filename(safe_name)
                                                    else "format non accepté"))
             continue
@@ -266,16 +270,7 @@ def index():
         chosen = chosen[:MAX_FILES_PER_SEND]
         f = chosen[0] if chosen else None
         image_url = (request.form.get("image_url") or "").strip()
-        max_size_bytes = get_max_upload_size_bytes()
         keep = (request.form.get("keep", "") in {"1", "on", "true", "yes"})
-        view_limit_enabled, max_views = _parse_view_limit_form()
-        file_password, password_error = _read_file_password()
-        if not is_member():
-            # Limite de vues et mot de passe : réservés aux comptes (ignorés pour les visiteurs sans compte).
-            view_limit_enabled, file_password, password_error = False, "", ""
-        if password_error and ((f and f.filename) or image_url):
-            flash(password_error, "warning")
-            return attach_guest_cookie(redirect(url_for("public.index")))
 
         # Limite d'envois par IP (l'admin n'est pas limité). Quand elle est atteinte,
         # on réaffiche la page avec un message et le code 429 (voir la fin de la fonction).
@@ -292,6 +287,25 @@ def index():
                 rate_limit_retry = rate.retry_after
                 flash(limit_message(rate, member=bool(account)), "warning")
 
+        # Sans compte : les options des membres (taille, durée, mot de passe, filtres, sons…)
+        # sont accordées pour quelques envois par heure (réglage « options avancées »).
+        if not rate_limited and ((f and f.filename) or image_url) and not is_member() \
+                and guest_pass.offered() and guest_pass.wants_advanced(chosen):
+            refusal = guest_pass.try_unlock(ip, guest_token)
+            if refusal:
+                flash(refusal, "warning")
+                return attach_guest_cookie(redirect(url_for("public.index")))
+
+        max_size_bytes = get_max_upload_size_bytes()
+        view_limit_enabled, max_views = _parse_view_limit_form()
+        file_password, password_error = _read_file_password()
+        if not guest_pass.features_unlocked():
+            # Limite de vues et mot de passe : options des comptes (ignorées sinon).
+            view_limit_enabled, file_password, password_error = False, "", ""
+        if not rate_limited and password_error and ((f and f.filename) or image_url):
+            flash(password_error, "warning")
+            return attach_guest_cookie(redirect(url_for("public.index")))
+
         if not rate_limited and len(chosen) > 1:
             return _save_several(chosen, too_many, ip, guest_token, keep, view_limit_enabled, max_views,
                                  max_size_bytes, file_password)
@@ -303,11 +317,11 @@ def index():
                 flash("Nom de photo invalide.", "danger")
                 return attach_guest_cookie(redirect(url_for("public.index")))
 
-            if not allowed_file(safe_name, member=is_member()):
+            if not allowed_file(safe_name, member=guest_pass.features_unlocked()):
                 if is_audio_filename(safe_name):
                     flash(AUDIO_FOR_MEMBERS, "info")
                 else:
-                    flash(f"Ce format n'est pas accepté. Formats acceptés : {accepted_formats(is_member())}", "danger")
+                    flash(f"Ce format n'est pas accepté. Formats acceptés : {accepted_formats(guest_pass.features_unlocked())}", "danger")
                 return attach_guest_cookie(redirect(url_for("public.index")))
 
             content_length = request.content_length or 0
@@ -417,6 +431,12 @@ def index():
         account=current_account(),
         limits=limits_table(),
         accounts_open=accounts_enabled(),
+        guest_pass=(not current_account() and not is_admin() and guest_pass.offered()),
+        guest_pass_per_hour=guest_pass.per_hour(),
+        guest_usage=(guest_pass.usage(ip, guest_token) if not current_account() and not is_admin()
+                     and guest_pass.offered() else None),
+        pass_lifetime_choices=[c for c in LIFETIME_CHOICES if c[0] <= get_guest_pass_max_lifetime()],
+        guest_max_life=get_max_lifetime(False),
     ))
     if rate_limit_retry:
         response.status_code = 429

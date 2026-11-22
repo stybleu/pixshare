@@ -6,21 +6,25 @@
       <tr><th scope="col"></th><th scope="col">Sans compte</th><th scope="col">Avec un compte</th></tr>
     </thead>
     <tbody>
-      <tr><th scope="row">Durée en ligne</th><td>2 min à {{ limits.guest.life }}</td><td class="fw-semibold">2 min à {{ limits.member.life }}</td></tr>
-      <tr><th scope="row">Taille par photo ou vidéo</th><td>{{ limits.guest.mb }} Mo</td><td class="fw-semibold">{{ limits.member.mb }} Mo</td></tr>
+      {% set pass_cell = ("⭐ " ~ limits.guest_pass ~ " fois par heure") if limits.guest_pass else "—" %}
+      <tr><th scope="row">Durée en ligne</th><td>2 min à {{ limits.guest.life }}{% if limits.guest_pass %}<br><span class="text-muted">⭐ {{ limits.guest_pass_life }} avec les options avancées</span>{% endif %}</td><td class="fw-semibold">2 min à {{ limits.member.life }}</td></tr>
+      <tr><th scope="row">Taille par photo ou vidéo</th><td>{{ limits.guest.mb }} Mo{% if limits.guest_pass %}<br><span class="text-muted">⭐ {{ limits.guest_pass_mb }} Mo avec les options avancées</span>{% endif %}</td><td class="fw-semibold">{{ limits.member.mb }} Mo</td></tr>
       <tr><th scope="row">Envois par heure</th>
         <td>{{ limits.guest.per_hour if limits.guest.per_hour else "illimité" }}</td>
         <td class="fw-semibold">{{ limits.member.per_hour if limits.member.per_hour else "illimité" }}</td></tr>
       <tr><th scope="row">Mes images sur tous mes appareils</th><td>Ce navigateur seulement</td><td class="fw-semibold">✔ Partout, avec aperçu</td></tr>
-      <tr><th scope="row">Améliorer la photo (netteté, contraste, couleurs)</th><td>—</td><td class="fw-semibold">✔</td></tr>
-      <tr><th scope="row">Filtres photo et scanner de documents (PDF)</th><td>—</td><td class="fw-semibold">✔</td></tr>
-      <tr><th scope="row">Sons (MP3, OGG, WAV, FLAC…) avec lecteur</th><td>—</td><td class="fw-semibold">✔</td></tr>
-      <tr><th scope="row">Mot de passe sur une photo</th><td>—</td><td class="fw-semibold">✔</td></tr>
-      <tr><th scope="row">Suppression après un nombre de vues</th><td>—</td><td class="fw-semibold">✔</td></tr>
+      <tr><th scope="row">Améliorer la photo (netteté, contraste, couleurs)</th><td>{{ pass_cell }}</td><td class="fw-semibold">✔</td></tr>
+      <tr><th scope="row">Filtres photo et scanner de documents (PDF)</th><td>{{ pass_cell }}</td><td class="fw-semibold">✔</td></tr>
+      <tr><th scope="row">Sons (MP3, OGG, WAV, FLAC…) avec lecteur</th><td>{{ pass_cell }}</td><td class="fw-semibold">✔</td></tr>
+      <tr><th scope="row">Mot de passe sur une photo</th><td>{{ pass_cell }}</td><td class="fw-semibold">✔</td></tr>
+      <tr><th scope="row">Suppression après un nombre de vues</th><td>{{ pass_cell }}</td><td class="fw-semibold">✔</td></tr>
       <tr><th scope="row">Remplacer une image en gardant le lien</th><td>—</td><td class="fw-semibold">✔</td></tr>
       <tr><th scope="row">Extension de navigateur (clic droit, capture)</th><td>—</td><td class="fw-semibold">✔</td></tr>
       {% if limits.albums %}
       <tr><th scope="row">Albums photo à partager par QR code (mariage, fête…), où les invités ajoutent leurs photos</th><td>—</td><td class="fw-semibold">✔ {{ limits.albums.count }} album(s) de {{ limits.albums.photos }} photos et {{ limits.albums.mb }} Mo</td></tr>
+      {% endif %}
+      {% if limits.guest_pass %}
+      <tr><td colspan="3" class="text-muted">⭐ Options avancées sans compte : {{ limits.guest_pass }} envoi{{ "s" if limits.guest_pass > 1 }} par heure, avec un compteur qui se recharge. Avec un compte gratuit, sans limite.</td></tr>
       {% endif %}
       {% if not compact %}
       <tr><th scope="row">Photos en maillot de bain, sous-vêtements, torse nu</th><td>Peuvent être bloquées par le filtre</td><td class="fw-semibold">Acceptées (la nudité reste interdite)</td></tr>

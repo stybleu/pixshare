@@ -3,7 +3,7 @@ import io
 import struct
 
 from conftest import csrf
-from test_accounts import mails, member, records  # noqa: F401
+from test_accounts import mails, member, no_guest_pass, records  # noqa: F401
 from test_albums import create
 
 
@@ -21,7 +21,7 @@ def send(client, name, data):
 
 
 def test_guest_is_invited_to_create_an_account(make_app):
-    app = make_app()
+    app = no_guest_pass(make_app())
     c = app.test_client()
     send(c, "chanson.mp3", b"ID3" + b"\x00" * 200)
     assert records(app) == {}

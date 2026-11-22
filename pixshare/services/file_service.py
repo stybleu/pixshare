@@ -180,10 +180,10 @@ def _account_id() -> str:
 
 
 def _is_member() -> bool:
-    """Amélioration des photos : réservée aux comptes (et à l'admin)."""
+    """Amélioration et filtres : comptes, admin, ou visiteur avec un envoi « options avancées »."""
     try:
-        from .account_service import is_member
-        return is_member()
+        from .guest_pass_service import features_unlocked
+        return features_unlocked()
     except Exception:
         return False
 

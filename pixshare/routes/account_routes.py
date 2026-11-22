@@ -547,8 +547,16 @@ def _doc_image():
 def _doc_guard():
     validate_csrf()
     rec = accounts.current_account()
+    from pixshare.services import guest_pass_service as guest_pass
     if not rec and not is_admin():
-        abort(403)
+        # Sans compte : aperçu du scanner permis si les options avancées sont proposées
+        # (seul l'envoi compte comme une utilisation), avec une limite plus basse.
+        if not guest_pass.offered():
+            abort(403)
+        from pixshare.services.request_service import get_client_ip
+        if not check_upload_rate(f"docscan:ip:{get_client_ip() or 'inconnue'}", limit=40).allowed:
+            abort(429)
+        return
     key = f"docscan:{rec['id'] if rec else 'admin'}"
     if not check_upload_rate(key, exempt=is_admin(), limit=120).allowed:
         abort(429)

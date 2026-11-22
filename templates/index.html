@@ -72,6 +72,7 @@
   .df .dropzone { padding: 34px 18px; min-height: 170px; display: flex; flex-direction: column; justify-content: center; }
   .df .dropzone:focus-visible { outline: 3px solid rgba(13,110,253,.5); outline-offset: 2px; }
   .enter-hint kbd { font-size: .75em; }
+  .usage-meter { background: linear-gradient(135deg, rgba(79,70,229,.06), rgba(236,72,153,.05)); }
   .preview-stage { position: relative; display: inline-block; max-width: 100%; }
   .preview-stage canvas { display: block; }
   .doc-overlay { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; overflow: visible; }
@@ -135,12 +136,12 @@
 
             <div id="dropzone" class="dropzone" role="button" tabindex="0" aria-controls="fileInput">
               <div class="dz-icon" aria-hidden="true">📷</div>
-              <div class="dz-title">{{ _("dropzone_title_member") if (account or admin) else _("dropzone_title") }}</div>
+              <div class="dz-title">{{ _("dropzone_title_member") if (account or admin or guest_pass) else _("dropzone_title") }}</div>
               <div class="dz-sub">{{ _("dropzone_subtitle") }}</div>
               <div id="dz-file" class="mt-2 small fw-semibold"></div>
             </div>
 
-            <input id="fileInput" aria-label="{{ _('dropzone_title') }}" class="visually-hidden" type="file" name="file" accept="image/*,video/*{% if account or admin %},audio/*{% endif %}" multiple {% if not uploads_enabled %}disabled{% endif %}>
+            <input id="fileInput" aria-label="{{ _('dropzone_title') }}" class="visually-hidden" type="file" name="file" accept="image/*,video/*{% if account or admin or guest_pass %},audio/*{% endif %}" multiple {% if not uploads_enabled %}disabled{% endif %}>
 
             <details class="mt-2 url-import">
               <summary class="small text-muted">{{ _("import_url_label") }}</summary>
@@ -152,7 +153,7 @@
               <div class="small text-muted mb-2">{{ _("image_preview") }}</div>
               <div class="preview-stage" id="previewStage">
                 <canvas id="previewCanvas"></canvas>
-                {% if account or admin %}
+                {% if account or admin or guest_pass %}
                 <svg id="docOverlay" class="doc-overlay" hidden aria-label="Coins de la page : faites-les glisser">
                   <polygon id="docPoly" points=""></polygon>
                   <circle class="doc-handle" r="14" data-i="0"></circle><circle class="doc-handle" r="14" data-i="1"></circle>
@@ -186,7 +187,7 @@
                   </details>
                 </div>
 
-                {% if account or admin %}
+                {% if account or admin or guest_pass %}
                 <div class="col-12" id="filterBox">
                   <div class="small fw-semibold mb-1">🎨 Filtres</div>
                   <div class="filter-strip" id="filterStrip" role="radiogroup" aria-label="Filtres photo">
@@ -279,8 +280,8 @@
                   <label class="form-label" for="lifetimeSelect">{{ _("file_lifetime_default_10") }}</label>
 
                   <select id="lifetimeSelect" name="lifetime" class="form-select">
-                    {% for minutes, label_key in lifetime_choices %}
-                    <option value="{{ minutes }}" {% if default_lifetime == minutes %}selected{% endif %}>{{ _(label_key) }}</option>
+                    {% for minutes, label_key in (pass_lifetime_choices if guest_pass else lifetime_choices) %}
+                    <option value="{{ minutes }}" {% if default_lifetime == minutes %}selected{% endif %}>{{ _(label_key) }}{% if guest_pass and minutes > guest_max_life %} ⭐{% endif %}</option>
                     {% endfor %}
                   </select>
 
@@ -289,7 +290,34 @@
                   </div>
                 </div>
 
-                {% set member_options = account or admin %}
+                {% set member_options = account or admin or guest_pass %}
+                {% if guest_usage %}
+                <div class="col-12">
+                  <div class="usage-meter border rounded p-3" id="usageMeter">
+                    <div class="d-flex justify-content-between align-items-baseline gap-2">
+                      <span class="fw-semibold">⭐ Options avancées sans compte</span>
+                      <span class="small text-muted text-nowrap">{{ guest_usage.remaining }} / {{ guest_usage.limit }}</span>
+                    </div>
+                    <div class="progress my-2" role="progressbar" aria-label="Utilisations restantes"
+                         aria-valuenow="{{ guest_usage.remaining }}" aria-valuemin="0" aria-valuemax="{{ guest_usage.limit }}" style="height: 8px;">
+                      <div class="progress-bar {{ 'bg-warning' if not guest_usage.remaining else '' }}" style="width: {{ guest_usage.percent }}%"></div>
+                    </div>
+                    <div class="small">
+                      {% if guest_usage.remaining %}
+                      Il vous reste <strong>{{ guest_usage.remaining }} utilisation{{ 's' if guest_usage.remaining > 1 }}</strong>{% if guest_usage.refill %} · une de plus à {{ guest_usage.refill }}{% else %} par heure{% endif %}.
+                      {% else %}
+                      <strong>Utilisées.</strong> Rechargées à {{ guest_usage.refill }} : d'ici là, vous pouvez envoyer sans ces options.
+                      {% endif %}
+                    </div>
+                    <div class="small text-muted mt-1">
+                      Une utilisation = un envoi avec mot de passe, limite de vues, filtre, amélioration, son,
+                      plus de {{ limits.guest.mb }} Mo (jusqu'à {{ limits.guest_pass_mb }} Mo) ou plus de {{ limits.guest.life }}
+                      (⭐, jusqu'à {{ limits.guest_pass_life }}).
+                      {% if accounts_open %}<a href="{{ url_for('account.signup') }}">Compte gratuit</a> : sans limite, et les albums.{% endif %}
+                    </div>
+                  </div>
+                </div>
+                {% endif %}
                 {% if not member_options %}
                 <div class="col-12">
                   <div class="border rounded p-3 bg-light small text-muted">
@@ -1429,7 +1457,7 @@ function copyById(id){
   setTimeout(check, 1500);
 })();
 </script>
-{% if account or admin %}
+{% if account or admin or guest_pass %}
 <script src="{{ url_for('static', filename='js/filtres.js') }}"></script>
 <script>
 (function () {

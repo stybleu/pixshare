@@ -107,6 +107,19 @@ def check_upload_rate(ip: str, exempt: bool = False, limit: int | None = None) -
         return RateInfo(True, limit, window, limit - len(queue), 0)
 
 
+def peek_upload_rate(ip: str, limit: int) -> tuple[int, int]:
+    """(utilisations restantes, secondes avant la prochaine recharge) — sans rien compter."""
+    env_limit, window = upload_limit_settings()
+    if env_limit <= 0 or limit <= 0 or not ip:
+        return max(0, limit), 0
+    now = _now()
+    with _lock:
+        queue = [t for t in _buckets().get(ip, ()) if now - t < window]
+    remaining = max(0, limit - len(queue))
+    wait = int(math.ceil(window - (now - queue[0]))) if queue else 0
+    return remaining, max(0, wait)
+
+
 def format_wait(seconds: int) -> str:
     if seconds < 60:
         return "quelques secondes"
