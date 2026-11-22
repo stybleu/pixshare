@@ -4,7 +4,7 @@
 {% block content %}
 
 <div class="container py-4">
-  <h1 class="h4 mb-3">{{ _("legal") }}</h1>
+  <h1 class="h4 mb-3">{{ _("legal") }} {{ "de PixShare" if current_lang == "fr" else "– PixShare" }}</h1>
       {% if current_lang == "en" %}<p class="alert alert-info small py-2">Some of this legal notice is only available in French. The French version is the one that applies.</p>{% endif %}
 
   <div class="card shadow-sm">
@@ -170,7 +170,7 @@
 
       <p class="mb-2">
         {{ _("report_via_contact_form") }}
-        <a href="{{ url_for('public.contact', type='report', subject=_('report_pixshare_content')) }}">{{ _("contact_form") }}</a>.
+        <a href="{{ url_for('public.contact', type='report', subject=_('report_pixshare_content')) }}" rel="nofollow">{{ _("contact_form") }}</a>.
       </p>
 
       <p class="mb-2">

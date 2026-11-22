@@ -42,7 +42,7 @@ def test_french_error_pages(make_app):
 
 def test_contact_appeal_type(make_app):
     html = make_app().test_client().get("/contact?type=appeal").get_data(as_text=True)
-    assert '<h1 class="h4 mb-3">Contact</h1>' in html
+    assert '<h1 class="h4 mb-3">Contacter l&#39;équipe de PixShare</h1>' in html
     assert 'value="appeal" selected' in html and "Contester une décision de modération" in html
 
 

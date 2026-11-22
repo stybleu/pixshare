@@ -34,16 +34,19 @@
 <meta name="theme-color" content="#4f46e5">
 {% block canonical %}<link rel="canonical" href="{{ _canon }}">{% endblock %}
 
-<title>{% block title %}{% if title %}{{ title }}{% if 'PixShare' not in title %} – PixShare{% endif %}{% else %}{{ _('index_meta_title') }}{% endif %}{% endblock %}</title>
+<title>{% block title %}{% if seo_page %}{{ seo_page.title }}{% elif title %}{{ title }}{% if 'PixShare' not in title %} – PixShare{% endif %}{% else %}{{ _('index_meta_title') }}{% endif %}{% endblock %}</title>
 
-{% block meta_description %}<meta name="description" content="{{ _('meta_description') }}">{% endblock %}
+{% set _desc = seo_page.desc if seo_page else _('meta_description') %}
+{% block meta_description %}<meta name="description" content="{{ _desc }}">{% endblock %}
 
-{% block robots %}<meta name="robots" content="index, follow">{% endblock %}
+{# Variantes d'une même page (?lang=fr, ?type=…) : à ne pas compter comme des pages en double. #}
+{% set _variant = (request.args|list|reject('equalto', 'lang')|list) or request.args.get('lang') == 'fr' %}
+{% block robots %}<meta name="robots" content="{{ 'noindex, follow' if _variant else 'index, follow' }}">{% endblock %}
 
 {% block social %}
 <meta property="og:site_name" content="PixShare">
-<meta property="og:title" content="{{ title if title else _('index_meta_title') }}">
-<meta property="og:description" content="{{ _('meta_description') }}">
+<meta property="og:title" content="{{ seo_page.title if seo_page else (title if title else _('index_meta_title')) }}">
+<meta property="og:description" content="{{ _desc }}">
 <meta property="og:image" content="https://pixshare.fr/static/images/pixshare_logo.png">
 <meta property="og:image:width" content="512">
 <meta property="og:image:height" content="512">
@@ -53,8 +56,8 @@
 <meta property="og:locale:alternate" content="{{ 'en_US' if current_lang=='fr' else 'fr_FR' }}">
 
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="{{ title if title else _('index_meta_title') }}">
-<meta name="twitter:description" content="{{ _('meta_description') }}">
+<meta name="twitter:title" content="{{ seo_page.title if seo_page else (title if title else _('index_meta_title')) }}">
+<meta name="twitter:description" content="{{ _desc }}">
 <meta name="twitter:image" content="https://pixshare.fr/static/images/pixshare_logo.png">
 {% endblock %}
 {% if request.path == "/" %}
@@ -387,8 +390,8 @@ footer {
           </nav>
 
           <div class="language-switcher" aria-label="Langue">
-            <a href="{{ switch_lang_url('fr') }}" title="{{ _('lang_fr') }}">🇫🇷</a>
-            <a href="{{ switch_lang_url('en') }}" title="{{ _('lang_en') }}">🇬🇧</a>
+            <a href="{{ switch_lang_url('fr') }}" rel="nofollow" title="{{ _('lang_fr') }}">🇫🇷</a>
+            <a href="{{ switch_lang_url('en') }}" rel="nofollow" hreflang="en" title="{{ _('lang_en') }}">🇬🇧</a>
           </div>
         </div>
         {{ season_extras(season_theme) }}

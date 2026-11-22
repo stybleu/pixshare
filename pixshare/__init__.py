@@ -19,6 +19,7 @@ from .services.visitor_stats_service import record_image_display, record_page_vi
 from .services.live_service import record as record_live
 from .services.auth_service import is_admin
 from .services.translation_service import apply_requested_language, build_lang_url, get_current_language, translate
+from .services.seo_pages import page_seo
 from .services.auth_service import check_admin_config
 from .services.nsfw_service import run_after_response
 from .services.settings_service import get_support_url, load_settings
@@ -203,6 +204,7 @@ def create_app(config_overrides: dict | None = None) -> Flask:
             "switch_lang_url": build_lang_url,
             "turnstile_site_key": site_key() if turnstile_required() else "",
             "member": current_account(),
+            "seo_page": page_seo(request.endpoint, get_current_language()),
         })
         return data
 
