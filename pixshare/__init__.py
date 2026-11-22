@@ -260,6 +260,11 @@ def create_app(config_overrides: dict | None = None) -> Flask:
         from .services import backup_service, disk_alert_service
         if backup_service.should_check():
             response.call_on_close(lambda: backup_service.maybe_nightly_backup(app))
+        # IndexNow : une nouvelle version vient d'être déployée → Bing est prévenu une fois.
+        if not app.config.get("TESTING"):
+            from .services import indexnow_service
+            if indexnow_service.should_check():
+                response.call_on_close(lambda: indexnow_service.maybe_submit_after_deploy(app))
         # Disque presque plein : un mail à l'admin (vérifié au plus toutes les 10 minutes, après la réponse).
         if disk_alert_service.should_check():
             response.call_on_close(lambda: disk_alert_service.check_later(app))

@@ -949,6 +949,7 @@ def admin_system():
         env_check=_env_check(),
         db_status=_db_status(),
         backup=_backup_status(),
+        indexnow=_indexnow_status(),
         ip_check=ip_check,
         version=current_app.config["APP_VERSION"],
     )
@@ -1330,6 +1331,24 @@ def admin_db_backup():
     response.headers["Cache-Control"] = "no-store"
     response.headers["X-Content-Type-Options"] = "nosniff"
     return response
+
+
+def _indexnow_status() -> dict:
+    try:
+        from pixshare.services import indexnow_service
+        return indexnow_service.status()
+    except Exception:
+        return {}
+
+
+@admin_bp.route("/admin/indexnow", methods=["POST"], endpoint="admin_indexnow")
+@admin_required
+def admin_indexnow():
+    validate_csrf()
+    from pixshare.services import indexnow_service
+    ok, msg = indexnow_service.submit()
+    flash(f"Bing (IndexNow) : {msg}", "success" if ok else "warning")
+    return redirect(url_for("admin.admin_system") + "#indexnow")
 
 
 @admin_bp.route("/admin/sauvegarde/lancer", methods=["POST"], endpoint="admin_backup_now")

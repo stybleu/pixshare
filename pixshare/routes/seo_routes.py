@@ -47,6 +47,17 @@ Sitemap: {base}/sitemap.xml
     return content, 200, {"Content-Type": "text/plain; charset=utf-8"}
 
 
+@seo_bp.route("/<string:name>.txt", endpoint="indexnow_key")
+def indexnow_key(name):
+    """Fichier de clé IndexNow : Bing le lit pour vérifier que les envois viennent bien du site."""
+    from flask import abort
+    from pixshare.services.indexnow_service import key
+    if name != key():
+        abort(404)
+    return key(), 200, {"Content-Type": "text/plain; charset=utf-8", "X-Robots-Tag": "noindex",
+                        "Cache-Control": "public, max-age=86400"}
+
+
 @seo_bp.route("/sitemap.xml", endpoint="sitemap")
 def sitemap():
     base = request.url_root.rstrip("/")

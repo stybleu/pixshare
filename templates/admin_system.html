@@ -67,6 +67,29 @@
     </div>
   </div>
 
+  <!-- INDEXNOW (Bing) -->
+  <div class="col-12" id="indexnow">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-1">
+          <h2 class="h6 mb-0">Bing et autres moteurs (IndexNow)</h2>
+          <form method="post" action="{{ url_for('admin.admin_indexnow') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="btn btn-outline-primary btn-sm" type="submit">🔔 Prévenir Bing maintenant</button>
+          </form>
+        </div>
+        {% if indexnow.last_at %}
+          <div class="small"><span class="badge {{ 'text-bg-success' if indexnow.last_ok else 'text-bg-warning' }}">{{ 'OK' if indexnow.last_ok else 'À vérifier' }}</span>
+            Dernier envoi : {{ indexnow.last_at|date_fr }} · {{ indexnow.last_message }}{% if indexnow.last_count %} · {{ indexnow.last_count }} page(s){% endif %}</div>
+        {% else %}
+          <div class="small text-muted">Aucun envoi pour l'instant.</div>
+        {% endif %}
+        <div class="small text-muted mt-1">Automatique après chaque déploiement : les pages publiques (accueil, album souvenir, FAQ, CGU, mentions légales, contact, en français et en anglais). Jamais les images ni les albums.</div>
+        {% if indexnow.key_url %}<div class="small text-muted">Fichier de clé : <a href="{{ indexnow.key_url }}" target="_blank" rel="noopener">{{ indexnow.key_url }}</a></div>{% endif %}
+      </div>
+    </div>
+  </div>
+
   <!-- SAUVEGARDE R2 -->
   <div class="col-12" id="sauvegarde">
     <div class="card shadow-sm">
