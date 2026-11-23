@@ -789,6 +789,8 @@ def public_file(file_id):
             "file.html",
             file=file_info,
             file_id=file_id,
+            # Le QR code sert à l'envoyeur pour partager : pas à la personne qui reçoit le lien.
+            can_share_qr=is_owner(meta) or is_admin(),
             file_url=url_for("public.view_file", file_id=file_id),
             download_url=url_for("public.download", file_id=file_id),
             original_name=meta.get("original_name", ""),

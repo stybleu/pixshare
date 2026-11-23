@@ -258,10 +258,11 @@
         <div class="d-flex flex-wrap gap-2">
           <a class="btn btn-ghost btn-sm" href="{{ url_for('album.slideshow', album_id=album.id) }}" target="_blank" rel="noopener">▶️ Diaporama</a>
           {% if counts.active %}<a class="btn btn-ghost btn-sm" href="{{ url_for('album.zip', album_id=album.id) }}">⬇️ Tout télécharger (.zip)</a>{% endif %}
-          {% with qr_src=url_for('album.qr_svg', album_id=album.id), qr_png=url_for('album.qr_png', album_id=album.id),
-                  qr_title=album.name, qr_note=("🔒 Album protégé : donnez aussi le mot de passe." if album.password_hash else "") %}
-            {% include "_qr_fullscreen.html" %}
-          {% endwith %}
+          <button type="button" class="btn btn-ghost btn-sm qr-open" data-qr-open
+                  data-qr-src="{{ url_for('album.qr_svg', album_id=album.id) }}" data-qr-png="{{ url_for('album.qr_png', album_id=album.id) }}"
+                  data-qr-title="{{ album.name }}"
+                  data-qr-note="{{ '🔒 Album protégé : donnez aussi le mot de passe.' if album.password_hash else '' }}">📱 QR code en grand</button>
+          {% include "_qr_fullscreen.html" %}
         </div>
         {% if album.password_hash %}<div class="small pxa-muted mt-1">🔒 Album protégé : donnez aussi le mot de passe aux invités.</div>{% endif %}
       </div>

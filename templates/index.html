@@ -675,6 +675,15 @@
                     </button>
                   </div>
                 </div>
+                <div class="col-12">
+                  <button type="button" class="btn btn-outline-dark btn-sm qr-open" data-qr-open
+                          data-qr-src="{{ url_for('public.file_qr_svg', file_id=f.id) }}" data-qr-png="{{ url_for('public.file_qr_png', file_id=f.id) }}"
+                          data-qr-title="{{ f.original }}"
+                          data-qr-note="{{ '🔒 Protégé : donnez aussi le mot de passe.' if f.protected else '' }}">
+                    📱 QR code
+                  </button>
+                  <span class="small text-muted ms-1">à montrer en plein écran pour qu'on le scanne</span>
+                </div>
               </div>
               {% if f.is_image and f.raw_url and not f.protected %}
               <details class="mt-2 forum-codes">
@@ -698,6 +707,7 @@
 
             </div>
           {% endfor %}
+          {% if guest_files %}{% include "_qr_fullscreen.html" %}{% endif %}
         {% else %}
         <p class="text-muted mb-0">
           {{ _("no_file_yet") }}

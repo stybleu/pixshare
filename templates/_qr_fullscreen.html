@@ -1,18 +1,13 @@
-{# QR code en plein écran, à montrer pour qu'on le scanne.
-   Paramètres : qr_src (image SVG), qr_png (téléchargement), qr_title, qr_note (facultatif). #}
-<button type="button" class="btn btn-outline-dark qr-open" data-qr-open>
-  <img src="{{ qr_src }}" alt="" width="28" height="28" class="bg-white rounded me-1" aria-hidden="true">
-  Afficher le QR code
-</button>
-
+{# QR code en plein écran : UNE fenêtre par page, remplie par le bouton touché.
+   Bouton : <button type="button" data-qr-open data-qr-src="…svg" data-qr-png="…png" data-qr-title="…" data-qr-note="…">. #}
 <div class="qr-full" id="qrFull" role="dialog" aria-modal="true" aria-labelledby="qrFullTitle" hidden>
   <div class="qr-full-inner">
-    <div class="qr-full-title" id="qrFullTitle">{{ qr_title }}</div>
-    <img class="qr-full-code" src="{{ qr_src }}" alt="QR code : {{ qr_title }}">
+    <div class="qr-full-title" id="qrFullTitle"></div>
+    <img class="qr-full-code" id="qrFullCode" src="data:," alt="">
     <div class="qr-full-hint">Scannez avec l'appareil photo du téléphone</div>
-    {% if qr_note %}<div class="qr-full-note">{{ qr_note }}</div>{% endif %}
+    <div class="qr-full-note" id="qrFullNote" hidden></div>
     <div class="qr-full-actions">
-      <a class="btn btn-outline-dark" href="{{ qr_png }}" download>⬇ Télécharger le QR code</a>
+      <a class="btn btn-outline-dark" id="qrFullPng" href="#" download>⬇ Télécharger le QR code</a>
       <button type="button" class="btn btn-dark" data-qr-close>Fermer</button>
     </div>
   </div>
@@ -28,6 +23,7 @@
   .qr-full-hint { font-size: 1rem; color: #333; }
   .qr-full-note { font-size: .9rem; color: #555; }
   .qr-full-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  .qr-open img { background: #fff; border-radius: 4px; }
 </style>
 
 <script>
@@ -36,8 +32,14 @@
   var box = document.getElementById("qrFull");
   if (!box) return;
   var lock = null, opener = null;
-  function open() {
-    opener = document.activeElement;
+  function open(btn) {
+    opener = btn;
+    var title = btn.getAttribute("data-qr-title") || "PixShare", note = btn.getAttribute("data-qr-note") || "";
+    document.getElementById("qrFullTitle").textContent = title;
+    var img = document.getElementById("qrFullCode");
+    img.src = btn.getAttribute("data-qr-src"); img.alt = "QR code : " + title;
+    document.getElementById("qrFullPng").href = btn.getAttribute("data-qr-png");
+    var n = document.getElementById("qrFullNote"); n.textContent = note; n.hidden = !note;
     box.hidden = false;
     document.body.style.overflow = "hidden";
     // Plein écran (si le navigateur le permet) et écran gardé allumé pendant qu'on le montre.
@@ -46,6 +48,7 @@
     box.querySelector("[data-qr-close]").focus();
   }
   function close() {
+    if (box.hidden) return;
     box.hidden = true;
     document.body.style.overflow = "";
     try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {}
@@ -53,10 +56,13 @@
     lock = null;
     if (opener && opener.focus) opener.focus();
   }
-  document.querySelectorAll("[data-qr-open]").forEach(function (b) { b.addEventListener("click", open); });
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest && e.target.closest("[data-qr-open]");
+    if (btn) { e.preventDefault(); open(btn); }
+  });
   box.querySelector("[data-qr-close]").addEventListener("click", close);
   box.addEventListener("click", function (e) { if (e.target === box) close(); });
-  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !box.hidden) close(); });
-  document.addEventListener("fullscreenchange", function () { if (!document.fullscreenElement && !box.hidden) close(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") close(); });
+  document.addEventListener("fullscreenchange", function () { if (!document.fullscreenElement) close(); });
 })();
 </script>

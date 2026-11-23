@@ -7,8 +7,12 @@ def test_file_qr_and_fullscreen(make_app):
     c = app.test_client()
     upload(c, "vacances.png")
     fid = next(iter(records(app)))
-    page = c.get(f"/file/{fid}").get_data(as_text=True)
+    page = c.get(f"/file/{fid}").get_data(as_text=True)          # l'envoyeur voit le QR code
     assert f"/file/{fid}/qr.svg" in page and 'id="qrFull"' in page and "Afficher le QR code" in page
+    other = app.test_client().get(f"/file/{fid}").get_data(as_text=True)   # la personne qui reçoit le lien, non
+    assert "Afficher le QR code" not in other and 'id="qrFull"' not in other
+    home = c.get("/").get_data(as_text=True)                     # juste après l'envoi, avec les liens
+    assert home.count('id="qrFull"') == 1 and f'data-qr-png="/file/{fid}/qr.png"' in home
     svg = c.get(f"/file/{fid}/qr.svg")
     assert svg.status_code == 200 and svg.mimetype == "image/svg+xml" and b"<svg" in svg.data
     assert "noindex" in svg.headers["X-Robots-Tag"]
