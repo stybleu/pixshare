@@ -80,3 +80,16 @@ def test_only_admin_can_forbid(app):
     client = app.test_client()
     assert client.post("/admin/interdire", data={"csrf_token": csrf(client), "file_id": file_id}).status_code in (302, 400, 403)
     assert only(app, "a.png")[1]["status"] == "active"
+
+
+def test_thumbnails_show_view_count(app):
+    upload(app.test_client(), "a.png", photo())
+    file_id, _meta = only(app, "a.png")
+    visitor = app.test_client()
+    for _ in range(3):
+        visitor.get(f"/view/{file_id}")
+    with app.app_context():
+        views = only(app, "a.png")[1].get("views", 0)
+    admin = login(app.test_client())
+    page = admin.get("/admin/thumbnails").get_data(as_text=True)
+    assert 'class="thumb-views' in page and f"👁 {views}" in page
