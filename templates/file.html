@@ -34,7 +34,7 @@
 
       <!-- 🖼️ Image -->
       {% if is_image %}
-        <img src="{{ file_url }}" class="img-fluid rounded mb-3">
+        <img src="{{ file_url }}" class="img-fluid rounded mb-3" alt="{{ file.original_name if file and file.original_name else 'Image partagée sur PixShare' }}">
       {% endif %}
 
       <!-- 🎵 Son -->

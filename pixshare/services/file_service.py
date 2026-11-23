@@ -21,7 +21,6 @@ from .time_service import parse_dt, utcnow
 from .image_quality_service import (
     HEIF_AVAILABLE,
     can_enhance_extension,
-    enhance_image_bytes,
     get_output_extension,
     parse_strength,
     transform_image_bytes,
@@ -35,6 +34,57 @@ from .usage_tracking_service import build_usage_summary
 
 class FileTooLargeError(ValueError):
     """Le fichier reçu dépasse la taille maximale autorisée."""
+
+
+class FileContentError(ValueError):
+    """Le contenu du fichier ne correspond pas à son extension (ex. une page web renommée en .png)."""
+
+
+CONTENT_ERROR_MESSAGE = "Ce fichier n'est pas une vraie photo, vidéo ou son : il a été refusé."
+
+_HEIF_BRANDS = {b"heic", b"heix", b"hevc", b"hevx", b"heim", b"heis", b"mif1", b"msf1", b"avif", b"avis", b"mif2"}
+
+
+def detect_media_kinds(head: bytes) -> set:
+    """Types possibles d'après la signature (« nombre magique ») des premiers octets."""
+    h = head or b""
+    riff = h[:4] == b"RIFF" and len(h) >= 12
+    if (h.startswith(b"\x89PNG\r\n\x1a\n") or h.startswith(b"\xff\xd8\xff") or h[:6] in (b"GIF87a", b"GIF89a")
+            or (riff and h[8:12] == b"WEBP") or h.startswith(b"BM") or h[:4] in (b"II*\x00", b"MM\x00*")):
+        return {"image"}
+    if h[4:8] == b"ftyp":
+        return {"image"} if h[8:12] in _HEIF_BRANDS else {"video", "audio"}
+    if h[4:8] in (b"moov", b"mdat", b"wide", b"free", b"skip", b"pnot"):
+        return {"video", "audio"}
+    if h.startswith(b"\x1a\x45\xdf\xa3") or h.startswith(b"OggS"):
+        return {"video", "audio"}
+    if riff and h[8:12] == b"AVI ":
+        return {"video"}
+    if (riff and h[8:12] == b"WAVE") or h.startswith(b"fLaC") or h.startswith(b"ID3") or h.startswith(b"ADIF"):
+        return {"audio"}
+    if len(h) > 1 and h[0] == 0xFF and (h[1] & 0xE0) == 0xE0:     # trame MP3 / AAC
+        return {"audio"}
+    return set()
+
+
+def content_matches_extension(head: bytes, ext: str) -> bool:
+    """Une image doit être une vraie image, une vidéo une vraie vidéo, un son un vrai son.
+    (Un PNG nommé .jpg par un téléphone passe ; une page web ou un .zip renommé en .png non.)"""
+    ext = (ext or "").lower()
+    family = ("image" if ext in IMAGE_EXTENSIONS or ext == ".avif" else
+              "video" if ext in VIDEO_EXTENSIONS else
+              "audio" if ext in AUDIO_EXTENSIONS else "")
+    return bool(family) and family in detect_media_kinds(head)
+
+
+def check_upload_content(file_storage, ext: str) -> None:
+    """Lit les premiers octets sans consommer le fichier ; refuse un contenu déguisé."""
+    stream = file_storage.stream
+    pos = stream.tell()
+    head = stream.read(32)
+    stream.seek(pos)
+    if not content_matches_extension(head, ext):
+        raise FileContentError(CONTENT_ERROR_MESSAGE)
 
 
 IMAGE_EXTENSIONS = {
@@ -939,6 +989,7 @@ def save_uploaded_file(
     password: str = "",
 ) -> tuple[str, int | None, bool]:
     file_id, server_name, dest, ext = _prepare_file_destination(original_name)
+    check_upload_content(file_storage, ext)
 
     from . import photo_filter_service as pfs
     member = _is_member()
@@ -1205,6 +1256,7 @@ def replace_file(file_id: str, file_storage, original_name: str, client_ip: str,
         raise FileNotFoundError(file_id)
 
     _tmp_id, tmp_name, tmp_dest, ext = _prepare_file_destination(original_name)
+    check_upload_content(file_storage, ext)
     file_storage.save(tmp_dest)
     try:
         if max_size_bytes and os.path.getsize(tmp_dest) > int(max_size_bytes):

@@ -3,9 +3,7 @@ from werkzeug.utils import secure_filename
 
 import hashlib
 import os
-import secrets
 import time
-from datetime import datetime, timedelta
 
 from pixshare.config import Config
 
@@ -13,6 +11,8 @@ from pixshare.security.csrf import validate_csrf
 from pixshare.services.auth_service import is_admin, is_locked, register_fail, reset_fail
 from pixshare.services.contact_service import create_contact_message
 from pixshare.services.file_service import (
+    CONTENT_ERROR_MESSAGE,
+    FileContentError,
     FileTooLargeError,
     accepted_formats,
     allowed_file,
@@ -40,10 +40,8 @@ from pixshare.services.file_service import (
 from pixshare.services.json_services import (
     load_blocked,
     load_db,
-    load_json,
     load_views,
     save_db,
-    save_json,
 )
 from pixshare.services.request_service import get_client_ip
 from pixshare.services.upload_limit_service import check_upload_rate, limit_message
@@ -239,6 +237,9 @@ def _save_several(files, too_many, ip, guest_token, keep, view_limit_enabled, ma
         except BannedImageError:
             problems.append(f"« {original} » : image déjà refusée par la modération")
             continue
+        except FileContentError:
+            problems.append(f"« {original} » : ce n'est pas une vraie photo ou vidéo")
+            continue
         saved.append(new_id)
         if requires_image_moderation(safe_name):
             waiting += 1
@@ -373,6 +374,9 @@ def index():
             except BannedImageError:
                 flash(BANNED_MESSAGE, "danger")
                 return attach_guest_cookie(redirect(url_for("public.index")))
+            except FileContentError:
+                flash(CONTENT_ERROR_MESSAGE, "danger")
+                return attach_guest_cookie(redirect(url_for("public.index")))
 
             if requires_image_moderation(safe_name):
                 flash("Image reçue ✅ Vérification automatique en cours : son lien s'affiche dès qu'elle est validée.", "info")
@@ -406,6 +410,9 @@ def index():
                 return attach_guest_cookie(redirect(url_for("public.index")))
             except BannedImageError:
                 flash(BANNED_MESSAGE, "danger")
+                return attach_guest_cookie(redirect(url_for("public.index")))
+            except FileContentError:
+                flash(CONTENT_ERROR_MESSAGE, "danger")
                 return attach_guest_cookie(redirect(url_for("public.index")))
             except Exception:
                 flash("Impossible d'importer cette image depuis l'URL fournie.", "danger")

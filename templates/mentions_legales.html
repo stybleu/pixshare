@@ -134,10 +134,33 @@
         du navigateur pour cette seule vérification.
       </p>
 
+      <h2 class="h6 mt-4" id="rgpd">Bases légales, destinataires et vos droits (RGPD)</h2>
+
       <p class="mb-2">
-        Conformément au RGPD, vous pouvez demander l’accès à vos données, leur rectification ou leur suppression via le
+        <strong>Responsable du traitement :</strong> l’éditeur du site (voir plus haut), joignable par le
         <a href="{{ url_for('public.contact') }}">{{ _("contact_form") }}</a>.
-        Vous pouvez aussi adresser une réclamation à la CNIL (www.cnil.fr).
+      </p>
+
+      <ul class="mb-2">
+        <li><strong>Exécution du service demandé</strong> (article 6.1.b du RGPD) : hébergement et partage des photos, vidéos et sons, comptes, albums, e-mails de connexion.</li>
+        <li><strong>Intérêt légitime</strong> (article 6.1.f) : sécurité du service, lutte contre les abus et les robots, modération, statistiques de fréquentation sans adresse IP.</li>
+        <li><strong>Obligation légale</strong> (article 6.1.c) : réponse aux demandes des autorités judiciaires, traitement des signalements de contenus illicites.</li>
+      </ul>
+
+      <p class="mb-2">
+        <strong>Destinataires et sous-traitants :</strong> Render Services, Inc. (hébergement du site), Cloudflare, Inc. (protection du site,
+        vérification anti-robot et sauvegardes chiffrées) et le fournisseur de messagerie de l’éditeur (envoi des e-mails).
+        Certains de ces prestataires sont établis aux États-Unis : les transferts de données reposent sur les garanties prévues par le RGPD
+        (décision d’adéquation « Data Privacy Framework » ou clauses contractuelles types de la Commission européenne).
+        Aucune donnée n’est vendue ni cédée à des fins commerciales.
+      </p>
+
+      <p class="mb-2">
+        <strong>Vos droits :</strong> vous pouvez demander l’accès à vos données, leur rectification, leur effacement, la limitation
+        du traitement, leur portabilité, et vous opposer à un traitement fondé sur l’intérêt légitime, via le
+        <a href="{{ url_for('public.contact') }}">{{ _("contact_form") }}</a>. Une réponse vous est apportée dans un délai d’un mois.
+        Les membres peuvent aussi supprimer eux-mêmes leur compte et toutes leurs données depuis « Mon compte ».
+        Vous pouvez adresser une réclamation à la CNIL (<a href="https://www.cnil.fr" rel="noopener" target="_blank">www.cnil.fr</a>).
       </p>
 
       <h2 class="h6 mt-4">{{ _("responsibility") }}</h2>
@@ -186,6 +209,24 @@
 
       <p class="mb-2">
         {{ _("legal_report_action") }} {{ _("legal_report_action_suffix") }}
+        Une confirmation s’affiche dès l’envoi du signalement ; si vous indiquez votre adresse e-mail, l’éditeur vous
+        informe de la suite donnée (article 16 du règlement (UE) 2022/2065, DSA). Un signalement doit être fait de bonne foi ; un signalement
+        abusif peut engager la responsabilité de son auteur.
+      </p>
+
+      <p class="mb-2">
+        Pour un contenu pédocriminel, terroriste ou une menace grave, vous pouvez aussi le signaler directement aux autorités
+        sur <a href="https://www.internet-signalement.gouv.fr" rel="noopener" target="_blank">internet-signalement.gouv.fr</a> (PHAROS).
+        PixShare informe les autorités compétentes de tout contenu laissant soupçonner une infraction menaçant la vie ou la
+        sécurité de personnes (article 18 du DSA).
+      </p>
+
+      <h2 class="h6 mt-4" id="point-de-contact">Point de contact unique (DSA)</h2>
+
+      <p class="mb-2">
+        Les autorités, la Commission européenne, le Comité européen des services numériques et les utilisateurs peuvent joindre
+        PixShare par voie électronique grâce au <a href="{{ url_for('public.contact') }}">{{ _("contact_form") }}</a>
+        (articles 11 et 12 du DSA). Langues acceptées : français et anglais.
       </p>
 
     </div>

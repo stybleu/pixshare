@@ -24,6 +24,8 @@ from pixshare.services.file_service import (
     is_owner,
     medium_path,
     replace_file,
+    CONTENT_ERROR_MESSAGE,
+    FileContentError,
     requires_image_moderation,
 )
 from pixshare.services.image_ban_service import BannedImageError
@@ -214,7 +216,11 @@ def login():
 
 def _safe_next() -> str:
     target = request.args.get("next") or ""
-    return target if target.startswith("/") and not target.startswith("//") else ""
+    # « /\\site.com » ou un caractère invisible : les navigateurs en font « //site.com » (redirection piégée).
+    if (not target.startswith("/") or target.startswith("//") or "\\" in target
+            or any(ord(ch) < 32 or ord(ch) == 127 for ch in target)):
+        return ""
+    return target
 
 
 def _finish_login(rec: dict, device_id: str = ""):
@@ -513,6 +519,9 @@ def replace(file_id):
         return back
     except BannedImageError:
         flash("Cette image a déjà été refusée par la modération : elle ne peut pas être publiée.", "danger")
+        return back
+    except FileContentError:
+        flash(CONTENT_ERROR_MESSAGE, "danger")
         return back
     except FileNotFoundError:
         abort(404)

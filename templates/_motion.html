@@ -179,7 +179,9 @@
         if (!btn || btn.classList.contains("mx-loading")) return;
         btn.classList.add("mx-loading");
         if (form.id === "uploadForm") {
-          btn.innerHTML = '<span class="mx-spinner" aria-hidden="true"></span>' + btn.textContent.trim();
+          const spin = document.createElement("span");
+          spin.className = "mx-spinner"; spin.setAttribute("aria-hidden", "true");
+          btn.prepend(spin);
         }
       }, 0);
     });

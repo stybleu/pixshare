@@ -1,7 +1,7 @@
 import logging
 import mimetypes
 
-from flask import Flask, g, request
+from flask import Flask, request
 
 from .config import Config
 from .storage import init_storage, project_path
@@ -236,8 +236,15 @@ def create_app(config_overrides: dict | None = None) -> Flask:
             "font-src 'self' data:; "
             "object-src 'none'; "
             "base-uri 'self'; "
+            "form-action 'self'; "
             "frame-ancestors 'none';"
         )
+        # Fonctions du téléphone que le site n'utilise jamais : coupées (même pour un script injecté).
+        response.headers["Permissions-Policy"] = (
+            "camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), "
+            "interest-cohort=(), browsing-topics=()"
+        )
+        response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
         return response
 
     @app.after_request

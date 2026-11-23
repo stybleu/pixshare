@@ -446,7 +446,7 @@ def admin_ban_image():
     validate_csrf()
     file_id = (request.form.get("file_id") or "").strip()
     back = request.form.get("back") or url_for("admin.admin_thumbnails")
-    if not back.startswith("/admin"):
+    if not back.startswith("/admin") or "\\" in back or "//" in back:
         back = url_for("admin.admin_thumbnails")
     db = load_db()
     meta = db.get(file_id)

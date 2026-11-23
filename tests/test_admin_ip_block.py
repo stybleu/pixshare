@@ -87,7 +87,7 @@ def test_endpoint_needs_admin_and_csrf(admin):
 
 def test_per_file_block_button_still_works(admin):
     app, client = admin
-    client.post("/", data={"csrf_token": csrf(client), "file": (io.BytesIO(b"x" * 10), "a.mp4")}, content_type="multipart/form-data")
+    client.post("/", data={"csrf_token": csrf(client), "file": (io.BytesIO(b"\x00\x00\x00\x18ftypmp42" + b"\x00" * 20), "a.mp4")}, content_type="multipart/form-data")
     html = client.get("/admin").get_data(as_text=True)
     assert 'action="/admin/block"' in html
     client.post("/admin/block", data={"csrf_token": csrf(client), "ip": "9.9.9.9"})

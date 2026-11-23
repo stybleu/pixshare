@@ -82,6 +82,10 @@ def removal_message(meta: dict, reason: str | None = None) -> str:
     else:
         text = f"Votre vidéo « {name} » a été retirée" if name else "Une de vos vidéos a été retirée"
     text += f" par la modération : {removal_cause(meta, reason)}."
+    # Exposé des motifs (article 17 du DSA) : décision automatique ou non, et moyen de la contester.
+    if str(reason or meta.get("delete_reason") or "").startswith("auto"):
+        text += " Cette décision a été prise automatiquement."
+    text += " Si vous pensez que c'est une erreur, demandez un réexamen par une personne depuis la page Contact (« Contester une décision de modération »)."
     if meta.get("account_id"):
         text += (" Vous pouvez la remplacer par une autre") + \
             " en gardant le même lien, depuis « Mes envois »."
@@ -151,7 +155,6 @@ def _utc_now_iso() -> str:
 def start_lifetime_now(meta: dict) -> None:
     """Le délai de l'image ne compte qu'à partir de sa publication : le temps passé en vérification
     (analyse automatique ou revue par l'admin) est rajouté à la date d'expiration."""
-    from datetime import timedelta
 
     from pixshare.services.time_service import parse_dt, utcnow
 

@@ -16,6 +16,7 @@ from werkzeug.utils import secure_filename
 
 from pixshare.services import account_service as accounts
 from pixshare.services.file_service import (
+    FileContentError,
     FileTooLargeError,
     allowed_file,
     get_guest_token,
@@ -120,6 +121,8 @@ def upload():
         return _error(f"Trop volumineux (maximum {max_mb} Mo).", 413)
     except BannedImageError:
         return _error("Cette image a déjà été refusée par la modération : elle ne peut pas être publiée.", 422)
+    except FileContentError as exc:
+        return _error(str(exc), 415)
     except UrlImportError as exc:
         return _error(str(exc), 422)
     except Exception:

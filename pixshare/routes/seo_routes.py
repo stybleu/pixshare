@@ -3,8 +3,6 @@ import json
 
 from flask import Blueprint, flash, redirect, request, url_for
 
-from pixshare.services.file_service import get_file_record
-from pixshare.services.json_services import load_db
 
 seo_bp = Blueprint("seo", __name__)
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
@@ -13,7 +11,6 @@ IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
 @seo_bp.route("/healthz", endpoint="healthz")
 def healthz():
     """Contrôle de santé pour Render : l'appli répond et peut écrire ses données."""
-    import os
     import tempfile
 
     from flask import current_app
