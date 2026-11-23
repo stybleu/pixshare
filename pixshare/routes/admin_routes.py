@@ -217,6 +217,7 @@ def admin_blocked_ips():
         blocked_ips=blocked,
         blocked_info=load_blocked_info(),
         banned_images=list_banned(),
+        ok_images=_ok_images(),
         block_remaining={ip: block_remaining_label(entry) for ip, entry in load_blocked_info().items()},
         auto_block=auto_block_settings(),
         version=current_app.config["APP_VERSION"],
@@ -265,6 +266,24 @@ def admin_block_duration():
     else:
         flash("Cette IP n'est pas dans la liste.", "warning")
     return redirect(url_for("admin.admin_blocked_ips"))
+
+
+def _ok_images() -> list[dict]:
+    from pixshare.services.admin_ok_service import list_ok
+    return list_ok()
+
+
+@admin_bp.route("/admin/ok-images/remove", methods=["POST"], endpoint="admin_forget_ok_image")
+@admin_required
+def admin_forget_ok_image():
+    """Oublie une photo validée : si elle revient, NudeNet l'analysera de nouveau."""
+    validate_csrf()
+    from pixshare.services.admin_ok_service import forget
+    if forget((request.form.get("sha256") or "").strip()):
+        flash("Photo retirée des photos validées : NudeNet l'analysera de nouveau si elle revient.", "success")
+    else:
+        flash("Photo introuvable dans la liste.", "warning")
+    return redirect(url_for("admin.admin_blocked_ips") + "#photos-validees")
 
 
 @admin_bp.route("/admin/banned-images/remove", methods=["POST"], endpoint="admin_unban_image")
@@ -844,6 +863,10 @@ def admin_review_approve():
     approve_image(db, file_id, meta, "admin", meta.get("moderation_score"))
     if label not in ("analyse_impossible", "signalement"):
         bump_stat("review_approved")  # fausse alerte de NudeNet
+        from pixshare.services.admin_ok_service import remember_approved
+        if remember_approved(meta, file_id):
+            flash("Image approuvée et publiée ✅ Elle est mémorisée : si elle revient, elle passera directement.", "success")
+            return redirect(url_for("admin.admin_panel"))
     flash("Image approuvée et publiée ✅", "success")
     return redirect(url_for("admin.admin_panel"))
 

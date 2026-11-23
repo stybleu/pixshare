@@ -94,6 +94,8 @@ def decide(file_id: str, action: str, notify: bool = True, block_hours: float | 
         approve_image(db, file_id, meta, "admin-mail", meta.get("moderation_score"))
         if label not in NOT_NUDENET:
             bump_stat("review_approved")
+            from pixshare.services.admin_ok_service import remember_approved
+            remember_approved(meta, file_id)
         return "approved"
     if action == "delete":
         if delete_by_id(file_id, reason="non_respect_cgu"):

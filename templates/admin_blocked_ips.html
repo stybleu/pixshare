@@ -174,6 +174,43 @@
 
 </div>
 
+<div class="card shadow-sm mt-4" id="photos-validees">
+  <div class="card-body">
+    <h2 class="h6 mb-1">Photos validées par toi ({{ ok_images|length }})</h2>
+    <div class="small text-muted mb-2">
+      Photos que NudeNet avait bloquées par erreur et que tu as approuvées. Si la même photo revient, elle est publiée
+      directement. Une copie très proche (redimensionnée, renvoyée par une messagerie) passe aussi quand NudeNet hésite ;
+      s'il est sûr de lui, c'est toi qui décides. Seule l'empreinte est gardée, jamais la photo.
+    </div>
+    {% if ok_images %}
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead><tr><th>Date</th><th>Nom</th><th>Alerte de NudeNet</th><th></th></tr></thead>
+          <tbody>
+          {% for o in ok_images[:100] %}
+            <tr>
+              <td class="small text-nowrap">{{ o.at|date_fr }}</td>
+              <td class="small text-break">{{ o.name or "—" }}{% if o.member %} <span class="badge text-bg-light">membre</span>{% endif %}</td>
+              <td class="small">{{ nsfw_label(o.label) if o.label else "—" }}</td>
+              <td>
+                <form method="post" action="{{ url_for('admin.admin_forget_ok_image') }}" class="m-0" onsubmit="return confirm('Oublier cette photo ? NudeNet l\'analysera de nouveau si elle revient.');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <input type="hidden" name="sha256" value="{{ o.sha256 }}">
+                  <button class="btn btn-outline-secondary btn-sm" type="submit">Oublier</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if ok_images|length > 100 %}<div class="small text-muted mt-1">… et {{ ok_images|length - 100 }} plus anciennes.</div>{% endif %}
+    {% else %}
+      <div class="text-muted small">Aucune pour le moment. Elles s'ajoutent quand tu approuves une photo bloquée par erreur.</div>
+    {% endif %}
+  </div>
+</div>
+
 <div class="card shadow-sm mt-4" id="images-interdites">
   <div class="card-body">
     <h2 class="h6 mb-1">Images interdites ({{ banned_images|length }})</h2>

@@ -450,6 +450,20 @@ def _process_one(file_id: str, review_threshold: float, block_threshold: float, 
                 bump_stat("auto_approved")
                 bump_stat("hash_approved")
             return
+        # Photo déjà validée par l'admin après une fausse alerte : le même fichier passe sans analyse.
+        from pixshare.services import admin_ok_service
+        admin_ok = admin_ok_service.check(path, sha)
+        if admin_ok and admin_ok[0] == "exact":
+            db = load_db()
+            meta = db.get(file_id)
+            if _is_waiting_image(meta):
+                meta["content_sha256"] = sha
+                meta["moderation_admin_ok"] = "exact"
+                approve_image(db, file_id, meta, DETECTOR_NAME, admin_ok[1].get("score"))
+                stats["approved"] += 1
+                bump_stat("auto_approved")
+                bump_stat("admin_ok_approved")
+            return
         label, score = analyze_bytes(data, tiling, classes)
     except Exception as exc:
         outcome = _record_failure(file_id, f"{type(exc).__name__}: {exc}")
@@ -468,6 +482,12 @@ def _process_one(file_id: str, review_threshold: float, block_threshold: float, 
     decision = decide(label, score, review_threshold, block_threshold)
     if member and decision == "reject" and not member_rules["reject_direct"]:
         decision = "review"  # membre : par défaut jamais de suppression automatique, l'admin décide
+    if decision == "review" and admin_ok and admin_ok[0] == "similar":
+        # Copie très proche d'une photo validée par l'admin, et NudeNet hésite seulement : publiée.
+        # (Si NudeNet est sûr de lui, « reject », l'admin décide quand même.)
+        decision = "approve"
+        meta["moderation_admin_ok"] = "similar"
+        bump_stat("admin_ok_approved")
     if decision == "review" and _filter_decides(member):
         bump_stat("auto_review")
         if _delete_while_absent(file_id, meta, label, score):

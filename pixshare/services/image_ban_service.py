@@ -91,6 +91,7 @@ def ban_file(path: str, reason: str, label: str = "", file_id: str = "") -> bool
             if vis:
                 data["visual"][vis] = sha
             save_json(BANNED_FILE, data)
+        _forget_admin_ok(sha, vis or "")
         return True
     except Exception:
         _log.exception("Empreinte d'image interdite non enregistrée")
@@ -114,7 +115,17 @@ def ban_record(meta: dict, file_id: str, thumb_path: str = "", reason: str = "no
         if vis:
             data["visual"][vis] = key
         save_json(BANNED_FILE, data)
+    _forget_admin_ok(sha, vis or "")
     return True
+
+
+def _forget_admin_ok(sha: str, vis: str) -> None:
+    """Une image interdite ne peut plus être « validée par l'admin » : l'interdiction gagne."""
+    try:
+        from pixshare.services.admin_ok_service import forget
+        forget(sha, vis)
+    except Exception:
+        _log.exception("Mémoire des photos validées non mise à jour")
 
 
 def banned_ids() -> set[str]:
