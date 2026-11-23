@@ -99,7 +99,17 @@ def enhance_image_bytes(file_bytes: bytes, ext: str, strength: int = DEFAULT_STR
     return transform_image_bytes(file_bytes, ext, lambda rgb: _enhance_rgb(rgb, strength))
 
 
-def transform_image_bytes(file_bytes: bytes, ext: str, transform) -> bytes:
+def crop_box_pixels(crop, width: int, height: int):
+    """(x, y, l, h) en proportions → boîte en pixels pour Pillow (au moins 1 px, dans l'image)."""
+    x, y, w, h = crop
+    left = max(0, min(width - 1, int(round(x * width))))
+    top = max(0, min(height - 1, int(round(y * height))))
+    right = max(left + 1, min(width, int(round((x + w) * width))))
+    bottom = max(top + 1, min(height, int(round((y + h) * height))))
+    return left, top, right, bottom
+
+
+def transform_image_bytes(file_bytes: bytes, ext: str, transform=None, crop=None) -> bytes:
     """Ouvre la photo (remise dans le bon sens), applique ``transform(rgb) -> rgb`` et la réenregistre
     dans le même format. Image animée, illisible ou format non géré : renvoie l'original tel quel.
     Si la transformation change la taille (document redressé), la transparence est abandonnée."""
@@ -117,6 +127,9 @@ def transform_image_bytes(file_bytes: bytes, ext: str, transform) -> bytes:
             img = ImageOps.exif_transpose(src)
             if img is None:
                 img = src.copy()
+            if crop:
+                # Recadrage choisi au doigt : fait ici, sur la photo d'origine (qualité et transparence gardées).
+                img = img.crop(crop_box_pixels(crop, img.width, img.height))
 
             has_alpha = img.mode in ("RGBA", "LA", "PA") or (
                 img.mode == "P" and "transparency" in img.info
@@ -132,7 +145,8 @@ def transform_image_bytes(file_bytes: bytes, ext: str, transform) -> bytes:
             if rgb.mode != "RGB" or rgb.width < 2 or rgb.height < 2:
                 return file_bytes
 
-            rgb = transform(rgb)
+            if transform is not None:
+                rgb = transform(rgb)
             if rgb is None:
                 return file_bytes
             if rgb.mode != "RGB":

@@ -242,3 +242,21 @@ def to_pdf_bytes(img: Image.Image, dpi: int = 150) -> bytes:
     buf = io.BytesIO()
     sheet.save(buf, "PDF", resolution=dpi)
     return buf.getvalue()
+
+
+def parse_crop(value):
+    """« x,y,l,h » en proportions de la photo (0 à 1) → tuple, ou None si absent, invalide ou inutile."""
+    try:
+        parts = [float(v) for v in str(value or "").split(",")]
+    except ValueError:
+        return None
+    if len(parts) != 4 or any(v != v for v in parts):   # NaN
+        return None
+    x, y, w, h = parts
+    if not (0 <= x < 1 and 0 <= y < 1 and 0.01 <= w <= 1 and 0.01 <= h <= 1):
+        return None
+    if x + w > 1.001 or y + h > 1.001:
+        return None
+    if x < 0.002 and y < 0.002 and w > 0.996 and h > 0.996:
+        return None                                     # toute la photo : rien à recadrer
+    return (x, y, min(w, 1 - x), min(h, 1 - y))

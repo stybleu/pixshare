@@ -951,6 +951,11 @@ def save_uploaded_file(
     filter_strength = pfs.parse_strength(request.form.get("filter_strength"))
     doc_corners = pfs.parse_corners(request.form.get("doc_corners")) if photo_filter == pfs.DOCUMENT else None
     doc_mode = (request.form.get("doc_mode") or "scan").strip().lower()
+    # Recadrage au doigt : pour tout le monde, une seule photo à la fois (pas avec le mode Document,
+    # dont les coins sont placés sur la photo entière).
+    crop = pfs.parse_crop(request.form.get("crop_box"))
+    if crop and (photo_filter == pfs.DOCUMENT or len([f for f in request.files.getlist("file") if f and f.filename]) > 1):
+        crop = None
     applied = {"filter": ""}
 
     def _transform(rgb):
@@ -965,11 +970,11 @@ def save_uploaded_file(
             rgb = _enhance_rgb(rgb, enhance_strength)
         return rgb
 
-    wants_change = (enhance_requested and enhance_strength > 0) or bool(photo_filter)
+    wants_change = (enhance_requested and enhance_strength > 0) or bool(photo_filter) or bool(crop)
     if wants_change and can_enhance_extension(ext):
         original_bytes = file_storage.read()
         try:
-            file_bytes = transform_image_bytes(original_bytes, ext, _transform)
+            file_bytes = transform_image_bytes(original_bytes, ext, _transform, crop=crop)
         except Exception:
             file_bytes = original_bytes
 
