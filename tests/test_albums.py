@@ -305,6 +305,9 @@ def test_guestbook_signed_moderated_and_safe(app, mails, monkeypatch):
     owner.post(f"/mes-albums/{album_id}/supprimer", data={"csrf_token": csrf(owner, "/mes-albums"), "confirm": "1"})
     with app.app_context():
         assert album_service.guestbook(album_id) == []                         # effacé avec l'album
+    with app.app_context():
+        from pixshare.services import legal_log_service as legal
+        assert any(r["op"] == legal.LIVRE_OR for r in legal.search())   # registre légal (1 an)
 
 
 def test_site_texts_say_albums_are_for_members(app):

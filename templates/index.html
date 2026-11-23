@@ -483,6 +483,8 @@
               {% if account %}✔ {{ _("limits_member_line")|format(limits.member.life, limits.member.mb) }} · <a href="{{ url_for('account.page') }}">{{ _("nav_account") }}</a>
               {% else %}{{ _("limits_guest_line")|format(limits.guest.life, limits.guest.mb) }}{% if accounts_open and not admin %} · <a href="{{ url_for('account.signup') }}">{{ _("free_account_more") }}</a>{% endif %}{% endif %}
               <br>{{ _("by_uploading_you_accept") }} <a href="{{ url_for('public.cgu') }}">{{ _("cgu_short") }}</a>.
+              <br>{{ "L'adresse IP de l'envoi est gardée un an, uniquement pour la justice (obligation légale)" if current_lang == "fr" else "The upload's IP address is kept for one year, for law enforcement only (legal obligation)" }} ·
+              <a href="{{ url_for('public.mentions_legales') }}#registre-legal">{{ "en savoir plus" if current_lang == "fr" else "learn more" }}</a>.
             </div>
           </div>
 

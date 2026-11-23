@@ -856,6 +856,9 @@ def delete_own_file(file_id):
         abort(403)
 
     ok = delete_by_id(file_id)
+    if ok:
+        from pixshare.services.legal_log_service import SUPPRESSION, record as legal_record
+        legal_record(SUPPRESSION, file_id)
     flash(
         "Supprimé ✅" if ok else "Suppression impossible.",
         "success" if ok else "warning",

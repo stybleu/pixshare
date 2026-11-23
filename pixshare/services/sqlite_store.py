@@ -42,6 +42,16 @@ CREATE TABLE IF NOT EXISTS files (
     id TEXT PRIMARY KEY,
     data TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS legal_log (
+    id      INTEGER PRIMARY KEY AUTOINCREMENT,
+    at      TEXT NOT NULL,
+    op      TEXT NOT NULL,
+    content TEXT NOT NULL DEFAULT '',
+    ip      TEXT NOT NULL DEFAULT '',
+    proto   TEXT NOT NULL DEFAULT '',
+    author  TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS legal_log_at ON legal_log (at);
 CREATE TABLE IF NOT EXISTS approved_hashes (
     key   TEXT PRIMARY KEY,
     fp    TEXT NOT NULL,
@@ -295,6 +305,40 @@ def approved_purge(data_dir: str, older_than: str = "") -> int:
 
 def approved_count(data_dir: str) -> int:
     return _connect(db_path(data_dir)).execute("SELECT COUNT(*) FROM approved_hashes").fetchone()[0]
+
+
+# ------------------------------------------------------------------ registre légal (1 an, réquisitions)
+
+def legal_add(data_dir: str, at: str, op: str, content: str, ip: str, proto: str, author: str) -> None:
+    conn = _connect(db_path(data_dir))
+    with _Tx(conn) as c:
+        c.execute("INSERT INTO legal_log (at, op, content, ip, proto, author) VALUES (?, ?, ?, ?, ?, ?)",
+                  (at, op, content, ip, proto, author))
+
+
+def legal_purge(data_dir: str, older_than: str) -> int:
+    conn = _connect(db_path(data_dir))
+    with _Tx(conn) as c:
+        return c.execute("DELETE FROM legal_log WHERE at < ?", (older_than,)).rowcount
+
+
+def legal_search(data_dir: str, query: str = "", limit: int = 200) -> list[dict]:
+    conn = _connect(db_path(data_dir))
+    cols = ("at", "op", "content", "ip", "proto", "author")
+    if query:
+        like = "%" + query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+        rows = conn.execute(
+            "SELECT at, op, content, ip, proto, author FROM legal_log "
+            "WHERE content LIKE ? ESCAPE '\\' OR ip LIKE ? ESCAPE '\\' OR author LIKE ? ESCAPE '\\' "
+            "ORDER BY at DESC, id DESC LIMIT ?", (like, like, like, int(limit))).fetchall()
+    else:
+        rows = conn.execute("SELECT at, op, content, ip, proto, author FROM legal_log "
+                            "ORDER BY at DESC, id DESC LIMIT ?", (int(limit),)).fetchall()
+    return [dict(zip(cols, r)) for r in rows]
+
+
+def legal_count(data_dir: str) -> int:
+    return _connect(db_path(data_dir)).execute("SELECT COUNT(*) FROM legal_log").fetchone()[0]
 
 
 def status(data_dir: str) -> dict:

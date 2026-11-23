@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block sr_h1 %}{% endblock %}
+{% set title = "Registre légal - Admin" %}
+{% block robots %}<meta name="robots" content="noindex, nofollow, noarchive">{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">⚖️ Registre légal</h1>
+    {% include "_admin_nav.html" %}
+  </div>
+
+  <div class="alert alert-secondary small">
+    <strong>À n'utiliser que pour une réquisition</strong> de la justice ou de la police (officier de police judiciaire, juge).
+    Ce registre est une obligation des hébergeurs (LCEN, article 6, V ; décret n° 2021-1362) : adresse IP, date et heure,
+    opération, identifiant du contenu et de l'auteur, gardés <strong>un an</strong> puis effacés automatiquement.
+    Ne le communique jamais à un particulier qui le demande : demande une réquisition écrite et vérifie qu'elle vient bien
+    d'un service officiel.
+  </div>
+
+  <form method="get" class="row g-2 align-items-end mb-3" role="search">
+    <div class="col-12 col-md-8">
+      <label class="form-label small mb-1" for="q">Identifiant du fichier ou de l'album, adresse IP ou e-mail</label>
+      <input class="form-control" id="q" name="q" value="{{ q }}" maxlength="200" autocomplete="off"
+             placeholder="ex. Vb4RkojdW5U ou 203.0.113.9">
+    </div>
+    <div class="col-6 col-md-2"><button class="btn btn-primary w-100" type="submit">Chercher</button></div>
+    <div class="col-6 col-md-2">
+      <a class="btn btn-outline-secondary w-100" href="{{ url_for('admin.admin_legal_log_csv', q=q) }}">⬇ CSV</a>
+    </div>
+  </form>
+
+  <div class="small text-muted mb-2">{{ total }} ligne(s) dans le registre · {{ rows|length }} affichée(s){% if rows|length == limit %} (les {{ limit }} plus récentes){% endif %}. Heures en UTC.</div>
+
+  <div class="table-responsive">
+    <table class="table table-sm align-middle small">
+      <thead><tr><th>Date (UTC)</th><th>Opération</th><th>Contenu</th><th>Adresse IP</th><th>Protocole</th><th>Auteur</th></tr></thead>
+      <tbody>
+        {% for r in rows %}
+        <tr><td class="text-nowrap">{{ r.at }}</td><td>{{ r.op }}</td><td><code>{{ r.content }}</code></td>
+            <td><code>{{ r.ip or "—" }}</code></td><td>{{ r.proto }}</td><td>{{ r.author or "—" }}</td></tr>
+        {% else %}
+        <tr><td colspan="6" class="text-muted">Aucune ligne{% if q %} pour « {{ q }} »{% endif %}.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -918,6 +918,8 @@ def _register_saved_public_file(
         record_upload()
     except Exception:
         pass
+    from .legal_log_service import CREATION, record as legal_record
+    legal_record(CREATION, file_id, ip=client_ip)   # registre légal (1 an, réquisitions)
 
     return file_id, lifetime, permanent
 
@@ -1327,4 +1329,6 @@ def replace_file(file_id: str, file_storage, original_name: str, client_ip: str,
         from .moderation_service import mark_image_for_review
         mark_image_for_review(db, file_id, meta, "empreinte", None, "deja_refusee")
     save_db(db)
+    from .legal_log_service import MODIFICATION, record as legal_record
+    legal_record(MODIFICATION, file_id, ip=client_ip)   # registre légal (1 an, réquisitions)
     return meta

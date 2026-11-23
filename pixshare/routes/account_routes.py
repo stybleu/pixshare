@@ -136,6 +136,8 @@ def confirm(token):
         validate_csrf()
         rec = accounts.confirm_account(rec["id"])
         if rec.get("status") == "active":
+            from pixshare.services.legal_log_service import COMPTE_CREATION, record as legal_record
+            legal_record(COMPTE_CREATION, rec["id"], author=rec.get("email", ""))
             accounts.login(rec)
             get_guest_token()
             claimed = claim_device_files(rec["id"])
@@ -442,6 +444,8 @@ def delete():
     if request.form.get("confirm") != "1" or not accounts.authenticate(rec["email"], request.form.get("password") or ""):
         flash("Cochez la case et indiquez votre mot de passe pour supprimer le compte.", "danger")
         return redirect(url_for("account.page"))
+    from pixshare.services.legal_log_service import COMPTE_SUPPRESSION, record as legal_record
+    legal_record(COMPTE_SUPPRESSION, rec["id"], author=rec.get("email", ""))
     removed = accounts.delete_account(rec["id"])
     flash(f"Compte supprimé, avec ses {removed} photo(s) et vidéo(s). Votre adresse e-mail a été effacée.", "success")
     return redirect(url_for("public.index"))

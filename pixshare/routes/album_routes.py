@@ -64,6 +64,8 @@ def mine():
             album = albums.create(me, request.form.get("name"), request.form.get("description"),
                                   request.form.get("password"), request.form.get("guests_can_add") == "1",
                                   request.form.get("theme") or "classique")
+            from pixshare.services.legal_log_service import ALBUM_CREATION, record as legal_record
+            legal_record(ALBUM_CREATION, album["id"])
             flash(f"Album « {album['name']} » créé ✅ Ajoutez vos photos, puis partagez le QR code.", "success")
             return redirect(url_for("album.view", album_id=album["id"]))
         except albums.AlbumError as exc:
@@ -356,7 +358,10 @@ def sign(album_id):
         return back
     try:
         name = request.form.get("name") or session.get("album_name", "")
-        albums.sign_guestbook(album, name, request.form.get("text"))
+        entry = albums.sign_guestbook(album, name, request.form.get("text"))
+        from pixshare.services.legal_log_service import LIVRE_OR, record as legal_record
+        legal_record(LIVRE_OR, f"{album['id']}/{entry.get('id', '')}",
+                     author=(me or {}).get("email") or (f"prénom indiqué : {name}" if name else ""))
         if name and not albums.is_owner(album, me):
             session["album_name"] = albums.clean_contributor(name)
         flash("Merci pour votre message ✅", "success")

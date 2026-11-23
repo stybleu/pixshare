@@ -97,7 +97,15 @@
       <h2 class="h6 mt-4">Durées de conservation et vos droits</h2>
 
       <ul class="mb-2">
-        <li>Photos et vidéos envoyées : supprimées à leur expiration ou dès leur suppression. L’adresse IP et les informations techniques liées à l’envoi sont effacées peu après (le temps d’une éventuelle vérification).</li>
+        <li>Photos et vidéos envoyées : supprimées à leur expiration ou dès leur suppression. L’adresse IP et les informations techniques liées à l’envoi sont effacées peu après (le temps d’une éventuelle vérification), sauf la ligne du registre légal décrite ci-dessous.</li>
+        <li id="registre-legal"><strong>Registre légal (obligation des hébergeurs)</strong> : pour chaque mise en ligne, modification ou suppression
+          (photo, vidéo, son, album, message du livre d’or) et pour chaque création ou suppression de compte, PixShare garde
+          <strong>un an</strong> l’adresse IP d’origine, la date et l’heure, la nature de l’opération, le protocole utilisé,
+          l’identifiant du contenu et, s’il y en a un, l’identifiant de l’auteur (adresse e-mail du compte ou prénom indiqué).
+          C’est une obligation légale (article 6, V de la loi n° 2004-575 du 21 juin 2004, LCEN, et décret n° 2021-1362 du 20 octobre 2021) :
+          ces données ne servent qu’à répondre à une demande de l’autorité judiciaire, ne sont utilisées pour rien d’autre,
+          et sont effacées automatiquement au bout d’un an, même si le contenu ou le compte a été supprimé avant.
+          Elles ne peuvent pas être effacées plus tôt sur demande, puisque leur conservation est imposée par la loi.</li>
         <li>Miniatures servant à la modération : supprimées automatiquement après un court délai.</li>
         <li>Messages envoyés par le formulaire de contact (avec l’adresse IP) : conservés au plus 12 mois.</li>
         <li>Adresses IP bloquées pour abus : conservées jusqu’à la levée du blocage.</li>
@@ -107,7 +115,7 @@
         <li>Empreintes des images refusées (jamais les images elles-mêmes) : conservées pour refuser leur renvoi.</li>
         {% if backup_on %}<li>Copie de secours : chaque nuit, les photos et vidéos en ligne et les données du site sont copiées pour pouvoir les récupérer en cas de panne. Une photo ou vidéo supprimée ou expirée disparaît de la copie la nuit suivante ; les copies des données sont gardées 7 jours.</li>{% endif %}
         <li>Empreintes des images acceptées par l’outil d’analyse (jamais les images elles-mêmes) : servent à publier sans nouvelle analyse une image identique ; effacées après 6 mois sans resservir.</li>
-        <li>Comptes (facultatifs) : adresse e-mail, empreinte du mot de passe (jamais le mot de passe lui-même), dates de création et de dernière connexion, nombre d’images refusées, formule personnalisée éventuelle, et, si le membre en crée une, l’empreinte de sa clé d’extension de navigateur (jamais la clé elle-même) avec sa date de dernière utilisation. Conservés tant que le compte existe ; effacés immédiatement, avec toutes les photos et vidéos du compte, quand le membre le supprime depuis « Mon compte ». Un compte jamais confirmé est effacé au bout de 7 jours.</li>
+        <li>Comptes (facultatifs) : adresse e-mail, empreinte du mot de passe (jamais le mot de passe lui-même), dates de création et de dernière connexion, nombre d’images refusées, formule personnalisée éventuelle, et, si le membre en crée une, l’empreinte de sa clé d’extension de navigateur (jamais la clé elle-même) avec sa date de dernière utilisation. Conservés tant que le compte existe ; effacés immédiatement, avec toutes les photos et vidéos du compte, quand le membre le supprime depuis « Mon compte » (seule la ligne du registre légal est gardée un an). Un compte jamais confirmé est effacé au bout de 7 jours.</li>
         <li>Albums des membres : nom, petit mot, mise en page, empreinte du mot de passe éventuel (jamais le mot de passe lui-même) pour chaque photo ajoutée par un invité, le prénom qu’il a choisi d’indiquer et le défi choisi, le nombre de réactions par photo (sans savoir qui a réagi), et les messages du livre d’or avec le prénom indiqué. Effacés avec l’album ou le compte.</li>
       </ul>
       <p class="mb-2">

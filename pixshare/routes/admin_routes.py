@@ -954,6 +954,31 @@ def admin_system():
         version=current_app.config["APP_VERSION"],
     )
 
+@admin_bp.route("/admin/registre-legal", methods=["GET"], endpoint="admin_legal_log")
+@admin_required
+def admin_legal_log():
+    """Registre légal (1 an) : seulement pour répondre à une réquisition judiciaire."""
+    from pixshare.services import legal_log_service as legal
+    q = (request.args.get("q") or "").strip()[:200]
+    limit = 300
+    response = make_response(render_template("admin_legal_log.html", q=q, rows=legal.search(q, limit),
+                                             total=legal.count(), limit=limit))
+    response.headers["Cache-Control"] = "private, no-store"
+    return response
+
+
+@admin_bp.route("/admin/registre-legal.csv", methods=["GET"], endpoint="admin_legal_log_csv")
+@admin_required
+def admin_legal_log_csv():
+    from pixshare.services import legal_log_service as legal
+    q = (request.args.get("q") or "").strip()[:200]
+    response = make_response(legal.to_csv(legal.search(q, 100000)))
+    response.headers["Content-Type"] = "text/csv; charset=utf-8"
+    response.headers["Content-Disposition"] = 'attachment; filename="registre-legal-pixshare.csv"'
+    response.headers["Cache-Control"] = "private, no-store"
+    return response
+
+
 @admin_bp.route("/admin/disque", methods=["GET"], endpoint="admin_disk")
 @admin_required
 def admin_disk():
