@@ -23,6 +23,21 @@
     background: rgba(0,0,0,.02);
   }
 
+  .page-drop{
+    position: fixed; inset: 0; z-index: 1900; pointer-events: none;
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+    background: rgba(13,110,253,.10); backdrop-filter: blur(2px);
+  }
+  .page-drop[hidden]{ display: none; }
+  .page-drop-box{
+    width: 100%; height: 100%; border: 4px dashed rgba(13,110,253,.85); border-radius: 24px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+    background: rgba(255,255,255,.82); color: #0b3d91; text-align: center;
+  }
+  .page-drop-box .pd-icon{ font-size: 4rem; line-height: 1; }
+  .page-drop-box .pd-title{ font-size: 1.6rem; font-weight: 700; }
+  .page-drop-box .pd-sub{ font-size: 1rem; color: #33507a; }
+
   .df .dropzone.dragover{
     border-color: rgba(13,110,253,.8);
     background: rgba(13,110,253,.06);
@@ -138,6 +153,13 @@
           </div>
         {% endif %}
 
+        <div class="page-drop" id="pageDrop" hidden aria-hidden="true">
+          <div class="page-drop-box">
+            <div class="pd-icon">📥</div>
+            <div class="pd-title">{{ "Déposez vos fichiers n'importe où" if current_lang == "fr" else "Drop your files anywhere" }}</div>
+            <div class="pd-sub">{{ "Lâchez-les : ils seront prêts à envoyer" if current_lang == "fr" else "Let go: they will be ready to send" }}</div>
+          </div>
+        </div>
         <form id="uploadForm" method="POST" enctype="multipart/form-data" autocomplete="off" class="row g-2 align-items-end">
 
           <input type="hidden" name="csrf_token" value="{{ csrf_token|default('', true) }}">
@@ -1325,40 +1347,61 @@ function copyById(id){
     if (form.requestSubmit) form.requestSubmit(submitBtn); else submitBtn.click();
   });
 
-  ["dragenter", "dragover"].forEach(evt => {
-    dz.addEventListener(evt, (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dz.classList.add("dragover");
-    });
-  });
-
-  ["dragleave", "drop"].forEach(evt => {
-    dz.addEventListener(evt, (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dz.classList.remove("dragover");
-    });
-  });
-
-  dz.addEventListener("drop", (e) => {
-    const files = e.dataTransfer && e.dataTransfer.files;
-
+  // ---------- Glisser-déposer : TOUTE la page accepte les fichiers (plus seulement le cadre) ----------
+  function acceptDrop(dataTransfer) {
+    const files = dataTransfer && dataTransfer.files;
     if (files && files.length) {
       input.files = files;
-      if (imageUrlInput) imageUrlInput.value = "";
-      showName();
-      updateEnterHint();
-      return;
+      // « change » : prévient aussi l'aperçu, les filtres et le recadrage, comme un choix de fichier.
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      return true;
     }
-
-    const droppedUrl = (e.dataTransfer?.getData("text/uri-list") || e.dataTransfer?.getData("text/plain") || "").trim();
+    const droppedUrl = (dataTransfer?.getData("text/uri-list") || dataTransfer?.getData("text/plain") || "").trim();
     if (droppedUrl && /^https?:\/\//i.test(droppedUrl) && imageUrlInput) {
       imageUrlInput.value = droppedUrl.split(/\r?\n/)[0].trim();
       input.value = "";
       imageUrlInput.dispatchEvent(new Event("input", { bubbles: true }));
+      return true;
+    }
+    return false;
+  }
+
+  const pageDrop = document.getElementById("pageDrop");
+  let dragDepth = 0;
+  function carriesFiles(e) {
+    const types = Array.from((e.dataTransfer && e.dataTransfer.types) || []);
+    return types.includes("Files") || types.includes("text/uri-list");
+  }
+  function showPageDrop(on) {
+    if (pageDrop) pageDrop.hidden = !on;
+    dz.classList.toggle("dragover", on);
+  }
+  document.addEventListener("dragenter", (e) => {
+    if (!carriesFiles(e)) return;            // un texte ou un lien déplacé dans la page : on ne s'en mêle pas
+    e.preventDefault();
+    dragDepth += 1;
+    showPageDrop(true);
+  });
+  document.addEventListener("dragover", (e) => {
+    if (!carriesFiles(e)) return;
+    e.preventDefault();                       // sinon le navigateur ouvrirait la photo à la place du site
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+  });
+  document.addEventListener("dragleave", (e) => {
+    if (!carriesFiles(e)) return;
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (!dragDepth) showPageDrop(false);
+  });
+  document.addEventListener("drop", (e) => {
+    if (!carriesFiles(e)) return;
+    e.preventDefault();
+    dragDepth = 0;
+    showPageDrop(false);
+    if (acceptDrop(e.dataTransfer)) {
+      dz.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   });
+  window.addEventListener("blur", () => { dragDepth = 0; showPageDrop(false); });
 
   const enterHint = document.getElementById("enterHint");
   function updateEnterHint() {
