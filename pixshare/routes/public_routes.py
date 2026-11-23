@@ -770,9 +770,24 @@ def public_file(file_id):
     meta = dict(stored_meta)
     meta["remaining_time"] = get_remaining_time_label(meta.get("expires_at"))
 
+    # Infos affichées sous la photo (nom, taille, dates) : la page les attendait sans jamais les recevoir.
+    from pixshare.services.file_service import human_size
+    try:
+        size_text = human_size(os.path.getsize(os.path.join(current_app.config["UPLOAD_FOLDER"], meta.get("server_name", ""))))
+    except (OSError, TypeError):
+        size_text = ""
+    permanent = bool(meta.get("permanent")) or not meta.get("expires_at")
+    file_info = {
+        "original_name": meta.get("original_name", ""),
+        "size": size_text,
+        "created_at": current_app.jinja_env.filters["date_fr"](meta.get("uploaded_at", "")),
+        "expires_at": "" if permanent else current_app.jinja_env.filters["date_fr"](meta.get("expires_at", "")),
+        "is_permanent": permanent,
+    }
     response = make_response(
         render_template(
             "file.html",
+            file=file_info,
             file_id=file_id,
             file_url=url_for("public.view_file", file_id=file_id),
             download_url=url_for("public.download", file_id=file_id),
@@ -799,6 +814,39 @@ def public_file(file_id):
             samesite="Lax",
         )
 
+    return response
+
+
+def _shareable_meta(file_id: str) -> dict:
+    """Fichier encore en ligne (QR code) ; sinon 404."""
+    cleanup_expired()
+    _db, meta, _server_name = get_file_record(file_id)
+    if not meta or (meta.get("status") or "") not in ("active", "pending"):
+        abort(404)
+    return meta
+
+
+@public_bp.route("/file/<file_id>/qr.svg", methods=["GET"], endpoint="file_qr_svg")
+def file_qr_svg(file_id):
+    """QR code de la page de partage (le mot de passe et la limite de vues s'y appliquent toujours)."""
+    from pixshare.services import qr_service
+    _shareable_meta(file_id)
+    response = make_response(qr_service.svg(url_for("public.public_file", file_id=file_id, _external=True)))
+    response.headers["Content-Type"] = "image/svg+xml"
+    response.headers["X-Robots-Tag"] = "noindex, nofollow"
+    response.headers["Cache-Control"] = "public, max-age=86400"
+    return response
+
+
+@public_bp.route("/file/<file_id>/qr.png", methods=["GET"], endpoint="file_qr_png")
+def file_qr_png(file_id):
+    from pixshare.services import qr_service
+    meta = _shareable_meta(file_id)
+    response = make_response(qr_service.png(url_for("public.public_file", file_id=file_id, _external=True), scale=16))
+    response.headers["Content-Type"] = "image/png"
+    name = secure_filename(os.path.splitext(meta.get("original_name") or "")[0]) or "photo"
+    response.headers["Content-Disposition"] = f'attachment; filename="QR-{name}.png"'
+    response.headers["X-Robots-Tag"] = "noindex, nofollow"
     return response
 
 

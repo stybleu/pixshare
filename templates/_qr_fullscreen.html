@@ -1,0 +1,62 @@
+{# QR code en plein écran, à montrer pour qu'on le scanne.
+   Paramètres : qr_src (image SVG), qr_png (téléchargement), qr_title, qr_note (facultatif). #}
+<button type="button" class="btn btn-outline-dark qr-open" data-qr-open>
+  <img src="{{ qr_src }}" alt="" width="28" height="28" class="bg-white rounded me-1" aria-hidden="true">
+  Afficher le QR code
+</button>
+
+<div class="qr-full" id="qrFull" role="dialog" aria-modal="true" aria-labelledby="qrFullTitle" hidden>
+  <div class="qr-full-inner">
+    <div class="qr-full-title" id="qrFullTitle">{{ qr_title }}</div>
+    <img class="qr-full-code" src="{{ qr_src }}" alt="QR code : {{ qr_title }}">
+    <div class="qr-full-hint">Scannez avec l'appareil photo du téléphone</div>
+    {% if qr_note %}<div class="qr-full-note">{{ qr_note }}</div>{% endif %}
+    <div class="qr-full-actions">
+      <a class="btn btn-outline-dark" href="{{ qr_png }}" download>⬇ Télécharger le QR code</a>
+      <button type="button" class="btn btn-dark" data-qr-close>Fermer</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .qr-full { position: fixed; inset: 0; z-index: 2000; background: #fff; color: #111;
+             display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .qr-full[hidden] { display: none; }
+  .qr-full-inner { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; max-width: 100%; }
+  .qr-full-title { font-weight: 700; font-size: 1.15rem; max-width: 90vw; overflow-wrap: anywhere; }
+  .qr-full-code { width: min(84vw, 70vh); height: min(84vw, 70vh); image-rendering: pixelated; background: #fff; }
+  .qr-full-hint { font-size: 1rem; color: #333; }
+  .qr-full-note { font-size: .9rem; color: #555; }
+  .qr-full-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+</style>
+
+<script>
+(function () {
+  "use strict";
+  var box = document.getElementById("qrFull");
+  if (!box) return;
+  var lock = null, opener = null;
+  function open() {
+    opener = document.activeElement;
+    box.hidden = false;
+    document.body.style.overflow = "hidden";
+    // Plein écran (si le navigateur le permet) et écran gardé allumé pendant qu'on le montre.
+    try { if (box.requestFullscreen) box.requestFullscreen().catch(function () {}); } catch (e) {}
+    try { if (navigator.wakeLock) navigator.wakeLock.request("screen").then(function (l) { lock = l; }).catch(function () {}); } catch (e) {}
+    box.querySelector("[data-qr-close]").focus();
+  }
+  function close() {
+    box.hidden = true;
+    document.body.style.overflow = "";
+    try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {}
+    try { if (lock) lock.release(); } catch (e) {}
+    lock = null;
+    if (opener && opener.focus) opener.focus();
+  }
+  document.querySelectorAll("[data-qr-open]").forEach(function (b) { b.addEventListener("click", open); });
+  box.querySelector("[data-qr-close]").addEventListener("click", close);
+  box.addEventListener("click", function (e) { if (e.target === box) close(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !box.hidden) close(); });
+  document.addEventListener("fullscreenchange", function () { if (!document.fullscreenElement && !box.hidden) close(); });
+})();
+</script>
