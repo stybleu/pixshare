@@ -287,6 +287,11 @@ def test_guestbook_signed_moderated_and_safe(app, mails, monkeypatch):
     page = app.test_client().get(f"/album/{album_id}").get_data(as_text=True)
     assert "Félicitations scriptalert(1)/script aux mariés !" in page and "<script>alert" not in page
     assert "spam.example" not in page
+    # « Télécharger mes données » : l'album et son livre d'or sont dans le fichier du propriétaire
+    import io, json, zipfile
+    resp = owner.post("/compte/mes-donnees", data={"csrf_token": csrf(owner, "/compte")})
+    data = json.loads(zipfile.ZipFile(io.BytesIO(resp.data)).read("mes-donnees.json"))
+    assert data["albums"][0]["id"] == album_id and data["albums"][0]["livre_d_or"]
     set_settings(app, album_guestbook_per_hour=3)  # même adresse IP dans les tests : 2 déjà utilisés
     other = app.test_client()
     sign(other, "Premier")

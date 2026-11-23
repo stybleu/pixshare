@@ -157,6 +157,19 @@
     </div>
   </div>
 
+  <div class="card shadow-sm mb-3" id="mes-donnees">
+    <div class="card-body">
+      <h2 class="h6">📦 Mes données</h2>
+      <p class="small text-muted mb-2">Téléchargez tout ce que PixShare sait de votre compte : adresse e-mail, appareils reconnus,
+        photos, vidéos et sons, albums, et vos lignes du registre légal (gardées un an pour la justice).
+        Vous recevez un fichier .zip, lisible en clair (.txt) et réutilisable ailleurs (.json).</p>
+      <form method="post" action="{{ url_for('account.export_data') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="btn btn-outline-primary btn-sm" type="submit">📦 Télécharger mes données</button>
+      </form>
+    </div>
+  </div>
+
   <div class="card shadow-sm border-danger">
     <div class="card-body">
       <h2 class="h6 text-danger">Supprimer mon compte</h2>

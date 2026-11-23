@@ -375,6 +375,26 @@ def page():
     return _account_page(rec)
 
 
+@account_bp.route("/compte/mes-donnees", methods=["POST"], endpoint="export_data")
+def export_data():
+    """« Télécharger mes données » : droit d'accès et portabilité (articles 15 et 20 du RGPD)."""
+    validate_csrf()
+    rec = accounts.current_account()
+    if not rec:
+        return redirect(url_for("account.login", next="/compte"))
+    if not check_upload_rate(f"export:{rec['id']}", limit=10).allowed:
+        flash("Vous avez déjà téléchargé vos données plusieurs fois : réessayez dans une heure.", "warning")
+        return redirect(url_for("account.page") + "#mes-donnees")
+    from datetime import date
+    from pixshare.services.data_export_service import build_zip
+    response = make_response(build_zip(accounts.get_account(rec["id"]) or rec))
+    response.headers["Content-Type"] = "application/zip"
+    response.headers["Content-Disposition"] = f'attachment; filename="mes-donnees-pixshare-{date.today().isoformat()}.zip"'
+    response.headers["Cache-Control"] = "private, no-store"
+    response.headers["X-Robots-Tag"] = "noindex"
+    return response
+
+
 @account_bp.route("/compte/appareils/retirer", methods=["POST"], endpoint="device_remove")
 def device_remove():
     """Retire un appareil reconnu : il est déconnecté aussitôt et devra être vérifié par mail."""
