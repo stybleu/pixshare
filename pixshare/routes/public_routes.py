@@ -1,6 +1,7 @@
 from flask import Blueprint, abort, current_app, flash, jsonify, make_response, redirect, render_template, request, send_from_directory, session, url_for
 from werkzeug.utils import secure_filename
 
+import hashlib
 import os
 import secrets
 import time
@@ -127,6 +128,29 @@ def _limited_access_allowed(file_id: str, meta: dict) -> bool:
         return False
     seen = load_views().get(file_id, [])
     return isinstance(seen, list) and token in seen
+
+
+def _count_view(file_id: str, meta: dict, visitor_token: str, has_cookie: bool) -> bool:
+    """Compte une vue unique, mais pas :
+    - celles de l'envoyeur (« Mes envois », sa page de partage) ni de l'admin ;
+    - celles des robots (aperçus WhatsApp, Discord, Facebook, moteurs de recherche…).
+    Sans cookie (image intégrée sur un autre site, navigateur qui les bloque), le visiteur est
+    reconnu par une empreinte chiffrée (jamais son adresse IP en clair) : recharger ne recompte pas."""
+    if is_admin() or is_owner(meta):
+        return False
+    from pixshare.services.visitor_stats_service import is_bot
+    user_agent = request.headers.get("User-Agent", "") or ""
+    if is_bot(user_agent):
+        return False
+    if has_cookie:
+        return register_unique_view(file_id, visitor_token)
+    secret = str(current_app.config.get("SECRET_KEY") or "")
+    raw = f"{secret}|vue|{file_id}|{get_client_ip() or ''}|{user_agent[:200]}"
+    counted = register_unique_view(file_id, "e:" + hashlib.sha256(raw.encode()).hexdigest()[:20])
+    # Le cookie posé avec cette réponse est noté aussi : à la visite suivante (avec cookie), la même
+    # personne n'est pas recomptée, et l'image d'un fichier à vues limitées lui reste accessible.
+    register_unique_view(file_id, visitor_token)
+    return counted
 
 
 # --------------------------------------------------------------- mot de passe
@@ -554,7 +578,7 @@ def view_file(file_id):
 
     visitor_token, must_set_cookie = get_or_create_visitor_token()
 
-    if register_unique_view(file_id, visitor_token):
+    if _count_view(file_id, meta, visitor_token, has_cookie=not must_set_cookie):
         meta["views"] = int(meta.get("views", 0) or 0) + 1
         db[file_id] = meta
         save_db(db)
@@ -731,7 +755,7 @@ def public_file(file_id):
     record_usage_event(file_id, "viewer", stored_filename=stored_meta.get("server_name", ""))
 
     visitor_token, must_set_cookie = get_or_create_visitor_token()
-    if register_unique_view(file_id, visitor_token):
+    if _count_view(file_id, stored_meta, visitor_token, has_cookie=not must_set_cookie):
         stored_meta["views"] = int(stored_meta.get("views", 0) or 0) + 1
         db[file_id] = stored_meta
         save_db(db)
