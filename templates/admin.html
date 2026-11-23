@@ -15,6 +15,15 @@
   height: 100%;
 }
 
+.preview-link{ position: relative; display: block; }
+.views-badge{
+  position: absolute; top: 8px; right: 8px; z-index: 2; pointer-events: none;
+  padding: 3px 9px; border-radius: 999px;
+  background: rgba(17, 24, 39, .78); color: #fff;
+  font-size: .8rem; font-weight: 600; line-height: 1.4;
+  box-shadow: 0 1px 4px rgba(0,0,0,.25);
+}
+.views-badge-max{ background: rgba(180, 35, 24, .9); }
 .file-preview{
   display: block;
   width: 100%;
@@ -126,16 +135,20 @@
       <div class="col-12 col-md-6 col-xl-4">
         <div class="file-card shadow-sm">
 
+          {% set _views_badge %}<span class="views-badge{% if f.view_limit_enabled and f.views_remaining == 0 %} views-badge-max{% endif %}"
+                      title="{{ f.views or 0 }} vue(s){% if f.view_limit_enabled %} sur {{ f.max_views }} autorisée(s){% endif %}">👁 {{ f.views or 0 }}{% if f.view_limit_enabled %} / {{ f.max_views }}{% endif %}</span>{% endset %}
           {% if f.has_public_file and f.raw_url and f.previewable %}
             {% if is_video %}
-              <a href="{{ f.raw_url }}" target="_blank" rel="noopener" aria-label="Ouvrir la vidéo {{ f.original }}">
+              <a href="{{ f.raw_url }}" target="_blank" rel="noopener" class="preview-link" aria-label="Ouvrir la vidéo {{ f.original }}">
+                {{ _views_badge }}
                 <video class="file-preview-video" controls preload="metadata">
                   <source src="{{ f.raw_url }}">
                   Votre navigateur ne prend pas en charge la vidéo.
                 </video>
               </a>
             {% else %}
-              <a href="{{ f.raw_url }}" target="_blank" rel="noopener">
+              <a href="{{ f.raw_url }}" target="_blank" rel="noopener" class="preview-link">
+                {{ _views_badge }}
                 <img
                   src="{{ f.raw_url }}"
                   alt="Aperçu de {{ f.original }}"
@@ -144,7 +157,8 @@
               </a>
             {% endif %}
           {% else %}
-            <div class="file-placeholder">
+            <div class="file-placeholder preview-link">
+              {{ _views_badge }}
               Aucun aperçu disponible
             </div>
           {% endif %}

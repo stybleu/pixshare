@@ -93,3 +93,10 @@ def test_thumbnails_show_view_count(app):
     admin = login(app.test_client())
     page = admin.get("/admin/thumbnails").get_data(as_text=True)
     assert 'class="thumb-views' in page and f"👁 {views}" in page
+
+
+def test_files_page_shows_view_badge(app):
+    upload(app.test_client(), "a.png", photo())
+    admin = login(app.test_client())
+    page = admin.get("/admin").get_data(as_text=True)
+    assert 'class="views-badge' in page and "👁 " in page
