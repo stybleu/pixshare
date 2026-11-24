@@ -23,7 +23,7 @@
     <div class="card-body">
       <h2 class="h6 text-uppercase text-muted mb-1">{{ section.title }}</h2>
       {% for item in section["items"] %}
-      <details>
+      <details{% if item.id %} id="{{ item.id }}"{% endif %}>
         <summary>{{ item.q }}</summary>
         <div class="answer">
           {{ item.a }}
@@ -35,4 +35,15 @@
   </div>
   {% endfor %}
 </div>
+<script>
+// Un lien comme /faq#image-retiree ouvre directement la bonne question.
+(function () {
+  function openTarget() {
+    var el = location.hash ? document.getElementById(decodeURIComponent(location.hash.slice(1))) : null;
+    if (el && el.tagName === "DETAILS") { el.open = true; el.scrollIntoView({ block: "start" }); }
+  }
+  openTarget();
+  window.addEventListener("hashchange", openTarget);
+})();
+</script>
 {% endblock %}

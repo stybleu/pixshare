@@ -62,6 +62,8 @@ def removal_cause(meta: dict, reason: str | None = None) -> str:
         return "contenu contraire à la loi"
     if reason == "spam_abus":
         return "usage abusif du service"
+    if reason == "admin_delete":
+        return "suppression par l'éditeur du site, sans motif particulier"
     if label == "deja_refusee":
         return "image identique ou très proche d'une image déjà interdite"
     if label == "signalement":

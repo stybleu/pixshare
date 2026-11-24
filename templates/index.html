@@ -522,9 +522,8 @@
             <div class="small text-muted text-center mt-2">
               {% if account %}✔ {{ _("limits_member_line")|format(limits.member.life, limits.member.mb) }} · <a href="{{ url_for('account.page') }}">{{ _("nav_account") }}</a>
               {% else %}{{ _("limits_guest_line")|format(limits.guest.life, limits.guest.mb) }}{% if accounts_open and not admin %} · <a href="{{ url_for('account.signup') }}">{{ _("free_account_more") }}</a>{% endif %}{% endif %}
-              <br>{{ _("by_uploading_you_accept") }} <a href="{{ url_for('public.cgu') }}">{{ _("cgu_short") }}</a>.
-              <br>{{ "L'adresse IP de l'envoi est gardée un an, uniquement pour la justice (obligation légale)" if current_lang == "fr" else "The upload's IP address is kept for one year, for law enforcement only (legal obligation)" }} ·
-              <a href="{{ url_for('public.mentions_legales') }}#registre-legal">{{ "en savoir plus" if current_lang == "fr" else "learn more" }}</a>.
+              <br>{{ _("by_uploading_you_accept") }} <a href="{{ url_for('public.cgu') }}">{{ _("cgu_short") }}</a>
+              {{ "et les" if current_lang == "fr" else "and the" }} <a href="{{ url_for('public.mentions_legales') }}">{{ "mentions légales (données personnelles)" if current_lang == "fr" else "legal notice (personal data)" }}</a>.
             </div>
           </div>
 
@@ -552,7 +551,8 @@
           <div class="mb-3 p-2 border border-danger-subtle rounded small" id="file-{{ r.id }}" style="scroll-margin-top: 90px">
             <div class="fw-semibold">🚫 « {{ r.original_name }} » retirée par la modération</div>
             <div class="text-muted">Raison : {{ r.cause }} · {{ r.deleted_at|date_fr }}.
-              <a href="{{ url_for('public.faq') }}">Pourquoi ?</a></div>
+              <a href="{{ url_for('public.faq') }}#image-retiree">Pourquoi ?</a> ·
+              <a href="{{ url_for('public.contact', type='appeal') }}" rel="nofollow">Contester</a></div>
             {% if r.replaceable %}
             <form method="post" enctype="multipart/form-data" action="{{ url_for('account.replace', file_id=r.id) }}"
                   class="d-flex flex-wrap gap-2 align-items-center mt-2">

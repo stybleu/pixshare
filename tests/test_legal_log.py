@@ -66,7 +66,8 @@ def test_admin_only_and_csv_is_safe(make_app):
 
 def test_users_are_informed(make_app):
     c = make_app().test_client()
-    assert "gardée un an, uniquement pour la justice" in c.get("/").get_data(as_text=True)
+    home = c.get("/").get_data(as_text=True)   # l'accueil renvoie vers les mentions légales (le détail n'y est plus répété)
+    assert "mentions légales (données personnelles)" in home and "gardée un an" not in home
     legal_page = c.get("/mentions-legales").get_data(as_text=True)
     assert 'id="registre-legal"' in legal_page and "2021-1362" in legal_page
     assert "Conservation légale d’un an" in c.get("/cgu").get_data(as_text=True)

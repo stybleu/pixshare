@@ -102,7 +102,10 @@ def faq() -> list[dict]:
          "ou supprimée. Dans ce cas, un message vous indique laquelle et pourquoi, et elle reste indiquée "
          "7 jours dans « Mes envois ». Avec un compte, ce message vous suit sur tous vos appareils, et vous "
          "pouvez remplacer l'image par une autre en gardant le même lien. Une image déjà interdite (même "
-         "renommée ou redimensionnée) ne peut pas être republiée.", [("Lire les conditions d'utilisation", "public.cgu")]),
+         "renommée ou redimensionnée) ne peut pas être republiée. Si vous pensez à une erreur, demandez un réexamen par "
+         "une personne depuis le formulaire de contact, en choisissant « Contester une décision de modération ».",
+         [("Contester une décision (formulaire de contact)", "public.contact"),
+          ("Lire les conditions d'utilisation", "public.cgu")]),
         ("Comment signaler un contenu ?",
          "Avec le bouton « Signaler » sous chaque image, ou par le formulaire de contact. Les signalements sont "
          "vérifiés, et une image signalée peut être masquée en attendant la vérification.", [("Formulaire de contact", "public.contact")]),
@@ -128,5 +131,7 @@ def faq() -> list[dict]:
          + (" Si vous souhaitez soutenir le site, vous pouvez faire un don." if get_support_url() else ""),
          [("☕ Soutenir PixShare", get_support_url())] if get_support_url() else []),
     ]))
-    return [{"title": title, "items": [{"q": q, "a": a, "links": links} for q, a, links in items]}
+    # Ancres fixes pour les questions vers lesquelles le site renvoie (ex. « Pourquoi ? » sous une image retirée).
+    anchors = {"Pourquoi mon image a-t-elle été refusée ou supprimée ?": "image-retiree"}
+    return [{"title": title, "items": [{"q": q, "a": a, "links": links, "id": anchors.get(q, "")} for q, a, links in items]}
             for title, items in sections]
