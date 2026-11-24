@@ -1,0 +1,20 @@
+{# En-tête commun de l'espace entreprise #}
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+  <a href="{{ url_for('pro.home') }}" class="text-decoration-none">
+    <span class="h4 mb-0 fw-bold" style="color:#4f46e5">🔧 {{ brand }}</span>
+  </a>
+  <span class="small text-muted">🔒 Espace privé · chiffré · sans expiration</span>
+</div>
+{% if not enterprise %}
+<div class="alert alert-warning small py-2">
+  <strong>Essai</strong> : cet espace n'est visible que par toi (admin). Sur le futur site entreprise, seuls les comptes de l'entreprise y auront accès — pas l'hébergeur.
+</div>
+{% elif support and not manager %}
+<div class="alert alert-info small py-2">Un accès de dépannage de l'hébergeur est ouvert par votre responsable.</div>
+{% endif %}
+<style>
+  .pro-card { border: 1px solid #e5e7eb; border-radius: 14px; background: #fff; }
+  .pro-photo { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: 10px; background: #f1f3f5; }
+  .pro-kind { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #6b7280; }
+  .pro-big-btn { font-size: 1.05rem; padding: .8rem 1rem; }
+</style>

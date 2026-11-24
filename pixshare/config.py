@@ -76,6 +76,12 @@ def _load_or_create_secret_key() -> str:
 
 
 class Config:
+    # Espace entreprise : PIXSHARE_ENTREPRISE=1 transforme le site en outil privé pour UNE entreprise
+    # (accueil = /pro, pas d'envoi public, inscription réservée aux adresses e-mail de l'entreprise).
+    ENTERPRISE_MODE = (os.environ.get("PIXSHARE_ENTREPRISE") or "").strip().lower() in {"1", "true", "oui", "yes"}
+    BRAND_NAME = (os.environ.get("BRAND_NAME") or "PixShare Pro").strip()
+    ENTERPRISE_EMAIL_DOMAINS = (os.environ.get("ENTERPRISE_EMAIL_DOMAINS") or "").strip()   # ex. « entreprise.fr,filiale.fr »
+    ENTERPRISE_MANAGERS = (os.environ.get("ENTERPRISE_MANAGERS") or "").strip()             # e-mails des responsables
     ADMIN_USER = os.environ.get("ADMIN_USER") or "0"
     ADMIN_PASS = os.environ.get("ADMIN_PASS") or "0"
     MODERATION_PENDING_IMAGES = (os.environ.get("MODERATION_PENDING_IMAGES", "1") == "1")

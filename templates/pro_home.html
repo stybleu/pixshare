@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% set title = brand ~ " – Machines et interventions" %}
+{% block robots %}<meta name="robots" content="noindex, nofollow, noarchive">{% endblock %}
+{% block content %}
+<div class="container py-4" style="max-width: 900px">
+  {% include "_pro_head.html" %}
+
+  {% if not dedicated_key %}
+  <div class="alert alert-secondary small py-2">🔑 Clé de chiffrement : dérivée de la clé du site. Pour la mise en service, crée une clé dédiée <code>PRO_ENCRYPTION_KEY</code> dans Render.</div>
+  {% endif %}
+
+  <div class="pro-card p-3 mb-4">
+    <h1 class="h5 mb-3">Machines ({{ machines|length }})</h1>
+    {% if machines %}
+    <div class="list-group mb-3">
+      {% for m in machines %}
+      <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href="{{ url_for('pro.machine', machine_id=m.id) }}">
+        <span><strong>{{ m.name }}</strong>{% if m.location %}<span class="text-muted small"> · {{ m.location }}</span>{% endif %}</span>
+        <span class="small text-muted text-end">{{ m.count }} intervention{{ "s" if m.count > 1 }}{% if m.last %}<br>dernière : {{ m.last|date_fr }}{% endif %}</span>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-muted small">Aucune machine pour l'instant. Ajoutez la première ci-dessous.</p>
+    {% endif %}
+    <form method="post" action="{{ url_for('pro.machine_create') }}" class="row g-2">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="col-12 col-md-5"><input class="form-control" name="name" maxlength="80" required placeholder="Nom de la machine (ex. Compresseur C3)" aria-label="Nom de la machine"></div>
+      <div class="col-12 col-md-4"><input class="form-control" name="location" maxlength="120" placeholder="Lieu (ex. Atelier B)" aria-label="Lieu"></div>
+      <div class="col-12 col-md-3"><button class="btn btn-primary w-100" type="submit">+ Ajouter</button></div>
+    </form>
+  </div>
+
+  <div class="pro-card p-3">
+    <h2 class="h5 mb-3">Dernières interventions</h2>
+    {% for i in recent %}
+      <a class="d-flex justify-content-between border-bottom py-2 text-decoration-none" href="{{ url_for('pro.intervention', intervention_id=i.id) }}">
+        <span><strong>{{ i.machine_name }}</strong>{% if i.ref %} · n° {{ i.ref }}{% endif %}<br><span class="small text-muted">{{ i.author }} · {{ i.photos|length }} photo(s)</span></span>
+        <span class="small text-muted">{{ i.created_at|date_fr }}</span>
+      </a>
+    {% else %}
+      <p class="text-muted small mb-0">Aucune intervention pour l'instant.</p>
+    {% endfor %}
+    {% if manager %}<a class="btn btn-outline-secondary btn-sm mt-3" href="{{ url_for('pro.support') }}">🛟 Accès de dépannage de l'hébergeur</a>{% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -107,6 +107,7 @@ def signup():
             try:
                 accounts.normalize_email(email)
                 accounts.check_password_rules(password, email)
+                _check_enterprise_domain(email)
             except accounts.AccountError as exc:
                 flash(str(exc), "warning")
             else:
@@ -373,6 +374,17 @@ def page():
     if not rec:
         return redirect(url_for("account.login", next="/compte"))
     return _account_page(rec)
+
+
+def _check_enterprise_domain(email: str) -> None:
+    """Mode entreprise : seules les adresses e-mail de l'entreprise peuvent créer un compte."""
+    from flask import current_app
+    if not current_app.config.get("ENTERPRISE_MODE"):
+        return
+    domains = {d.strip().lower().lstrip("@") for d in str(current_app.config.get("ENTERPRISE_EMAIL_DOMAINS") or "").split(",") if d.strip()}
+    domain = email.rsplit("@", 1)[-1].lower() if "@" in email else ""
+    if not domains or domain not in domains:
+        raise accounts.AccountError("Inscription réservée aux adresses e-mail de l'entreprise.")
 
 
 @account_bp.route("/compte/mes-donnees", methods=["POST"], endpoint="export_data")

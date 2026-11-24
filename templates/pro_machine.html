@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% set title = m.name ~ " – " ~ brand %}
+{% block robots %}<meta name="robots" content="noindex, nofollow, noarchive">{% endblock %}
+{% block content %}
+<div class="container py-4" style="max-width: 900px">
+  {% include "_pro_head.html" %}
+  <a href="{{ url_for('pro.home') }}" class="small">← Toutes les machines</a>
+
+  <div class="pro-card p-3 my-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+      <div>
+        <h1 class="h4 mb-1">{{ m.name }}</h1>
+        <div class="text-muted small">{% if m.location %}{{ m.location }} · {% endif %}{{ items|length }} intervention{{ "s" if items|length > 1 }}</div>
+      </div>
+      <button type="button" class="btn btn-outline-dark qr-open" data-qr-open
+              data-qr-src="{{ url_for('pro.machine_qr', machine_id=m.id, fmt='svg') }}"
+              data-qr-png="{{ url_for('pro.machine_qr', machine_id=m.id, fmt='png') }}"
+              data-qr-title="{{ m.name }}" data-qr-note="À coller sur la machine : le scanner ouvre son historique.">
+        <img src="{{ url_for('pro.machine_qr', machine_id=m.id, fmt='svg') }}" alt="" width="28" height="28" class="me-1" aria-hidden="true">QR code
+      </button>
+    </div>
+  </div>
+
+  <div class="pro-card p-3 mb-3" id="nouvelle">
+    <h2 class="h5 mb-3">📸 Nouvelle intervention</h2>
+    <form method="post" action="{{ url_for('pro.intervention_create', machine_id=m.id) }}" enctype="multipart/form-data" class="row g-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="col-12 col-md-4">
+        <label class="form-label small" for="ref">N° d'intervention (facultatif)</label>
+        <input class="form-control" id="ref" name="ref" maxlength="60" placeholder="ex. BT-2026-0412">
+      </div>
+      {% for kind, label in [("avant", "Photos avant"), ("apres", "Photos après"), ("autre", "Autres photos")] %}
+      <div class="col-12 col-md-4">
+        <label class="form-label small" for="ph_{{ kind }}">{{ label }}</label>
+        <input class="form-control" id="ph_{{ kind }}" type="file" name="photos_{{ kind }}" accept="image/*" multiple>
+      </div>
+      {% endfor %}
+      <div class="col-12">
+        <label class="form-label small" for="comment">Commentaire</label>
+        <textarea class="form-control" id="comment" name="comment" rows="3" maxlength="4000" placeholder="Ce qui a été constaté, ce qui a été fait, pièces changées…"></textarea>
+      </div>
+      <div class="col-12"><button class="btn btn-primary w-100 pro-big-btn" type="submit">Enregistrer l'intervention</button></div>
+    </form>
+  </div>
+
+  <div class="pro-card p-3">
+    <h2 class="h5 mb-3">🗂️ Historique</h2>
+    {% for i in items %}
+      <a class="d-flex gap-3 align-items-center border-bottom py-2 text-decoration-none text-reset" href="{{ url_for('pro.intervention', intervention_id=i.id) }}">
+        {% if i.photos %}<img src="{{ url_for('pro.photo', photo_id=i.photos[0].id, s='mini') }}" alt="" width="64" height="48" style="object-fit:cover;border-radius:8px">{% endif %}
+        <span class="flex-grow-1"><strong>{{ i.created_at|date_fr }}</strong>{% if i.ref %} · n° {{ i.ref }}{% endif %}<br>
+          <span class="small text-muted">{{ i.author }} · {{ i.photos|length }} photo(s){% if i.comment %} · {{ i.comment[:60] }}{% if i.comment|length > 60 %}…{% endif %}{% endif %}</span></span>
+      </a>
+    {% else %}
+      <p class="text-muted small mb-0">Aucune intervention enregistrée sur cette machine.</p>
+    {% endfor %}
+  </div>
+  {% include "_qr_fullscreen.html" %}
+</div>
+{% endblock %}

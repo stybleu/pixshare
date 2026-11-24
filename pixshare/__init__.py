@@ -214,6 +214,21 @@ def create_app(config_overrides: dict | None = None) -> Flask:
         apply_requested_language()
 
     @app.before_request
+    def enterprise_gate():
+        """Mode entreprise : un site fermé. Seuls la connexion, l'inscription (adresses de l'entreprise),
+        les pages légales, l'espace /pro et l'admin technique restent ouverts ; tout le reste renvoie vers /pro."""
+        if not app.config.get("ENTERPRISE_MODE"):
+            return None
+        from flask import redirect, url_for
+        path = request.path
+        open_prefixes = ("/static/", "/pro", "/connexion", "/deconnexion", "/inscription", "/mot-de-passe",
+                         "/compte", "/admin", "/cgu", "/mentions-legales", "/contact", "/robots.txt", "/favicon",
+                         "/manifest", "/sw.js", "/healthz", "/sante")
+        if path.startswith(open_prefixes):
+            return None
+        return redirect(url_for("pro.home"))
+
+    @app.before_request
     def log_request():
         # Les IP sont des données personnelles : on ne les écrit dans les logs
         # qu'en mode debug, et via le logger plutôt que print().
@@ -245,6 +260,8 @@ def create_app(config_overrides: dict | None = None) -> Flask:
             "interest-cohort=(), browsing-topics=()"
         )
         response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+        if app.config.get("ENTERPRISE_MODE"):
+            response.headers["X-Robots-Tag"] = "noindex, nofollow, noarchive"   # rien n'apparaît sur Google
         return response
 
     @app.after_request
@@ -312,5 +329,7 @@ def create_app(config_overrides: dict | None = None) -> Flask:
     app.register_blueprint(account_bp)
     app.register_blueprint(extension_bp)
     app.register_blueprint(album_bp)
+    from .routes.pro_routes import pro_bp
+    app.register_blueprint(pro_bp)
 
     return app

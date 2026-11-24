@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% set title = "Accès de dépannage – " ~ brand %}
+{% block robots %}<meta name="robots" content="noindex, nofollow, noarchive">{% endblock %}
+{% block content %}
+<div class="container py-4" style="max-width: 900px">
+  {% include "_pro_head.html" %}
+  <a href="{{ url_for('pro.home') }}" class="small">← Retour</a>
+  <div class="pro-card p-3 my-3">
+    <h1 class="h5">🛟 Accès de dépannage de l'hébergeur</h1>
+    <p class="small text-muted">Par défaut, l'hébergeur du site n'a <strong>aucun accès</strong> à vos machines, interventions et photos.
+      En cas de problème, vous pouvez lui ouvrir un accès limité dans le temps. Chacune des pages qu'il consulte est notée ci-dessous.</p>
+    <p class="mb-3"><strong>État :</strong> {% if support %}<span class="text-danger">ouvert</span>{% else %}<span class="text-success">fermé</span>{% endif %}</p>
+    <form method="post" class="d-flex flex-wrap gap-2">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button class="btn btn-outline-danger btn-sm" name="hours" value="2">Ouvrir 2 h</button>
+      <button class="btn btn-outline-danger btn-sm" name="hours" value="24">Ouvrir 24 h</button>
+      <button class="btn btn-success btn-sm" name="hours" value="0">Fermer maintenant</button>
+    </form>
+  </div>
+  <div class="pro-card p-3">
+    <h2 class="h6">Journal</h2>
+    {% for j in journal %}
+      <div class="small border-bottom py-1"><span class="text-muted">{{ j.at|date_fr }}</span> · {{ j.who }} · {{ j.what }}</div>
+    {% else %}
+      <div class="small text-muted">Rien pour l'instant.</div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

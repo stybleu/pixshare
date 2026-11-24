@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% set title = "Intervention – " ~ (item.machine.name or "machine") %}
+{% block robots %}<meta name="robots" content="noindex, nofollow, noarchive">{% endblock %}
+{% block content %}
+<div class="container py-4" style="max-width: 900px">
+  {% include "_pro_head.html" %}
+  <a href="{{ url_for('pro.machine', machine_id=item.machine_id) }}" class="small">← {{ item.machine.name or "Machine" }}</a>
+
+  <div class="pro-card p-3 my-3">
+    <div class="d-flex flex-wrap justify-content-between gap-2">
+      <div>
+        <h1 class="h4 mb-1">{{ item.machine.name }}{% if item.ref %} · n° {{ item.ref }}{% endif %}</h1>
+        <div class="small text-muted">{{ item.created_at|date_fr }} · {{ item.author }}{% if item.machine.location %} · {{ item.machine.location }}{% endif %}</div>
+      </div>
+      <a class="btn btn-primary" href="{{ url_for('pro.intervention_pdf', intervention_id=item.id) }}">📄 Rapport PDF</a>
+    </div>
+    {% if item.comment %}<p class="mt-3 mb-0" style="white-space: pre-line">{{ item.comment }}</p>{% endif %}
+  </div>
+
+  {% for kind, label in [("avant", "Avant"), ("apres", "Après"), ("autre", "Autres photos")] %}
+    {% set photos = item.photos|selectattr("kind", "equalto", kind)|list %}
+    {% if photos %}
+    <div class="pro-kind mb-2">{{ label }} ({{ photos|length }})</div>
+    <div class="row g-2 mb-3">
+      {% for ph in photos %}
+      <div class="col-6 col-md-4">
+        <a href="{{ url_for('pro.photo', photo_id=ph.id) }}" target="_blank" rel="noopener">
+          <img class="pro-photo" src="{{ url_for('pro.photo', photo_id=ph.id, s='mini') }}" alt="{{ label }} : {{ ph.name }}" loading="lazy">
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  {% endfor %}
+</div>
+{% endblock %}

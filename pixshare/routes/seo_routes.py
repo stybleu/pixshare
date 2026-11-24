@@ -1,7 +1,7 @@
 
 import json
 
-from flask import Blueprint, flash, redirect, request, url_for
+from flask import Blueprint, flash, make_response, redirect, request, url_for
 
 
 seo_bp = Blueprint("seo", __name__)
@@ -28,6 +28,11 @@ def healthz():
 
 @seo_bp.route("/robots.txt", endpoint="robots")
 def robots():
+    from flask import current_app
+    if current_app.config.get("ENTERPRISE_MODE"):   # site privé d'entreprise : rien à indexer
+        resp = make_response("User-agent: *\nDisallow: /\n")
+        resp.headers["Content-Type"] = "text/plain; charset=utf-8"
+        return resp
     base = request.url_root.rstrip("/")
     content = f"""User-agent: *
 Allow: /
