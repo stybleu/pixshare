@@ -46,7 +46,7 @@ font-size:0.85rem;
 
 <h1 class="h4 mb-3">Conditions Générales d’Utilisation (CGU)</h1>
 
-<p class="small text-muted">Dernière mise à jour : 19 novembre 2026.</p>
+<p class="small text-muted">Dernière mise à jour : 24 novembre 2026.</p>
 {% if current_lang == "en" %}<p class="alert alert-info small py-2">These terms are only available in French. The French version is the one that applies.</p>{% endif %}
 
 <div id="sommaire" class="card shadow-sm mb-4 cgu-summary">
@@ -67,6 +67,7 @@ font-size:0.85rem;
 <li><a href="#responsabilite_service">10. Responsabilité du service</a></li>
 <li><a href="#evolution">11. Évolution des conditions</a></li>
 <li><a href="#financier">12. Conditions financières</a></li>
+<li><a href="#droit">13. Droit applicable et litiges</a></li>
 </ul>
 
 </div>
@@ -81,6 +82,12 @@ font-size:0.85rem;
 PixShare est un service permettant d’envoyer et de partager des photos et des vidéos via un lien temporaire.
 Le service est conçu pour un usage simple et rapide, sans obligation de créer un compte.
 Un compte gratuit, facultatif, donne accès à des limites plus larges (voir la section « Comptes »).
+</p>
+
+<p>
+Dans ces conditions, « l’éditeur » désigne la personne qui édite et gère le site (elle est identifiée dans les
+<a href="{{ url_for('public.mentions_legales') }}">mentions légales</a>), « l’utilisateur » ou « le visiteur » toute personne
+qui utilise le service, et « le membre » le titulaire d’un compte.
 </p>
 
 <p>
@@ -171,7 +178,7 @@ Pour faire respecter ces conditions, PixShare utilise les outils et mesures suiv
 </p>
 
 <p><strong>Analyse automatique des images.</strong>
-Chaque image envoyée est analysée automatiquement par un outil de détection de nudité (NudeNet),
+Chaque image envoyée est analysée automatiquement par un outil de détection de nudité fondé sur un réseau de neurones,
 qui fonctionne directement sur le serveur de PixShare. L’image est examinée en entier puis par morceaux.
 Selon le résultat et les réglages choisis par l’éditeur, l’image est :
 </p>
@@ -192,7 +199,9 @@ jusqu’à la décision de l’éditeur.
 Lorsque l’éditeur n’est pas disponible pour vérifier, l’outil décide seul : une image jugée douteuse est alors
 supprimée automatiquement{% if not absent_members %} (sauf pour les images envoyées avec un compte, qui attendent la vérification){% endif %}.
 Une image qui a déjà été acceptée par l’outil, avec les mêmes réglages, peut être publiée directement si exactement
-la même image est envoyée à nouveau.
+la même image est envoyée à nouveau. De même, lorsque l’éditeur valide à la main une image qu’il juge conforme, une empreinte
+numérique en est mémorisée (jamais l’image elle-même) : si la même image, ou une image très proche, est renvoyée,
+elle peut être publiée directement.
 </p>
 
 <p>
@@ -290,8 +299,7 @@ par un lien ou un QR code, éventuellement protégés par un mot de passe. S’i
 ajouter des photos, sans compte, avec un prénom facultatif affiché sous ses photos, répondre aux défis photo proposés,
 réagir aux photos avec des émojis et laisser un message dans le livre d’or. L’organisateur peut retirer n’importe quel
 message ou photo de son album. Ces photos sont soumises aux présentes conditions et analysées comme
-celles des visiteurs sans compte ; la personne qui les ajoute en est responsable. Le membre peut retirer n’importe
-quelle photo de son album. Les photos d’un album restent en ligne pendant la durée maximale prévue pour son compte ;
+celles des visiteurs sans compte ; la personne qui les ajoute en est responsable. Les photos d’un album restent en ligne pendant la durée maximale prévue pour son compte ;
 supprimer l’album, ou le compte, supprime toutes ses photos, y compris celles ajoutées par les invités.
 Le lien d’un album n’est pas public, mais toute personne qui le possède peut voir l’album.
 </p>
@@ -324,11 +332,11 @@ Le détail et les durées de conservation figurent dans les
 </p>
 
 <p>
-Un identifiant technique temporaire peut également être stocké dans le navigateur
+Un cookie technique, conservé 30 jours, est également enregistré dans le navigateur
 afin de permettre l’affichage de l’historique des envois faits depuis ce navigateur,
 de faciliter certaines mesures de sécurité et, le cas échéant, d’afficher un message d’information
 ou de modération lors d’une visite ultérieure depuis le même navigateur.
-Cet identifiant n’est pas utilisé pour le suivi publicitaire.
+Ce cookie n’est pas utilisé pour le suivi publicitaire ni pour mesurer l’audience.
 </p>
 
 <p>
@@ -372,7 +380,7 @@ L’utilisateur demeure responsable de l’utilisation des liens générés, y c
 
 <p>
 PixShare est fourni « tel quel » sans garantie de disponibilité continue, de conservation permanente, ni d’adéquation à un usage particulier.
-La responsabilité de PixShare ne saurait être engagée notamment en cas de :
+Dans les limites permises par la loi, la responsabilité de PixShare ne saurait être engagée notamment en cas de :
 </p>
 
 <ul>
@@ -392,7 +400,7 @@ un contenu manifestement illicite dès qu’il en a connaissance, notamment apr�
 </p>
 
 <p>
-La responsabilité de PixShare ne pourra être engagée en cas d’usage frauduleux, illicite ou non autorisé effectué par un utilisateur ou un tiers.
+La responsabilité de PixShare ne pourra être engagée en cas d’usage frauduleux, illicite ou non autorisé effectué par un utilisateur ou un tiers, sauf faute de sa part.
 </p>
 
 <div class="back-summary">
@@ -402,12 +410,9 @@ La responsabilité de PixShare ne pourra être engagée en cas d’usage fraudul
 <h2 id="evolution" class="h6 mt-4">11. Évolution des conditions</h2>
 
 <p>
-Les présentes conditions peuvent être modifiées à tout moment afin d’adapter
-le service à son évolution technique, fonctionnelle, sécuritaire, économique ou légale.
-</p>
-
-<p>
-La version en vigueur est celle publiée sur le site au moment de la consultation.
+Les présentes conditions peuvent évoluer pour suivre les changements techniques, de sécurité, économiques ou légaux du service.
+La date de dernière mise à jour est indiquée en haut de cette page. En cas de changement important, les membres en sont informés
+par e-mail ou par un message sur le site. Continuer à utiliser le service après la mise à jour vaut acceptation de la nouvelle version.
 </p>
 
 <div class="back-summary">
@@ -429,12 +434,24 @@ des limitations spécifiques selon les usages ou toute autre modalité d’accè
 
 <p>
 Ces évolutions pourront intervenir à tout moment, sous réserve d’une information préalable des utilisateurs
-par tout moyen jugé approprié par l’éditeur.
+par un message sur le site et, pour les membres, par e-mail.
 </p>
 
 <p>
 En conséquence, certaines fonctionnalités actuellement gratuites pourront être maintenues,
 modifiées, limitées ou rendues payantes à l’avenir.
+</p>
+
+<div class="back-summary">
+<a href="#sommaire">⬆ Retour au sommaire</a>
+</div>
+
+<h2 id="droit" class="h6 mt-4">13. Droit applicable et litiges</h2>
+
+<p>
+Les présentes conditions sont soumises au droit français. En cas de difficulté, une solution amiable est recherchée en premier
+lieu, via le <a href="{{ url_for('public.contact') }}" rel="nofollow">formulaire de contact</a>. À défaut, les tribunaux français sont compétents,
+sous réserve des règles protectrices applicables aux consommateurs.
 </p>
 
 <div class="back-summary">
