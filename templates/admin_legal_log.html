@@ -31,6 +31,18 @@
     </div>
   </form>
 
+  {% if admin_lines %}
+  <form method="post" action="{{ url_for('admin.admin_legal_log_clear_admin') }}" class="card card-body mb-3 small">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="mb-2"><strong>{{ admin_lines }} ligne(s) de test</strong> ont pour auteur « admin » (tes envois faits connecté en admin).
+      Tu peux les effacer : seules ces lignes disparaissent, jamais celles des utilisateurs.</div>
+    <div class="row g-2 align-items-end">
+      <div class="col-8 col-md-4"><input class="form-control form-control-sm" name="confirm" autocomplete="off" placeholder="Tape EFFACER" aria-label="Confirmation"></div>
+      <div class="col-4 col-md-3"><button class="btn btn-outline-danger btn-sm w-100" type="submit">Effacer</button></div>
+    </div>
+  </form>
+  {% endif %}
+
   <div class="small text-muted mb-2">{{ total }} ligne(s) dans le registre · {{ rows|length }} affichée(s){% if rows|length == limit %} (les {{ limit }} plus récentes){% endif %}. Heures en UTC.</div>
 
   <div class="table-responsive">

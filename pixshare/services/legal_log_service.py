@@ -142,6 +142,31 @@ def count() -> int:
     return len(load_json(JSON_DOC, []) or [])
 
 
+ADMIN_AUTHOR = "admin"   # auteur inscrit pour les envois faits depuis la session admin (avant qu'ils soient ignorés)
+
+
+def count_admin_lines() -> int:
+    """Nombre de lignes dont l'auteur est « admin » (anciens envois de test de l'éditeur)."""
+    store, data_dir = _store()
+    if store is not None:
+        return store.legal_count_author(data_dir, ADMIN_AUTHOR)
+    from .json_services import load_json
+    return sum(1 for r in (load_json(JSON_DOC, []) or []) if r.get("author") == ADMIN_AUTHOR)
+
+
+def delete_admin_lines() -> int:
+    """Efface les lignes d'auteur « admin » (tests de l'éditeur). Ne touche à aucune ligne d'un autre auteur."""
+    store, data_dir = _store()
+    if store is not None:
+        return store.legal_delete_author(data_dir, ADMIN_AUTHOR)
+    from .json_services import load_json, save_json
+    rows = load_json(JSON_DOC, []) or []
+    kept = [r for r in rows if r.get("author") != ADMIN_AUTHOR]
+    if len(kept) != len(rows):
+        save_json(JSON_DOC, kept)
+    return len(rows) - len(kept)
+
+
 def to_csv(rows: list[dict]) -> str:
     buf = io.StringIO()
     writer = csv.writer(buf, delimiter=";")

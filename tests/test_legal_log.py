@@ -80,3 +80,23 @@ def test_admin_tests_are_not_logged(make_app):
         __import__("test_upload_content").png()), "t.png")}, content_type="multipart/form-data", headers=IP)
     fid = next(iter(records(app)))
     assert rows(app, fid) == []
+
+
+def test_admin_test_lines_can_be_cleared_without_touching_others(make_app):
+    app = make_app()
+    with app.app_context():
+        legal.record(legal.CREATION, "t1", author="admin", ip="1.1.1.1")
+        legal.record(legal.CREATION, "u1", author="visiteur@example.com", ip="2.2.2.2")
+        legal.record(legal.CREATION, "u2", author="", ip="3.3.3.3")
+        assert legal.count_admin_lines() == 1
+    admin = login(app.test_client())
+    page = admin.get("/admin/registre-legal").get_data(as_text=True)
+    assert "1 ligne(s) de test" in page
+    # sans la confirmation écrite, rien n'est effacé
+    admin.post("/admin/registre-legal/effacer-admin", data={"csrf_token": csrf(admin, "/admin/registre-legal"), "confirm": ""})
+    assert len(rows(app)) == 3
+    admin.post("/admin/registre-legal/effacer-admin", data={"csrf_token": csrf(admin, "/admin/registre-legal"), "confirm": "effacer"})
+    assert sorted(r["content"] for r in rows(app)) == ["u1", "u2"]
+    assert "ont pour auteur" not in admin.get("/admin/registre-legal").get_data(as_text=True)
+    # il faut être admin
+    assert app.test_client().post("/admin/registre-legal/effacer-admin").status_code in (302, 400, 401, 403, 404)

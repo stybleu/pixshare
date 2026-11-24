@@ -985,9 +985,24 @@ def admin_legal_log():
     q = (request.args.get("q") or "").strip()[:200]
     limit = 300
     response = make_response(render_template("admin_legal_log.html", q=q, rows=legal.search(q, limit),
-                                             total=legal.count(), limit=limit))
+                                             total=legal.count(), limit=limit,
+                                             admin_lines=legal.count_admin_lines()))
     response.headers["Cache-Control"] = "private, no-store"
     return response
+
+
+@admin_bp.route("/admin/registre-legal/effacer-admin", methods=["POST"], endpoint="admin_legal_log_clear_admin")
+@admin_required
+def admin_legal_log_clear_admin():
+    """Efface seulement les lignes d'auteur « admin » (tes envois de test), après confirmation écrite."""
+    validate_csrf()
+    from pixshare.services import legal_log_service as legal
+    if (request.form.get("confirm") or "").strip().upper() != "EFFACER":
+        flash("Tape EFFACER pour confirmer.", "warning")
+        return redirect(url_for("admin.admin_legal_log"))
+    removed = legal.delete_admin_lines()
+    flash(f"{removed} ligne(s) de test « admin » effacée(s) du registre ✅", "success")
+    return redirect(url_for("admin.admin_legal_log"))
 
 
 @admin_bp.route("/admin/registre-legal.csv", methods=["GET"], endpoint="admin_legal_log_csv")

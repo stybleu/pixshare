@@ -322,6 +322,16 @@ def legal_purge(data_dir: str, older_than: str) -> int:
         return c.execute("DELETE FROM legal_log WHERE at < ?", (older_than,)).rowcount
 
 
+def legal_count_author(data_dir: str, author: str) -> int:
+    return _connect(db_path(data_dir)).execute("SELECT COUNT(*) FROM legal_log WHERE author = ?", (author,)).fetchone()[0]
+
+
+def legal_delete_author(data_dir: str, author: str) -> int:
+    conn = _connect(db_path(data_dir))
+    with _Tx(conn) as c:
+        return c.execute("DELETE FROM legal_log WHERE author = ?", (author,)).rowcount
+
+
 def legal_search(data_dir: str, query: str = "", limit: int = 200) -> list[dict]:
     conn = _connect(db_path(data_dir))
     cols = ("at", "op", "content", "ip", "proto", "author")
