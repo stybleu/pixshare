@@ -27,6 +27,13 @@ def faq() -> list[dict]:
              f"Le temps que vous choisissez au moment de l'envoi : jusqu'à {guest['life']} sans compte, "
              f"et jusqu'à {member['life']} avec un compte gratuit. Ensuite, elle est supprimée automatiquement. "
              "Si une image doit d'abord être vérifiée, le compte à rebours ne commence qu'après la vérification.", []),
+            ("Comment envoyer une capture d'écran ?",
+             "Sur Windows : appuyez sur Win + Maj + S, tracez le rectangle à capturer, puis faites Ctrl + V sur PixShare. "
+             "Sur Mac : Cmd + Ctrl + Maj + 4, tracez le rectangle, puis Cmd + V. "
+             "Si le collage ne fait rien, enregistrez la capture dans un fichier, puis glissez-la n'importe où sur la page "
+             "ou choisissez-la avec « Choisir des photos ». Une fois l'image prête, appuyez sur Entrée pour l'envoyer ; "
+             "vous pouvez la recadrer avant. Sur téléphone, faites la capture avec les touches de l'appareil, "
+             "puis choisissez-la dans la galerie.", []),
             ("Mes photos perdent-elles en qualité ?",
              "Non : vos images ne sont pas recompressées. Seules les informations cachées (position GPS, modèle "
              "d'appareil, date) sont retirées pour protéger votre vie privée. Vous pouvez aussi redimensionner "
@@ -40,6 +47,11 @@ def faq() -> list[dict]:
             ("Puis-je protéger mon image par un mot de passe ?",
              "Oui, avec un compte gratuit. Vous pouvez aussi faire supprimer l'image automatiquement après un "
              "nombre de vues choisi.", []),
+            ("Pourquoi voit-on « Image indisponible » à la place de ma photo ?",
+             "Cette vignette s'affiche quand l'adresse d'une image ne fonctionne plus : la photo a expiré ou a été "
+             "supprimée, elle a été refusée par la vérification, ou elle est protégée par un mot de passe ou une limite "
+             "de vues. Si vous pensez à une erreur, écrivez-nous avec le lien de l'image.",
+             [("Formulaire de contact", "public.contact")]),
             ("Comment supprimer ma photo avant la fin ?",
              "Dans « Mes envois », sur la page d'accueil, depuis le navigateur qui a servi à l'envoyer. "
              "Avec un compte, vous pouvez le faire depuis n'importe lequel de vos appareils.", []),
