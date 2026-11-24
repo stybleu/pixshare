@@ -71,3 +71,12 @@ def test_users_are_informed(make_app):
     legal_page = c.get("/mentions-legales").get_data(as_text=True)
     assert 'id="registre-legal"' in legal_page and "2021-1362" in legal_page
     assert "Conservation légale d’un an" in c.get("/cgu").get_data(as_text=True)
+
+
+def test_admin_tests_are_not_logged(make_app):
+    app = make_app()
+    admin = login(app.test_client())
+    admin.post("/", data={"csrf_token": csrf(admin), "file": (__import__("io").BytesIO(
+        __import__("test_upload_content").png()), "t.png")}, content_type="multipart/form-data", headers=IP)
+    fid = next(iter(records(app)))
+    assert rows(app, fid) == []

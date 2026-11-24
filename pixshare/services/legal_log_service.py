@@ -58,6 +58,14 @@ def _author() -> str:
         return ""
 
 
+def _is_admin_session() -> bool:
+    try:
+        from .auth_service import is_admin
+        return bool(is_admin())
+    except Exception:
+        return False
+
+
 def _proto() -> str:
     try:
         from flask import request
@@ -70,6 +78,10 @@ def _proto() -> str:
 def record(op: str, content: str, author: str | None = None, ip: str | None = None) -> None:
     """Ajoute une ligne. Ne lève jamais d'exception (l'envoi ne doit pas échouer pour ça)."""
     try:
+        # Les envois faits depuis la session admin (l'éditeur lui-même, pour tester) ne concernent aucun utilisateur :
+        # ils n'entrent pas dans le registre.
+        if author is None and _is_admin_session():
+            return
         if ip is None:
             from .request_service import get_client_ip
             ip = get_client_ip() or ""
