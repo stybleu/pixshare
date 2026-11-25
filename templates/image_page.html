@@ -127,9 +127,9 @@
     document.querySelectorAll("#codes input").forEach(function (f) { f.addEventListener("focus", function () { f.select(); }); });
   </script>
 
-  <details class="mb-3">
+  <details class="mb-3" id="reportBox">
     <summary class="btn btn-outline-danger btn-sm">Signaler cette image</summary>
-    <form method="post" action="{{ url_for('public.report_file', file_id=file_id) }}" class="d-flex flex-wrap gap-2 mt-2">
+    <form method="post" id="reportForm" action="{{ url_for('public.report_file', file_id=file_id) }}" class="d-flex flex-wrap gap-2 mt-2">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <select name="reason" class="form-select form-select-sm w-auto" aria-label="Motif du signalement" required>
         {% for value, label in report_reasons %}
@@ -139,7 +139,33 @@
       <button class="btn btn-danger btn-sm" type="submit">Envoyer le signalement</button>
       <a class="small align-self-center" href="{{ report_url }}">ou écrire un message</a>
     </form>
+    <div id="reportStatus" class="alert mt-2 mb-0 py-2 small d-none" role="status" aria-live="polite"></div>
   </details>
+  <script>
+    // Le message de confirmation s'affiche à côté du bouton (sinon il apparaît en haut d'une longue page, hors de l'écran).
+    (function () {
+      var form = document.getElementById("reportForm"), box = document.getElementById("reportStatus");
+      if (!form || !box || !window.fetch || !window.FormData || !window.DOMParser) return;
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var btn = form.querySelector("button[type=submit]");
+        if (btn) btn.disabled = true;
+        fetch(form.action, { method: "POST", body: new FormData(form), credentials: "same-origin" })
+          .then(function (r) { return r.text().then(function (t) { return { ok: r.ok, html: t }; }); })
+          .then(function (res) {
+            var doc = new DOMParser().parseFromString(res.html, "text/html");
+            var flash = doc.querySelector(".flash-stack .alert");
+            var text = res.ok && flash ? flash.textContent.replace(/\s+/g, " ").trim()
+                                       : "Le signalement n'a pas pu être envoyé. Écrivez-nous avec le lien « ou écrire un message ».";
+            box.textContent = text;
+            box.className = "alert mt-2 mb-0 py-2 small " + (res.ok && flash ? "alert-success" : "alert-warning");
+            if (res.ok && flash) { form.classList.add("d-none"); } else if (btn) { btn.disabled = false; }
+            box.scrollIntoView({ block: "nearest" });
+          })
+          .catch(function () { form.submit(); });
+      });
+    })();
+  </script>
 
 
   <div class="alert alert-warning mb-0">
