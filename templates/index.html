@@ -651,6 +651,27 @@
                 </details>
                 {% endif %}
 
+                {% if account and f.account_id == account.id and f.can_filter %}
+                <details class="w-100 order-last" id="filter-{{ f.id }}">
+                  <summary class="small text-primary" style="cursor:pointer">🎨 Changer le filtre{% if f.photo_filter %} (actuel : {% for k, label in photo_filters %}{% if k == f.photo_filter %}{{ label }}{% endif %}{% endfor %}){% endif %}</summary>
+                  <form method="post" action="{{ url_for('account.photo_filter', file_id=f.id) }}" class="d-flex flex-wrap gap-2 align-items-center mt-2">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <label class="visually-hidden" for="pf_{{ f.id }}">Filtre pour {{ f.original }}</label>
+                    <select id="pf_{{ f.id }}" class="form-select form-select-sm" style="max-width:220px" name="photo_filter">
+                      {% if f.has_source %}<option value="">Normal (photo d'origine)</option>{% endif %}
+                      {% for k, label in photo_filters %}
+                      <option value="{{ k }}"{% if k == f.photo_filter %} selected{% endif %}>{{ label }}</option>
+                      {% endfor %}
+                    </select>
+                    <label class="small text-muted d-flex align-items-center gap-2 mb-0" for="pfs_{{ f.id }}">Intensité
+                      <input id="pfs_{{ f.id }}" type="range" name="filter_strength" min="5" max="100" step="5" value="{{ f.photo_filter_strength }}" class="form-range" style="width:110px">
+                    </label>
+                    <button class="btn btn-outline-primary btn-sm" type="submit">Appliquer</button>
+                  </form>
+                  <div class="form-text">Le lien, la durée restante et les vues ne changent pas. La photo d'origine est gardée à part, sans être visible, pour pouvoir revenir à « Normal » ; elle est effacée avec l'image. Après un changement, la photo est vérifiée à nouveau avant de redevenir visible.</div>
+                </details>
+                {% endif %}
+
                 <form method="post"
                       action="{{ url_for('public.delete_own_file', file_id=f.id) }}"
                       class="m-0">

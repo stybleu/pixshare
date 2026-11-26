@@ -1,5 +1,6 @@
 import os
 import secrets
+import shutil
 import time
 from datetime import datetime, timedelta
 
@@ -461,6 +462,7 @@ def cleanup_expired() -> int:
             pass
 
         remove_medium(file_id)
+        remove_source(file_id)
         meta["status"] = "expired"
         meta["deleted_at"] = now.isoformat(timespec="seconds")
         meta["delete_reason"] = "expired"
@@ -516,6 +518,37 @@ def remove_medium(file_id: str) -> None:
         os.remove(medium_path(file_id))
     except OSError:
         pass
+
+
+# ------------------------------------------------------------------ photo d'origine (filtre modifiable)
+# Quand un membre applique un filtre à une image déjà envoyée, on garde à part la photo d'avant (déjà
+# vérifiée, sans métadonnées) pour pouvoir changer de filtre ou revenir à « Normal ». Elle n'est jamais
+# publique et disparaît avec l'image (suppression, expiration, remplacement, retour à Normal).
+
+def source_dir() -> str:
+    return os.path.join(current_app.config["UPLOAD_FOLDER"], "_sources")
+
+
+def find_source(file_id: str) -> str:
+    """Chemin de la photo d'origine gardée pour ce fichier, ou "" s'il n'y en a pas."""
+    folder = source_dir()
+    stem = os.path.basename(file_id)
+    try:
+        for name in os.listdir(folder):
+            if os.path.splitext(name)[0] == stem:
+                return os.path.join(folder, name)
+    except OSError:
+        pass
+    return ""
+
+
+def remove_source(file_id: str) -> None:
+    path = find_source(file_id)
+    if path:
+        try:
+            os.remove(path)
+        except OSError:
+            pass
 
 
 def create_medium(src: str, file_id: str) -> str:
@@ -652,6 +685,11 @@ def file_meta(file_id: str, db: dict | None = None):
             else ""
         ),
         "replaced_at": meta.get("replaced_at", ""),
+        "can_filter": bool(status == "active" and public_exists and ext in IMAGE_EXTENSIONS
+                           and can_enhance_extension(ext)),
+        "photo_filter": str(meta.get("photo_filter") or ""),
+        "photo_filter_strength": int(meta.get("photo_filter_strength") or 100),
+        "has_source": bool(meta.get("photo_filter")) and bool(find_source(file_id)),
         "has_thumb": thumb_exists,
         "thumb_delete_at": get_expected_thumb_delete_at(meta),
         "usage": build_usage_summary(file_id),
@@ -1201,6 +1239,7 @@ def delete_by_id(file_id: str, reason: str = "deleted") -> bool:
     except Exception:
         pass
     remove_medium(file_id)
+    remove_source(file_id)
 
     if not deleted_anything and (meta.get("status") or "active").lower() != "active":
         return True
@@ -1240,7 +1279,8 @@ def file_password_ok(meta: dict, password: str) -> bool:
         return False
 
 
-def replace_file(file_id: str, file_storage, original_name: str, client_ip: str, max_size_bytes: int) -> dict:
+def replace_file(file_id: str, file_storage, original_name: str, client_ip: str, max_size_bytes: int,
+                 keep_source: bool = False, keep_reports: bool = False) -> dict:
     """Remplace le contenu d'un fichier en gardant son adresse (réservé aux membres).
 
     La nouvelle image repasse par tout le circuit d'un envoi : taille, conversion HEIC, retrait des
@@ -1284,6 +1324,8 @@ def replace_file(file_id: str, file_storage, original_name: str, client_ip: str,
             pass
     os.replace(tmp_dest, os.path.join(folder, new_name))
     remove_medium(file_id)
+    if not keep_source:
+        remove_source(file_id)  # nouvelle photo : l'ancienne photo d'origine ne sert plus
 
     old_thumb = (meta.get("thumb_path") or "").strip()
     if old_thumb:
@@ -1311,13 +1353,16 @@ def replace_file(file_id: str, file_storage, original_name: str, client_ip: str,
         "moderation_score": None,
         "moderation_label": "",
         "moderation_attempts": 0,
-        "reports": [],
+        "reports": (meta.get("reports") or []) if keep_reports else [],
         "thumb_path": thumb_path,
         "thumb_delete_at": "",
         "replaced_at": now,
         "replace_count": int(meta.get("replace_count") or 0) + 1,
         "ip": client_ip,
     })
+    if not keep_source:
+        meta.pop("photo_filter", None)
+        meta.pop("photo_filter_strength", None)
     if restoring:  # image retirée par la modération, remplacée par une autre : le lien reprend vie
         for key in ("deleted_at", "delete_reason", "status_before_delete"):
             meta.pop(key, None)
@@ -1331,4 +1376,93 @@ def replace_file(file_id: str, file_storage, original_name: str, client_ip: str,
     save_db(db)
     from .legal_log_service import MODIFICATION, record as legal_record
     legal_record(MODIFICATION, file_id, ip=client_ip)   # registre légal (1 an, réquisitions)
+    return meta
+
+
+class FilterError(Exception):
+    """Le filtre ne peut pas être appliqué à cette image (message lisible par le membre)."""
+
+
+def set_photo_filter(file_id: str, account_id: str, filter_name: str, strength: int,
+                     client_ip: str, max_size_bytes: int) -> dict:
+    """Change le filtre d'une image déjà envoyée par un membre, en gardant son lien.
+
+    ``filter_name`` vide = « Normal » (retour à la photo d'origine). La photo repasse par tout le circuit
+    d'un remplacement (métadonnées, images interdites, NudeNet) : elle redevient visible après la vérification.
+    Les vues, l'expiration, le mot de passe et les signalements ne changent pas.
+    """
+    import io
+
+    from werkzeug.datastructures import FileStorage
+
+    from . import photo_filter_service as pfs
+
+    meta = load_db().get(file_id)
+    if not isinstance(meta, dict) or not account_id or meta.get("account_id") != account_id:
+        raise FileNotFoundError(file_id)
+    if (meta.get("status") or "active").lower() != "active":
+        raise FilterError("Cette image n'est pas en ligne : le filtre se change une fois qu'elle est vérifiée.")
+
+    folder = current_app.config["UPLOAD_FOLDER"]
+    server_name = os.path.basename(str(meta.get("server_name") or ""))
+    current = os.path.join(folder, server_name) if server_name else ""
+    ext = os.path.splitext(server_name)[1].lower()
+    if not current or not os.path.isfile(current) or ext not in IMAGE_EXTENSIONS or not can_enhance_extension(ext):
+        raise FilterError("Les filtres s'appliquent aux photos (JPG, PNG, WebP…), pas aux autres fichiers.")
+
+    name = pfs.parse_filter(filter_name)
+    if filter_name and (not name or name == pfs.DOCUMENT):
+        raise FilterError("Ce filtre n'existe pas.")
+    strength = pfs.parse_strength(strength)
+    had_source = find_source(file_id)
+
+    if name and strength > 0:
+        src_path = had_source or current
+        with open(src_path, "rb") as fh:
+            src_bytes = fh.read()
+        new_bytes = transform_image_bytes(src_bytes, ext, lambda rgb: pfs.apply_filter(rgb, name, strength))
+        if new_bytes is src_bytes:
+            raise FilterError("Cette photo ne peut pas être filtrée (image animée ou illisible).")
+    else:
+        # « Normal » : on remet la photo d'origine.
+        name = ""
+        if not had_source:
+            raise FilterError("Cette photo est déjà sans filtre.")
+        with open(had_source, "rb") as fh:
+            new_bytes = fh.read()
+
+    created_source = ""
+    if not had_source and name:
+        os.makedirs(source_dir(), exist_ok=True)
+        created_source = os.path.join(source_dir(), f"{os.path.basename(file_id)}{ext}")
+        try:
+            shutil.copyfile(current, created_source)
+        except OSError:
+            raise FilterError("Impossible de garder la photo d'origine pour le moment. Réessayez plus tard.")
+
+    filename = os.path.splitext(str(meta.get("original_name") or "photo"))[0] + ext
+    storage = FileStorage(stream=io.BytesIO(new_bytes), filename=filename)
+    try:
+        meta = replace_file(file_id, storage, filename, client_ip, max_size_bytes,
+                            keep_source=True, keep_reports=True)
+    except Exception:
+        if created_source:
+            try:
+                os.remove(created_source)
+            except OSError:
+                pass
+        raise
+
+    if not name:
+        remove_source(file_id)  # retour à la photo d'origine : la copie ne sert plus
+    db = load_db()
+    meta = db.get(file_id) or meta
+    if name:
+        meta["photo_filter"] = name
+        meta["photo_filter_strength"] = strength
+    else:
+        meta.pop("photo_filter", None)
+        meta.pop("photo_filter_strength", None)
+    db[file_id] = meta
+    save_db(db)
     return meta

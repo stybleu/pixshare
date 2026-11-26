@@ -57,7 +57,8 @@ def faq() -> list[dict]:
              "Avec un compte, vous pouvez le faire depuis n'importe lequel de vos appareils.", []),
             ("Puis-je remplacer une image sans changer le lien ?",
              "Oui, avec un compte gratuit : la nouvelle image prend la place de l'ancienne, et le lien déjà "
-             "partagé continue de fonctionner.", []),
+             "partagé continue de fonctionner. Pour seulement changer le filtre (noir et blanc, dramatique…), "
+             "voir la question sur les filtres plus bas.", []),
         ]),
         ("Compte gratuit", [
             ("Qu'apporte un compte gratuit ?",
@@ -76,6 +77,12 @@ def faq() -> list[dict]:
             ("Quels filtres photo sont disponibles ?",
              "Avec un compte gratuit, ou sans compte avec une utilisation des options avancées : noir et blanc, dramatique, rétro, vintage, intense, chaud, froid et doux, "
              "avec une intensité réglable. L'aperçu montre exactement le résultat avant l'envoi.", []),
+            ("Puis-je changer le filtre d'une photo déjà envoyée ?",
+             "Oui, avec un compte gratuit : dans « Mes envois », ouvrez « 🎨 Changer le filtre » sous la photo, choisissez "
+             "le filtre et l'intensité, puis « Appliquer ». Le lien, la durée restante et les vues ne changent pas. "
+             "« Normal (photo d'origine) » remet la photo d'avant. Pour cela, PixShare garde la photo d'origine à part, "
+             "sans jamais la rendre publique, tant qu'un filtre est appliqué ; elle est effacée avec l'image. "
+             "La photo filtrée est vérifiée à nouveau : elle peut rester indisponible quelques instants avant de redevenir visible.", []),
             ("Comment supprimer mon compte ?",
              "Dans « Mon compte », en bas de la page : « Supprimer mon compte ». Toutes vos photos, vos vidéos et vos albums "
              "sont alors supprimés, définitivement.", []),

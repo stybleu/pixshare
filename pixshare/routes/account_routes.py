@@ -24,6 +24,8 @@ from pixshare.services.file_service import (
     is_owner,
     medium_path,
     replace_file,
+    set_photo_filter,
+    FilterError,
     CONTENT_ERROR_MESSAGE,
     FileContentError,
     requires_image_moderation,
@@ -566,6 +568,63 @@ def replace(file_id):
               "(les anciennes copies en cache peuvent mettre quelques minutes à disparaître).", "success")
     else:
         flash("Photo remplacée ✅ Le lien reste le même.", "success")
+    return back
+
+
+@account_bp.route("/filtre/<file_id>", methods=["POST"], endpoint="photo_filter")
+def photo_filter(file_id):
+    """Change le filtre d'une image déjà envoyée (même lien). Réservé au compte qui l'a envoyée."""
+    validate_csrf()
+    rec = accounts.current_account()
+    if not rec:
+        flash("Changer le filtre d'une image est réservé aux comptes.", "warning")
+        return redirect(url_for("account.login"))
+    back = redirect(url_for("public.index") + f"#file-{file_id}")
+    meta = load_db().get(file_id)
+    if not isinstance(meta, dict) or meta.get("account_id") != rec["id"]:
+        abort(404)
+    if _blocked():
+        abort(403)
+    if not upload_service_enabled():
+        flash("Le service d'envoi est suspendu pour le moment.", "warning")
+        return back
+    rate = check_upload_rate(f"acct:{rec['id']}", exempt=is_admin(), limit=get_uploads_per_hour(rec))
+    if not rate.allowed:
+        flash(limit_message(rate, member=True), "warning")
+        return back
+    try:
+        size = os.path.getsize(os.path.join(current_app.config["UPLOAD_FOLDER"],
+                                            os.path.basename(str(meta.get("server_name") or ""))))
+    except OSError:
+        size = 0
+    if not has_room_for(size * 2):
+        flash("Le stockage est plein pour le moment. Réessayez un peu plus tard.", "warning")
+        return back
+    from pixshare.services import photo_filter_service as pfs
+    name = (request.form.get("photo_filter") or "").strip().lower()
+    strength = pfs.parse_strength(request.form.get("filter_strength"))
+    try:
+        set_photo_filter(file_id, rec["id"], name, strength, get_client_ip(), get_max_upload_size_bytes())
+    except FilterError as exc:
+        flash(str(exc), "warning")
+        return back
+    except FileTooLargeError:
+        flash(f"Trop volumineux. Taille maximale : {get_max_upload_size_mb()} Mo.", "danger")
+        return back
+    except BannedImageError:
+        flash("Cette image a déjà été refusée par la modération : elle ne peut pas être publiée.", "danger")
+        return back
+    except FileContentError:
+        flash(CONTENT_ERROR_MESSAGE, "danger")
+        return back
+    except FileNotFoundError:
+        abort(404)
+    if name:
+        flash("Filtre appliqué ✅ Le lien reste le même. L'image redevient visible après la vérification "
+              "automatique (les anciennes copies en cache peuvent mettre quelques minutes à disparaître).", "success")
+    else:
+        flash("Photo d'origine remise ✅ Le lien reste le même. L'image redevient visible après la vérification "
+              "automatique.", "success")
     return back
 
 

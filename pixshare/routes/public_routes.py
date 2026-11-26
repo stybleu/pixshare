@@ -259,6 +259,12 @@ def _save_several(files, too_many, ip, guest_token, keep, view_limit_enabled, ma
     return attach_guest_cookie(redirect(url_for("public.index", nouveau=",".join(saved), _anchor=f"file-{saved[0]}")))
 
 
+def _photo_filter_choices() -> list[tuple[str, str]]:
+    """Les filtres photo proposés dans « Mes envois » : (clé, nom affiché)."""
+    from pixshare.services.photo_filter_service import FILTERS
+    return [(key, spec["label"]) for key, spec in FILTERS.items()]
+
+
 @public_bp.route("/", methods=["GET", "POST"], endpoint="index")
 def index():
     cleanup_expired()
@@ -451,6 +457,7 @@ def index():
     response = make_response(render_template(
         "index.html",
         guest_files=guest_files,
+        photo_filters=_photo_filter_choices(),
         removed_files=list_removed_files(),
         max_mb=get_max_upload_size_mb(),
         admin=is_admin(),
