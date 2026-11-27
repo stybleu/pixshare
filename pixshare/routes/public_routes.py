@@ -132,23 +132,49 @@ def _count_view(file_id: str, meta: dict, visitor_token: str, has_cookie: bool) 
     """Compte une vue unique, mais pas :
     - celles de l'envoyeur (« Mes envois », sa page de partage) ni de l'admin ;
     - celles des robots (aperçus WhatsApp, Discord, Facebook, moteurs de recherche…).
-    Sans cookie (image intégrée sur un autre site, navigateur qui les bloque), le visiteur est
-    reconnu par une empreinte chiffrée (jamais son adresse IP en clair) : recharger ne recompte pas."""
+    Aucun cookie n'est utilisé pour compter : le visiteur est reconnu par une empreinte non réversible
+    (jamais son adresse IP en clair), donc recharger ne recompte pas. Seule exception : une photo dont
+    l'envoyeur a choisi la suppression après un nombre de vues, où un cookie technique sert à ne compter
+    qu'une fois chaque personne et à lui laisser l'accès après sa première vue."""
     if is_admin() or is_owner(meta):
         return False
     from pixshare.services.visitor_stats_service import is_bot
     user_agent = request.headers.get("User-Agent", "") or ""
     if is_bot(user_agent):
         return False
-    if has_cookie:
+    limited = bool(meta.get("view_limit_enabled", False))
+    if limited and has_cookie:
         return register_unique_view(file_id, visitor_token)
     secret = str(current_app.config.get("SECRET_KEY") or "")
     raw = f"{secret}|vue|{file_id}|{get_client_ip() or ''}|{user_agent[:200]}"
     counted = register_unique_view(file_id, "e:" + hashlib.sha256(raw.encode()).hexdigest()[:20])
-    # Le cookie posé avec cette réponse est noté aussi : à la visite suivante (avec cookie), la même
-    # personne n'est pas recomptée, et l'image d'un fichier à vues limitées lui reste accessible.
-    register_unique_view(file_id, visitor_token)
+    if limited:
+        # Le cookie posé avec cette réponse est noté aussi : à la visite suivante (avec cookie), la même
+        # personne n'est pas recomptée, et l'image lui reste accessible.
+        register_unique_view(file_id, visitor_token)
     return counted
+
+
+def _set_visitor_cookie(response, meta: dict, visitor_token: str, must_set_cookie: bool) -> None:
+    """Pose le cookie de comptage uniquement pour une photo à vues limitées, pour la durée de la photo (1 an au plus)."""
+    if not must_set_cookie or not meta.get("view_limit_enabled"):
+        return
+    max_age = 60 * 60 * 24 * 365
+    expires_at = meta.get("expires_at")
+    if expires_at:
+        from pixshare.services.time_service import parse_dt, utcnow
+        try:
+            max_age = min(max_age, max(60, int((parse_dt(expires_at) - utcnow()).total_seconds())))
+        except (TypeError, ValueError, OverflowError):
+            pass
+    response.set_cookie(
+        current_app.config["VISITOR_COOKIE_NAME"],
+        visitor_token,
+        max_age=max_age,
+        httponly=True,
+        secure=not bool(current_app.debug),
+        samesite="Lax",
+    )
 
 
 # --------------------------------------------------------------- mot de passe
@@ -610,15 +636,7 @@ def view_file(file_id):
     response.headers["Vary"] = "Sec-Fetch-Dest"  # même adresse : page (navigateur) ou image (intégration)
     response.headers["X-Robots-Tag"] = "noindex, noimageindex"  # jamais dans Google Images
 
-    if must_set_cookie:
-        response.set_cookie(
-            current_app.config["VISITOR_COOKIE_NAME"],
-            visitor_token,
-            max_age=60 * 60 * 24 * 365,
-            httponly=True,
-            secure=not bool(current_app.debug),
-            samesite="Lax",
-        )
+    _set_visitor_cookie(response, meta, visitor_token, must_set_cookie)
 
     return response
 
@@ -813,15 +831,7 @@ def public_file(file_id):
     )
     response.headers["X-Robots-Tag"] = "noindex, noimageindex"
 
-    if must_set_cookie:
-        response.set_cookie(
-            current_app.config["VISITOR_COOKIE_NAME"],
-            visitor_token,
-            max_age=60 * 60 * 24 * 365,
-            httponly=True,
-            secure=not bool(current_app.debug),
-            samesite="Lax",
-        )
+    _set_visitor_cookie(response, stored_meta, visitor_token, must_set_cookie)
 
     return response
 

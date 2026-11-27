@@ -102,7 +102,7 @@
       <ul class="mb-2">
         <li>Photos et vidéos envoyées : supprimées à leur expiration ou dès leur suppression. L’adresse IP de l’envoi reste rattachée à la photo pour la modération et la lutte contre les abus (elle permet par exemple de bloquer l’auteur de contenus refusés) ; elle est effacée avec la photo, dans les jours qui suivent sa suppression ou son expiration. Elle figure aussi sur la ligne du registre légal décrite ci-dessous.</li>
         <li>Compteurs d’accès de chaque photo (type d’accès, site d’origine et navigateur des 80 dernières consultations, sans adresse IP) : effacés avec la photo.</li>
-        <li>Comptage des vues : l’identifiant aléatoire du cookie décrit plus bas ou, à défaut de cookie, une empreinte non réversible (adresse IP et navigateur mêlés à une clé secrète, jamais l’adresse en clair), uniquement pour ne compter qu’une fois chaque personne : effacés avec la photo.</li>
+        <li>Comptage des vues : une empreinte non réversible (adresse IP et navigateur mêlés à une clé secrète, jamais l’adresse en clair), uniquement pour ne compter qu’une fois chaque personne, sans cookie ; pour une photo à vues limitées, l’identifiant du cookie décrit plus bas s’y ajoute. Effacé avec la photo.</li>
         <li id="registre-legal"><strong>Registre légal (obligation des hébergeurs)</strong> : pour chaque mise en ligne, modification ou suppression
           (photo, vidéo, son, album, message du livre d’or) et pour chaque création ou suppression de compte, PixShare garde
           <strong>un an</strong> l’adresse IP d’origine, la date et l’heure, la nature de l’opération, le protocole utilisé,
@@ -141,9 +141,9 @@
 
       <p class="mb-2">
         Cookies : un cookie technique de session (sécurité des formulaires et, pour les membres, connexion pendant 30 jours),
-        l’identifiant technique décrit ci-dessus (30 jours), et un identifiant aléatoire qui sert uniquement à ne compter
-        qu’une fois chaque personne qui regarde une photo ou une vidéo (nombre de vues et, si l’envoyeur l’a choisie,
-        suppression après un nombre de vues ; 1 an, jamais relié à une personne ni à un autre site). Pour les membres, un cookie de sécurité « appareil reconnu »
+        l’identifiant technique décrit ci-dessus (30 jours), et, uniquement pour une photo dont l’envoyeur a choisi la suppression après un
+        nombre de vues, un identifiant aléatoire qui sert à ne compter qu’une fois chaque personne qui la regarde et à lui laisser
+        l’accès après sa première vue (durée de la photo, 1 an au plus ; jamais relié à une personne ni à un autre site). Pour les membres, un cookie de sécurité « appareil reconnu »
         (un jeton tiré au hasard, sans aucune information sur l’appareil) évite de redemander le code de vérification
         envoyé par mail à chaque connexion (13 mois, ou jusqu’à ce que le membre retire l’appareil). Sur téléphone, l’application installable utilise un petit espace du navigateur uniquement pour transmettre une photo partagée depuis la galerie : il est vidé dès que la photo arrive dans le formulaire. La vérification anti-robot de l’envoi, du contact et de l’inscription
         est fournie par Cloudflare Turnstile (Cloudflare, Inc.), qui reçoit l’adresse IP et des informations techniques

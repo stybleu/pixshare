@@ -131,7 +131,7 @@ def faq() -> list[dict]:
          "« Ce n'était pas moi » du mail.", []),
         ("Le site utilise-t-il des cookies de pistage ?",
          "Non. PixShare n'utilise que des cookies techniques, nécessaires au fonctionnement du site (sécurité, "
-         "connexion, historique de vos envois), sans publicité ni mesure d'audience.",
+         "connexion, historique de vos envois, et, pour une photo à vues limitées, le comptage des vues), sans publicité ni mesure d'audience.",
          [("Mentions légales", "public.mentions_legales")]),
         ("Le service est-il payant ?",
          "Non, PixShare est gratuit et sans publicité."
