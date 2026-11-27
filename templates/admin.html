@@ -297,7 +297,6 @@
                         <div>Catégorie : {{ ev.source_category }} — confiance : {{ ev.confidence }}</div>
                         {% if ev.referer_domain %}<div>Domaine : <code>{{ ev.referer_domain }}</code></div>{% endif %}
                         {% if ev.referer %}<div>Referer : <code>{{ ev.referer }}</code></div>{% endif %}
-                        {% if ev.ip %}<div>IP : <code>{{ ev.ip }}</code></div>{% endif %}
                         {% if ev.user_agent %}<div>User-Agent : <code>{{ ev.user_agent }}</code></div>{% endif %}
                       </div>
                     {% endfor %}

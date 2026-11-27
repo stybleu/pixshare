@@ -7,7 +7,6 @@ from urllib.parse import urlparse
 from flask import request, url_for
 
 from pixshare.services.json_services import load_usage, save_usage
-from pixshare.services.request_service import get_client_ip
 
 MAX_EVENTS_PER_FILE = 80
 MAX_UA_LENGTH = 220
@@ -177,7 +176,6 @@ def record_usage_event(file_id: str, access_type: str, *, stored_filename: str =
     event = {
         "at": _now_iso(),
         "access_type": access_type,
-        "ip": get_client_ip(),
         "referer": referer,
         "referer_domain": source.get("referer_domain", ""),
         "user_agent": user_agent,
@@ -242,3 +240,41 @@ def build_usage_summary(file_id: str) -> dict:
         "categories": [{"name": name, "count": count} for name, count in by_category.most_common(8)],
         "last_events": last_events,
     }
+
+
+def forget_files(file_ids) -> None:
+    """Efface les compteurs d'accès des photos qui n'existent plus."""
+    ids = {str(i) for i in (file_ids or [])}
+    if not ids:
+        return
+    data = load_usage()
+    if not isinstance(data, dict):
+        return
+    gone = [i for i in ids if i in data]
+    if gone:
+        for i in gone:
+            data.pop(i, None)
+        save_usage(data)
+
+
+def scrub_ips(valid_ids=None) -> int:
+    """Efface les adresses IP des visiteurs enregistrées autrefois dans les compteurs d'accès, et les compteurs
+    des photos disparues (``valid_ids`` : identifiants encore présents). Renvoie le nombre d'éléments nettoyés."""
+    data = load_usage()
+    if not isinstance(data, dict) or not data:
+        return 0
+    changed = 0
+    for file_id in list(data):
+        if valid_ids is not None and file_id not in valid_ids:
+            data.pop(file_id, None)
+            changed += 1
+            continue
+        record = data.get(file_id)
+        events = record.get("events") if isinstance(record, dict) else None
+        for event in events if isinstance(events, list) else []:
+            if isinstance(event, dict) and "ip" in event:
+                event.pop("ip", None)
+                changed += 1
+    if changed:
+        save_usage(data)
+    return changed

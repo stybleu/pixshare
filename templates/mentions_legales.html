@@ -35,7 +35,7 @@
       {% if backup_on %}
       <p class="mb-2">
         Copie de secours : <b>Cloudflare, Inc.</b> (service Cloudflare R2), 101 Townsend Street, San Francisco,
-        CA 94107, États-Unis. Les données y sont chiffrées et ne sont accessibles qu’à l’administrateur.
+        CA 94107, États-Unis. Les données y sont chiffrées par Cloudflare (au repos et pendant le transfert) et seul l’éditeur y a accès.
       </p>
       {% endif %}
 
@@ -100,7 +100,9 @@
       <h2 class="h6 mt-4">Durées de conservation et vos droits</h2>
 
       <ul class="mb-2">
-        <li>Photos et vidéos envoyées : supprimées à leur expiration ou dès leur suppression. L’adresse IP et les informations techniques liées à l’envoi sont effacées peu après (le temps d’une éventuelle vérification), sauf la ligne du registre légal décrite ci-dessous.</li>
+        <li>Photos et vidéos envoyées : supprimées à leur expiration ou dès leur suppression. L’adresse IP de l’envoi reste rattachée à la photo pour la modération et la lutte contre les abus (elle permet par exemple de bloquer l’auteur de contenus refusés) ; elle est effacée avec la photo, dans les jours qui suivent sa suppression ou son expiration. Elle figure aussi sur la ligne du registre légal décrite ci-dessous.</li>
+        <li>Compteurs d’accès de chaque photo (type d’accès, site d’origine et navigateur des 80 dernières consultations, sans adresse IP) : effacés avec la photo.</li>
+        <li>Comptage des vues : l’identifiant aléatoire du cookie décrit plus bas ou, à défaut de cookie, une empreinte non réversible (adresse IP et navigateur mêlés à une clé secrète, jamais l’adresse en clair), uniquement pour ne compter qu’une fois chaque personne : effacés avec la photo.</li>
         <li id="registre-legal"><strong>Registre légal (obligation des hébergeurs)</strong> : pour chaque mise en ligne, modification ou suppression
           (photo, vidéo, son, album, message du livre d’or) et pour chaque création ou suppression de compte, PixShare garde
           <strong>un an</strong> l’adresse IP d’origine, la date et l’heure, la nature de l’opération, le protocole utilisé,
@@ -112,11 +114,12 @@
         <li>Miniatures servant à la modération : supprimées automatiquement après un court délai.</li>
         <li>Photo d’origine d’une image à laquelle un membre a appliqué un filtre : gardée à part, jamais publique, uniquement pour pouvoir changer de filtre ou revenir à la photo d’origine ; effacée avec l’image (suppression, expiration ou remplacement) ou dès le retour à la photo d’origine.</li>
         <li>Messages envoyés par le formulaire de contact (avec l’adresse IP) : conservés au plus 12 mois.</li>
-        <li>Adresses IP bloquées pour abus : conservées jusqu’à la levée du blocage.</li>
+        <li>Adresses IP bloquées pour abus : conservées pendant la durée du blocage, soit 24 heures (puis 7 jours et 30 jours en cas de récidive) pour un blocage automatique, soit de 30 minutes à définitif pour un blocage manuel, jusqu’à sa levée par l’éditeur.</li>
+        <li>Blocage automatique : compteur d’images refusées par adresse IP (24 heures par défaut) et historique des blocages (adresse IP et dates, 90 jours), pour allonger la durée d’un blocage en cas de récidive.</li>
         <li>Essais de connexion à l’administration ratés : effacés après quelques minutes.</li>
         <li>Visites en cours : pour la sécurité du service, l’adresse IP et la page consultée sont visibles par l’administrateur pendant 5 minutes, sans être conservées.</li>
         <li>Statistiques de fréquentation : nombres de visites, de pages vues et d’envois par jour, pages les plus vues, sites d’où viennent les visiteurs et sites où les images sont affichées. Aucune adresse IP n’est conservée (seulement une empreinte journalière non réversible), ni aucune localisation, ni rien sur l’appareil ou la personne. Conservées 90 jours.</li>
-        <li>Empreintes des images refusées (jamais les images elles-mêmes) : conservées pour refuser leur renvoi.</li>
+        <li>Empreintes des images refusées (jamais les images elles-mêmes), avec la date et le motif du refus : conservées sans limite de durée tant que l’éditeur ne les retire pas, pour empêcher leur renvoi. Une empreinte ne permet de retrouver ni l’image ni son auteur.</li>
         <li>Empreintes des images validées à la main par l’éditeur (jamais les images elles-mêmes), avec leur nom de fichier : conservées pour publier directement un renvoi de la même image, ou d’une image très proche.</li>
         {% if backup_on %}<li>Copie de secours : chaque nuit, les photos et vidéos en ligne et les données du site sont copiées pour pouvoir les récupérer en cas de panne. Une photo ou vidéo supprimée ou expirée disparaît de la copie la nuit suivante ; les copies des données sont gardées 7 jours.</li>{% endif %}
         <li>Empreintes des images acceptées par l’outil d’analyse (jamais les images elles-mêmes) : servent à publier sans nouvelle analyse une image identique ; effacées après 6 mois sans resservir.</li>
@@ -139,8 +142,8 @@
       <p class="mb-2">
         Cookies : un cookie technique de session (sécurité des formulaires et, pour les membres, connexion pendant 30 jours),
         l’identifiant technique décrit ci-dessus (30 jours), et un identifiant aléatoire qui sert uniquement à ne compter
-        qu’une fois chaque personne qui regarde une photo ou une vidéo, pour appliquer la suppression après un nombre de vues
-        (1 an, jamais relié à une personne ni à un autre site). Pour les membres, un cookie de sécurité « appareil reconnu »
+        qu’une fois chaque personne qui regarde une photo ou une vidéo (nombre de vues et, si l’envoyeur l’a choisie,
+        suppression après un nombre de vues ; 1 an, jamais relié à une personne ni à un autre site). Pour les membres, un cookie de sécurité « appareil reconnu »
         (un jeton tiré au hasard, sans aucune information sur l’appareil) évite de redemander le code de vérification
         envoyé par mail à chaque connexion (13 mois, ou jusqu’à ce que le membre retire l’appareil). Sur téléphone, l’application installable utilise un petit espace du navigateur uniquement pour transmettre une photo partagée depuis la galerie : il est vidé dès que la photo arrive dans le formulaire. La vérification anti-robot de l’envoi, du contact et de l’inscription
         est fournie par Cloudflare Turnstile (Cloudflare, Inc.), qui reçoit l’adresse IP et des informations techniques
@@ -150,7 +153,9 @@
       <h2 class="h6 mt-4" id="rgpd">Bases légales, destinataires et vos droits (RGPD)</h2>
 
       <p class="mb-2">
-        <strong>Responsable du traitement :</strong> l’éditeur du site (voir plus haut), joignable par le
+        <strong>Responsable du traitement :</strong> l’éditeur du site, particulier agissant à titre non professionnel, identifié
+        par le pseudonyme « stybleu » (voir plus haut). Son identité complète est connue de l’hébergeur du site et peut être
+        communiquée à l’autorité judiciaire sur réquisition. Pour toute question ou pour exercer vos droits, il est joignable par le
         <a href="{{ url_for('public.contact') }}">{{ _("contact_form") }}</a>.
       </p>
 
@@ -164,8 +169,9 @@
         <strong>Destinataires et sous-traitants :</strong> Render Services, Inc. (hébergement du site), Cloudflare, Inc. (protection du site,
         vérification anti-robot et sauvegardes chiffrées) et le fournisseur de messagerie de l’éditeur (envoi des e-mails).
         Les serveurs du site sont en Union européenne (Francfort), mais certains de ces prestataires sont des sociétés établies aux États-Unis :
-        d’éventuels transferts ou accès depuis les États-Unis reposent sur les garanties prévues par le RGPD
-        (décision d’adéquation « Data Privacy Framework » ou clauses contractuelles types de la Commission européenne).
+        d’éventuels transferts ou accès depuis les États-Unis reposent sur les garanties prévues par le RGPD : ces deux sociétés sont
+        certifiées au cadre « EU-US Data Privacy Framework » (décision d’adéquation de la Commission européenne) et, à défaut,
+        s’appuient sur les clauses contractuelles types de la Commission européenne.
         Aucune donnée n’est vendue ni cédée à des fins commerciales.
       </p>
 
@@ -194,6 +200,14 @@
 
       <p class="mb-2">
         {{ _("editor_not_responsible_user_content") }}
+      </p>
+
+      <p class="mb-2">
+        En tant que fournisseur de services d’hébergement, PixShare bénéficie de l’exemption de responsabilité prévue par l’article 6
+        du règlement (UE) 2022/2065 (DSA) et par l’article 6 de la LCEN, <strong>à deux conditions</strong> : ne pas avoir effectivement
+        connaissance (ou conscience) du caractère illicite d’un contenu, et agir promptement pour le retirer ou en rendre l’accès impossible
+        dès qu’il en a connaissance, par exemple à la suite d’un signalement. PixShare n’a pas d’obligation générale de surveiller les contenus
+        (article 8 du DSA) : l’analyse automatique des images est une mesure de protection, elle ne fait pas de PixShare l’éditeur des contenus.
       </p>
 
       <p class="mb-2">
@@ -227,6 +241,13 @@
         Une confirmation s’affiche dès l’envoi du signalement ; si vous indiquez votre adresse e-mail, l’éditeur vous
         informe de la suite donnée (article 16 du règlement (UE) 2022/2065, DSA). Un signalement doit être fait de bonne foi ; un signalement
         abusif peut engager la responsabilité de son auteur.
+      </p>
+
+      <p class="mb-2">
+        Lorsqu’une image est retirée ou masquée par la modération, la personne concernée en est informée dès son retour sur le site
+        (dans « Mes envois » pour un compte, par un message affiché depuis le même navigateur sinon). Le message indique le motif,
+        précise si la décision a été prise automatiquement, et renvoie vers le formulaire de contact (« Contester une décision de modération »)
+        pour demander un réexamen par une personne (article 17 du DSA).
       </p>
 
       <p class="mb-2">

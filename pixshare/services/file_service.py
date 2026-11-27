@@ -274,6 +274,20 @@ def get_or_create_visitor_token() -> tuple[str, bool]:
     return secrets.token_urlsafe(24), True
 
 
+def forget_views(file_ids) -> int:
+    """Efface le comptage des vues (identifiants de visiteurs) des photos qui n'existent plus. Renvoie le nombre de photos nettoyées."""
+    ids = {str(i) for i in (file_ids or [])}
+    data = load_views()
+    if not ids or not isinstance(data, dict):
+        return 0
+    gone = [i for i in ids if i in data]
+    for i in gone:
+        data.pop(i, None)
+    if gone:
+        save_views(data)
+    return len(gone)
+
+
 def register_unique_view(file_id: str, visitor_token: str) -> bool:
     data = load_views()
     file_views = data.get(file_id, [])
@@ -418,6 +432,13 @@ def purge_expired_thumbnails(db: dict | None = None) -> tuple[dict, bool]:
     for file_id in to_remove:
         db.pop(file_id, None)
         changed = True
+    if to_remove:
+        try:  # les compteurs d'accès et le comptage des vues disparaissent avec la photo
+            from .usage_tracking_service import forget_files
+            forget_files(to_remove)
+            forget_views(to_remove)
+        except Exception:
+            pass
 
     return db, changed
 

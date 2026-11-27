@@ -56,6 +56,24 @@ def _forget_geolocation() -> None:
         log.exception("Effacement des anciens pays/villes des statistiques impossible")
 
 
+def _forget_usage_ips() -> None:
+    """Les compteurs d'accès par photo gardaient l'adresse IP des visiteurs : on les efface (et les compteurs
+    des photos disparues). Sans effet quand il n'y a plus rien à nettoyer."""
+    log = logging.getLogger(__name__)
+    try:
+        from .services.file_service import forget_views
+        from .services.json_services import load_db, load_views
+        from .services.usage_tracking_service import scrub_ips
+        valid = set(load_db())
+        cleaned = scrub_ips(valid)
+        views = load_views()
+        cleaned += forget_views([i for i in (views if isinstance(views, dict) else {}) if i not in valid])
+        if cleaned:
+            log.info("Compteurs d'accès : %s élément(s) nettoyé(s) (adresses IP, photos disparues)", cleaned)
+    except Exception:
+        log.exception("Nettoyage des compteurs d'accès impossible")
+
+
 _ERRORS = {
     400: ("Requête invalide", "La demande n'a pas pu être traitée. Rechargez la page et réessayez."),
     403: ("Accès refusé", "Vous n'avez pas accès à cette page."),
@@ -318,6 +336,7 @@ def create_app(config_overrides: dict | None = None) -> Flask:
         return resp
 
     _forget_geolocation()  # ancienne base de géolocalisation : effacée du disque (fonction retirée)
+    _forget_usage_ips()  # anciennes adresses IP de visiteurs dans les compteurs d'accès : effacées
 
     if not app.config.get("TESTING"):
         from .services.mail_service import resume_pending_alert
