@@ -5,3 +5,8 @@ def test_legal_notice_names_the_hosting_region(make_app):
     html = make_app().test_client().get("/mentions-legales").get_data(as_text=True)
     assert "Francfort-sur-le-Main (Allemagne)" in html
     assert "Data Privacy Framework" in html and "clauses contractuelles types" in html
+
+
+def test_legal_notice_says_thumbnails_are_editor_only(make_app):
+    html = make_app().test_client().get("/mentions-legales").get_data(as_text=True)
+    assert "visibles uniquement par l’éditeur" in html
