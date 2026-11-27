@@ -15,7 +15,7 @@
 <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between mb-3">
   <div>
     <h1 class="h4 mb-0"><span class="live-dot" aria-hidden="true"></span>En direct</h1>
-    <div class="text-muted small">Visiteurs actifs ces 5 dernières minutes (hors robots et admin). Mise à jour toutes les 10 secondes.</div>
+    <div class="text-muted small">Visiteurs actifs ces 5 dernières minutes (hors admin). Les robots ont leur liste plus bas. Mise à jour toutes les 10 secondes.</div>
   </div>
   {% include "_admin_nav.html" %}
 </div>
@@ -24,6 +24,7 @@
   <div class="card-body">
     <div class="d-flex flex-wrap gap-3 align-items-baseline mb-2">
       <div><span class="fs-4 fw-bold" id="liveCount">…</span> <span class="text-muted">visiteur(s) en ce moment</span></div>
+      <div><span class="fs-4 fw-bold" id="botCount">…</span> <span class="text-muted">robot(s)</span></div>
       <div class="small text-muted" id="liveUpdated" role="status" aria-live="polite"></div>
     </div>
     <div class="small text-muted">Aucune localisation : seulement la page consultée, et l'IP masquée pour pouvoir bloquer un abus.</div>
@@ -40,6 +41,20 @@
       </table>
     </div>
     <div class="small text-muted mt-2">Touche une IP masquée pour l'afficher en entier. Rien n'est gardé : la liste se vide d'elle-même après 5 minutes sans activité.</div>
+  </div>
+</div>
+
+<div class="card shadow-sm mt-3">
+  <div class="card-body">
+    <h2 class="h6 mb-2">Robots</h2>
+    <div class="d-flex flex-wrap gap-1 mb-2" id="botFamilies"></div>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0">
+        <thead><tr><th>Robot</th><th>Dernière page</th><th>Requêtes</th><th>Action</th></tr></thead>
+        <tbody id="botRows"><tr><td colspan="4" class="text-muted">Chargement…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="small text-muted mt-2">Moteurs de recherche, aperçus de liens (WhatsApp…), IA, scripts. Les moteurs et aperçus ne se bloquent pas d'un clic. Même règle que plus haut : rien n'est gardé, la liste se vide après 5 minutes.</div>
   </div>
 </div>
 
@@ -74,14 +89,33 @@
     document.getElementById("liveRows").innerHTML = rows.join("") || '<tr><td colspan="4" class="text-muted">Personne pour le moment.</td></tr>';
   }
 
+  function renderBots(data) {
+    document.getElementById("botCount").textContent = data.robots_count || 0;
+    document.getElementById("botFamilies").innerHTML = (data.robot_families || []).map(function (f) {
+      return '<span class="badge text-bg-secondary">' + esc(f.name) + " : " + f.count + "</span>";
+    }).join("");
+    var rows = (data.robots || []).map(function (b) {
+      var action = b.blocked ? '<span class="badge text-bg-secondary">Bloquée</span>' :
+        b.legit ? '<span class="badge text-bg-light border">Moteur / aperçu</span>' :
+        '<div class="d-flex gap-1"><select class="form-select form-select-sm w-auto" aria-label="Durée du blocage" id="r_' + esc(b.id) + '">' +
+        {% for h, label in block_durations %}'<option value="{{ h }}"{% if h == default_block_hours %} selected{% endif %}>{{ label }}</option>' + {% endfor %}
+        '</select><button class="btn btn-warning btn-sm" data-block="' + esc(b.ip) + '" data-sel="r_' + esc(b.id) + '">Bloquer</button></div>';
+      return '<tr><td><strong>' + esc(b.name) + '</strong><div class="small text-muted text-break">' + esc(b.ua) + "</div>" +
+        '<button class="ip-toggle small" data-full="' + esc(b.ip) + '" data-masked="' + esc(b.masked) + '">' + esc(b.masked) + "</button></td>" +
+        "<td><code>" + esc(b.path) + '</code><div class="small text-muted">vu il y a ' + dur(b.seen_ago) + "</div></td>" +
+        "<td>" + b.hits + "</td><td>" + action + "</td></tr>";
+    });
+    document.getElementById("botRows").innerHTML = rows.join("") || '<tr><td colspan="4" class="text-muted">Aucun robot ces 5 dernières minutes.</td></tr>';
+  }
+
   function refresh() {
     fetch(DATA_URL, { credentials: "same-origin", cache: "no-store" })
       .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
-      .then(render)
+      .then(function (data) { render(data); renderBots(data); })
       .catch(function () { document.getElementById("liveUpdated").textContent = "Mise à jour impossible, nouvel essai dans 10 s."; });
   }
 
-  document.getElementById("liveRows").addEventListener("click", function (e) {
+  function onRowClick(e) {
     var t = e.target;
     if (t.classList.contains("ip-toggle")) {
       t.textContent = t.textContent === t.dataset.masked ? t.dataset.full : t.dataset.masked;
@@ -92,7 +126,9 @@
       document.getElementById("blockHours").value = sel ? sel.value : "24";
       document.getElementById("blockForm").submit();
     }
-  });
+  }
+  document.getElementById("liveRows").addEventListener("click", onRowClick);
+  document.getElementById("botRows").addEventListener("click", onRowClick);
 
   refresh();
   setInterval(refresh, 10000);

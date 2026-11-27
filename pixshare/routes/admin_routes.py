@@ -933,12 +933,14 @@ def admin_live():
 @admin_bp.route("/admin/live.json", methods=["GET"], endpoint="admin_live_data")
 @admin_required
 def admin_live_data():
-    from pixshare.services.live_service import snapshot
+    from pixshare.services.live_service import robot_families, snapshot, snapshot_bots
     rows = snapshot()
+    robots = snapshot_bots()
     blocked = set(load_blocked())
-    for row in rows:
+    for row in rows + robots:
         row["blocked"] = row.get("ip") in blocked
-    response = jsonify({"visitors": rows, "count": len(rows)})
+    response = jsonify({"visitors": rows, "count": len(rows), "robots": robots, "robots_count": len(robots),
+                        "robot_families": robot_families(robots)})
     response.headers["Cache-Control"] = "no-store"
     return response
 

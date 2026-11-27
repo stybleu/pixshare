@@ -16,7 +16,7 @@ from .routes.album_routes import album_bp
 from .services.account_service import current_account
 from .services.turnstile_service import site_key, turnstile_required
 from .services.visitor_stats_service import record_image_display, record_page_view, should_count, should_count_display
-from .services.live_service import record as record_live
+from .services.live_service import is_robot_request, record as record_live, record_bot as record_live_bot
 from .services.auth_service import is_admin
 from .services.translation_service import apply_requested_language, build_lang_url, get_current_language, translate
 from .services.seo_pages import page_seo
@@ -323,6 +323,8 @@ def create_app(config_overrides: dict | None = None) -> Flask:
                 record_live(ip)
             elif should_count_display(resp) and not is_admin():
                 record_image_display()
+            if is_robot_request() and not is_admin():
+                record_live_bot(get_client_ip())  # liste « Robots » de la page En direct (5 minutes, sans disque)
         except Exception:
             pass
         return resp
