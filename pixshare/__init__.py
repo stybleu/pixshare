@@ -6,6 +6,7 @@ from flask import Flask, request
 from .config import Config
 from .storage import init_storage, project_path
 from .security.csrf import inject_csrf_token
+from .services.json_services import load_blocked
 from .services.request_service import get_client_ip
 from .routes.public_routes import public_bp
 from .routes.admin_routes import admin_bp
@@ -245,6 +246,21 @@ def create_app(config_overrides: dict | None = None) -> Flask:
         if path.startswith(open_prefixes):
             return None
         return redirect(url_for("pro.home"))
+
+    @app.before_request
+    def refuse_blocked_robots():
+        """Une IP bloquée depuis l'admin (liste En direct, IP bloquées) est refusée partout quand c'est un robot :
+        erreur 403, sauf /robots.txt. Les visiteurs normaux gardent le comportement habituel du blocage."""
+        if request.path.startswith(("/admin", "/static", "/healthz", "/robots.txt")):
+            return None
+        from .services.visitor_stats_service import is_bot
+        if not is_bot(request.headers.get("User-Agent", "")):
+            return None
+        ip = get_client_ip()
+        if ip and ip in load_blocked() and not is_admin():
+            return ("Accès refusé.", 403, {"Content-Type": "text/plain; charset=utf-8",
+                                           "Cache-Control": "no-store", "X-Robots-Tag": "noindex"})
+        return None
 
     @app.before_request
     def log_request():
